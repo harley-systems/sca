@@ -285,16 +285,53 @@ sca security_key get_crt subca
 
 ### init
 
-Initialize SCA environment or demo data.
+Initialize SCA environment, demo data, or bootable USB images.
 
 ```bash
-sca init <target>
+sca init <target> [options]
 ```
 
 | Target | Description |
 |--------|-------------|
-| `demo` | Create demo CA structure |
-| `usb` | Prepare USB stick for offline CA |
+| `demo` | Create demo CA structure for testing |
+| `sca_usb_stick` | Create bootable USB for air-gapped CA operations |
+| `openssl_ca_db` | Initialize OpenSSL CA database |
+| `yubikey` | Initialize YubiKey for use with sca |
+
+#### sca_usb_stick
+
+Creates a bootable Ubuntu live USB with sca pre-installed for air-gapped root CA operations.
+
+```bash
+sca init sca_usb_stick [options] [ubuntu_version_id]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-y, --yubikey-support` | Include YubiKey/Yubico packages |
+| `-i, --include-apt-mirror` | Mirror apt repositories for fully offline use |
+| `-x, --exclude-pkcs11-support` | Skip PKCS#11 packages |
+| `-t, --test-image` | Create test variant for automated testing |
+| `-s, --skip-cleanup` | Keep intermediate files after build |
+| `-q, --no-cache-squashfs` | Do not cache squashfs file |
+| `-p, --no-cache-iso` | Do not cache ISO file |
+| `-n, --no-cache` | Disable all caching |
+
+**Ubuntu versions:** `18.04.1-bionic` (default), `16.04.x-xenial`, `14.04.x-trusty`
+
+**Example:**
+
+```bash
+# Create USB image with YubiKey support
+sca init sca_usb_stick --yubikey-support
+
+# Write to USB (replace sdX with your device)
+sudo dd bs=4M if=~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
+```
+
+See [Air-Gapped Operations](air-gapped-operations.md) for complete workflow documentation.
 
 ---
 
