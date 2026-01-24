@@ -1,0 +1,4 @@
+Creates a PKCS#12 (.p12) file containing the entity's certificate, private key,
+and CA chain certificates. The p12 format is commonly used for importing
+certificates into mobile VPN clients (like StrongSwan), browsers, and other
+applications that require bundled credentials.

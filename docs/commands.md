@@ -144,6 +144,7 @@ sca export <bundle_type> <entity>
 |-------------|----------|
 | `crt_pub_ssh` | Certificate + public key + SSH public key |
 | `csr` | Certificate signing request |
+| `p12` | PKCS#12 bundle with certificate, private key, and CA chain |
 
 **Examples:**
 
@@ -153,7 +154,25 @@ sca export crt_pub_ssh service
 
 # Export CSR for remote signing
 sca export csr service
+
+# Export PKCS#12 bundle for mobile VPN client
+sca export p12 user
+
+# Export p12 with custom password and friendly name
+sca export p12 -p mypassword -n "My VPN Certificate" user
+
+# Export p12 with legacy encryption for older software
+sca export p12 --legacy service
 ```
+
+**p12 Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-p, --password` | Password to protect the p12 file (prompted if not provided) |
+| `-n, --friendly-name` | Friendly name for the certificate in the bundle |
+| `-l, --legacy` | Use legacy encryption for compatibility with older software |
+| `-o, --output` | Custom output file path |
 
 ---
 

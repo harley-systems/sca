@@ -31,14 +31,14 @@ export_() {
   local entity=$2
   log_detailed "export_: start (document_type=${document_type}, entity=${entity})"
   case "$document_type" in
-    crt_pub_ssh|csr)
+    crt_pub_ssh|csr|p12)
       shift
       eval export_$document_type "$@"
       ;;
     *)
     read -r -d '' message <<- ____EOM
       invalid value '$document_type' for document_type (first) argument.
-      supported values are crt_pub_ssh|csr.
+      supported values are crt_pub_ssh|csr|p12.
 ____EOM
     error "$message" 1
     ;;

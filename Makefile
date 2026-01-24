@@ -299,6 +299,26 @@ export_csr: src/export/csr/export_csr.sh export_csr_help
 	sed -e '/@@@HELP@@@/{r build/export/csr/help/help.txt' -e 'd}' \
 	  src/export/csr/export_csr.sh > build/export/csr/export_csr.sh
 
+export_p12_help: common_help src/help/options.txt src/export/help/options.txt \
+									src/export/p12/help/command_title.txt \
+									src/export/p12/help/abstract.txt src/export/p12/help/syntax.txt \
+									src/export/p12/help/options.txt src/export/p12/help/further_read.txt
+	mkdir -p build/export/p12/help
+	sed -e '/@@@COMMAND TITLE@@@/{r src/export/p12/help/command_title.txt' -e 'd}' \
+		  build/common/help/help.txt | \
+		  sed -e '/@@@ABSTRACT@@@/{r src/export/p12/help/abstract.txt' -e 'd}' | \
+		  sed -e '/@@@SYNTAX@@@/{r src/export/p12/help/syntax.txt' -e 'd}' | \
+		  sed -e '/@@@SCA OPTIONS@@@/{r src/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@EXPORT OPTIONS@@@/{r src/export/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@OPTIONS@@@/{r src/export/p12/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@FURTHER READ@@@/{r src/export/help/further_read.txt' -e 'd}' > \
+			build/export/p12/help/help.txt
+
+export_p12: src/export/p12/export_p12.sh export_p12_help
+	mkdir -p build/export/p12
+	sed -e '/@@@HELP@@@/{r build/export/p12/help/help.txt' -e 'd}' \
+	  src/export/p12/export_p12.sh > build/export/p12/export_p12.sh
+
 export_help: common_help src/help/options.txt \
 							src/export/help/command_title.txt src/export/help/abstract.txt \
 							src/export/help/syntax.txt src/export/help/options.txt \
@@ -313,12 +333,12 @@ export_help: common_help src/help/options.txt \
 			sed -e '/@@@FURTHER READ@@@/{r src/export/help/further_read.txt' -e 'd}' > \
 			build/export/help/help.txt
 
-export: src/export/export.sh export_help export_csr export_crt_pub_ssh
+export: src/export/export.sh export_help export_csr export_crt_pub_ssh export_p12
 	mkdir -p build/export
 	sed -e '/@@@HELP@@@/{r build/export/help/help.txt' -e 'd}' \
 			src/export/export.sh > build/export/export.sh
 	cat build/export/csr/export_csr.sh build/export/crt_pub_ssh/export_crt_pub_ssh.sh \
-			>> build/export/export.sh
+			build/export/p12/export_p12.sh >> build/export/export.sh
 
 import_help: common_help src/help/options.txt \
 							src/import/help/command_title.txt src/import/help/abstract.txt \
