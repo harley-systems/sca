@@ -1,0 +1,19 @@
+sca [<sca_options>] display [<display_options>] csr <csr_options> <entity> [<entity_id>]
+
+@@@SCA OPTIONS@@@
+
+@@@DISPLAY OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+  - user          - for current user
+  - host          - for current host
+  - service       - for current service
+
+entity_id argument is optional and it stands for the id of the given entity.
+when omitted, the current entity id determined by the environment variables is
+user.

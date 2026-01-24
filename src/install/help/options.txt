@@ -1,0 +1,10 @@
+install_options:
+
+  -h, --help                    - display install command help and exit
+  -a, --air-gapped              - perform installations in offline mode
+  -f, --force                   - overwrite any existing installations of sca
+  -y, --yubikey-support         - includes apt-mirror of the yubikey tools in
+                                  the image and installs the tools along with
+                                  sca installation.
+  -x, --exclude-pkcs11-support  - if specified excludes bundling of pkcs11
+                                  support in the generated sca usb image

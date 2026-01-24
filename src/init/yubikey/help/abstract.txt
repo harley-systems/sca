@@ -1,0 +1,19 @@
+The initialize yubikey command is used for initializing a security hardware device
+from Yubico company called yubikey.
+
+The initialization is necessary only in first time use of the key in case it was
+previously uninitialized. The key comes pre-initialized with publicly known
+credentials and therefore needs re-creating of all it's access keys:
+  - management key
+  - pin key
+  - puk key
+
+Those are automatically changed from default factory preset to randomly generated
+and saved values.
+
+It is recommended to issue init command every now and then with --roll-keys option
+so that you refresh the stale access passwords for a yubikey.
+
+IMPORTANT: In case you have already initialized yubikey, you will need to
+configure the above mentioned keys by setting the content of the related entity
+hw key configuration settings.

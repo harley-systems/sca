@@ -1,0 +1,3 @@
+The security key command is used for managing cryptographic token storage devices
+- devices that securely store and utilize cryptographic information including
+private keys and certificates.

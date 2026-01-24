@@ -1,0 +1,2 @@
+The configuration save command is used for saving the current sca configuration
+to a file.

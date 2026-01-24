@@ -1,0 +1,3 @@
+The initialize demo command is used for initializing a demo ca consisting of all
+the directories and files to reflect a fully setup use-case with two CAs, and
+one of them with subca's user's host's and service's defined.

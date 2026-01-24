@@ -1,0 +1,12 @@
+The install command is used for installation of sca prerequisites.
+There are two installation modes - offline and online.
+When in online mode - while connected to internet, the installation are
+performed against internet latest versions.
+When in offline mode - while working in secure air-gap scenario the
+installations are done against the locally present package downloads
+available on sca USB stick.
+
+Also, note that prerequisites related to sca USB stick iso creation are only
+installed when in online mode as sca USB stick iso needs to download images and
+packages over internet. Therefore they are not installed when installing 
+offline.

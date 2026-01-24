@@ -1,0 +1,8 @@
+The security key wait for command is used for pausing execution of a program and
+prompting a user to insert particular security key device.
+
+A security key wait for is used internally by sca and may be useful in custom
+tools for management of security keys.
+
+The last output line is the number of the smart card reader through in which
+the awaited security key resides.

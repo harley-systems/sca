@@ -1,0 +1,17 @@
+# Build output
+build/
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.log
+*.tmp

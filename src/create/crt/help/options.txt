@@ -1,0 +1,8 @@
+crt_options:
+
+  -h, --help              - print this help
+  -f, --force             - if there is an existing certificate file, instead of
+                            reporting and failing - backup and generate new a
+                            crt. if the entity is configured to use security key,
+                            and there is an existing certificate in a security
+                            key slot, it will be replaced.

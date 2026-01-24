@@ -1,0 +1,11 @@
+sca [<sca_options>] init [<init_options>] demo <demo_options> [<demo_folder>]
+
+@@@SCA OPTIONS@@@
+
+@@@INIT OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The demo_folder is the root folder in which to initialize the demo.
+The default for demo_folder is ./sca-demo meaning in current folder sca-demo
+sub-folder.

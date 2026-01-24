@@ -1,0 +1,15 @@
+sca [<sca_options>] init [<init_options>] openssl_ca_db <openssl_ca_db_options> <entity>
+
+@@@SCA OPTIONS@@@
+
+@@@INIT OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+  - user          - for current user (not recommended to use)
+  - host          - for current host (not recommended to use)
+  - service       - for current service (not recommended to use)

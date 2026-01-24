@@ -1,0 +1,15 @@
+sca [<sca_options>] approve [<approve_options>] <entity> [<entity_id>]
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+  - user          - for current user
+  - host          - for current host
+  - service       - for current service
+
+entity_id is the id of the entity requested to approve.

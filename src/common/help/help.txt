@@ -1,0 +1,15 @@
+@@@TITLE@@@
+
+  @@@COMMAND TITLE@@@
+
+ABSTRACT
+
+  @@@ABSTRACT@@@
+
+SYNTAX
+
+  @@@SYNTAX@@@
+
+SEE ALSO
+
+  @@@FURTHER READ@@@

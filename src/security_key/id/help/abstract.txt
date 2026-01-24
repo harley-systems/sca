@@ -1,0 +1,14 @@
+The security key id command is used for retrieving ids of the currently inserted
+cryptographic token secure storage devices.
+
+A security key id is the first 6 hexadecimal numbers of the token secure storage
+device serial number, separated by dash '-' character.
+
+The opensc card reader number associated with the security key is printed along
+with the security key id with white space as a separator.
+
+In case there are more than one security keys connected to the computer, they
+will all be displayed one on each line.
+
+In case there are no security keys connected to the system, dash sign is
+displayed for both security key id and the card reader number.

@@ -1,0 +1,6 @@
+sca_options:
+
+  -h, --help              - print this help
+  -v, --verbose           - verbose log to standard output
+  -d, --detailed-verbose  - even more verbose log to standard output
+  -c, --config-file       - configuration file to use instead of the default

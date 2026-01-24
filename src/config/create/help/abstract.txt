@@ -1,0 +1,2 @@
+The configuration create command is used for creating the initial sca
+configuration.

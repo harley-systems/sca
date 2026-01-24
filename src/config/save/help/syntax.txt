@@ -1,0 +1,10 @@
+sca [<sca_options>] config [<config_options>] save [<save_options>] <sca_config_file>
+
+@@@SCA OPTIONS@@@
+
+@@@CONFIG OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The sca_config_file will be created with the sca configuration. The file format
+is plain bash script exporting default variables settings.

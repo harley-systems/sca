@@ -1,0 +1,5 @@
+The completion command is used for retrieving the (auto)completion script.
+
+The completion scripts are used by shell to interactively complete commands.
+To use the completion script, save the output of this command to
+/etc/bash_completion.d/sca file.

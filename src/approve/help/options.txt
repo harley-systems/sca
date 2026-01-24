@@ -1,0 +1,8 @@
+approve_options:
+
+  -h, --help      - optional. if used the operation is completed by presenting
+                    this help.
+  -s, --sign-by   - optional. if used, specifies the entity to use for signing
+                    on the issued certificate. valid values are the ids of the
+                    existing entities with certificates capable of signing
+                    other certificates. normally, those are ca and subca ids.

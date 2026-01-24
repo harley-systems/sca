@@ -1,0 +1,2 @@
+Run 'sca config <config_command> -h' for getting help specific to a the given
+config_command.

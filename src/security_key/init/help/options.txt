@@ -1,0 +1,5 @@
+init_options:
+
+  -h, --help      - print this help
+  -r, --roll-keys - change security key access keys (pin/puk/management key) by
+                    setting the new ones randomly generated

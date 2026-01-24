@@ -1,0 +1,4 @@
+The list configurations command is used for listing id's (file names) of all of
+the configuration files (files with extension .config) defined within the sca
+configuration folder and demo folders. the default sca configuration file
+location is

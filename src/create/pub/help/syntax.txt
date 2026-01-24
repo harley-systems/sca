@@ -1,0 +1,15 @@
+sca [<sca_options>] create [<create_options>] pub [<pub_options>] <entity>
+
+@@@SCA OPTIONS@@@
+
+@@@CREATE OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+  - user          - for current user
+  - host          - for current host
+  - service       - for current service

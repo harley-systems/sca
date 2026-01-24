@@ -1,0 +1,2 @@
+The list users command is used for listing id's of all of the users defined
+according to the current configuration.

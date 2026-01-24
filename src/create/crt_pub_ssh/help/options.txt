@@ -1,0 +1,7 @@
+crt_pub_ssh_options:
+
+  -h, --help              - print this help
+  -f, --force             - overwrite any existing files and generate new
+                            documents. if entity is configured to use the a
+                            security key, any existing key and certificate in
+                            related security key slot will be replaced.

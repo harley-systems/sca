@@ -1,0 +1,2 @@
+Run 'sca export <document_type> -h' for getting help specific to a exporting the
+document_type of interest.

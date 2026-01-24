@@ -1,0 +1,1 @@
+The configuration command is used for managing the sca configuration.

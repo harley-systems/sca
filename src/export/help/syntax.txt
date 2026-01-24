@@ -1,0 +1,18 @@
+sca [<sca_options>] export [<export_options>] <document_type> <entity>
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the document_type are:
+
+  - crt_pub_ssh   - export certificate, public key and public key in OpenSSH form bundle archive
+  - csr           - export certificate signing request
+
+allowed values for the entity are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+  - user          - for current user
+  - host          - for current host
+  - service       - for current service

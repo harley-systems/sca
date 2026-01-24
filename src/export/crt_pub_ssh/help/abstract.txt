@@ -1,0 +1,4 @@
+Export certificate, public key and public key in OpenSSH format of the
+provided entity. the resulting file is a tar gzip archive containing above
+listed documents. The resulting archive is suitable for exchange of the public
+security documents with other parties by email or other means.

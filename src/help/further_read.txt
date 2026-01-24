@@ -1,0 +1,1 @@
+Run 'sca <verb> -h' for getting help specific to a verb.

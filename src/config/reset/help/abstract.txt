@@ -1,0 +1,4 @@
+The configuration reset command is used for resetting the current sca
+configuration to their default values. it is useful only in context of sca
+itself or in dot sourcing scenario as it doesn't affect the parent execution
+environment.

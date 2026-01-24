@@ -1,0 +1,59 @@
+sca_usb_stick_options:
+
+  -h, --help                    - print this help
+  -s, --skip-cleanup            - optional flag, preserve intermediary files
+                                  created during live iso image creation.
+                                  this option is useful in case you want to
+                                  further customize sca iso image.
+  -t, --test-images             - optional flag create iso image for sca test.
+                                  the slight
+                                  difference between the regular image is that
+                                  the test image automatically starts sca test
+                                  on end of booting.
+  -i, --include-apt-mirror      - optional flag includes all restricted Ubuntu packages within
+                                  the image by storing apt-mirror within it and
+                                  configuring offline environment package
+                                  manager to use it.
+                                  NOTE: we do include offline repository of
+                                  yubico yubikey tools regardless of this
+                                  option being set or not and depending on
+                                  another dedicated flag -y.
+  -y, --yubikey-support         - optional flag includes apt-mirror of the yubikey tools in
+                                  the image and installs the tools along with
+                                  sca installation.
+  -x, --exclude-pkcs11-support  - optional flag if specified excludes bundling of pkcs11
+                                  support in the generated sca usb image
+  -q, --no-cache-squashfs       - optional flag indicating we do not want to
+                                  preserve a copy of the squashfs file containing
+                                  all the unmodified directories of live file
+                                  system.
+                                  default value is false.
+                                  default behavior is to cache the squashfs file
+                                  per ubuntu_version_id in the ~/.sca/downloads/
+                                  folder.
+                                  if set, we instead extract the whole live
+                                  file-system squashfs and re-compress it again
+                                  with mksquashfs.
+                                  enabling this flag prolongs the time it takes
+                                  to complete the operation if ran multiple times.
+                                  on the cons side, it takes up some disk space
+                                  upon operation completion.
+  -o, --no-cache-iso            - optional flag indicating we do not want to
+                                  preserve a copy of the downloaded iso file
+                                  for the specified ubuntu_version_id.
+                                  default value is false.
+                                  default behavior is to cache the squashfs file
+                                  per ubuntu_version_id in the ~/.sca/downloads/
+                                  folder.
+                                  if set, we instead extract the whole live
+                                  file-system squashfs and re-compress it again
+                                  with mksquashfs.
+                                  enabling this flag prolongs the time it takes
+                                  to complete the operation if ran multiple times.
+                                  on the cons side, it takes up some disk space
+                                  upon operation completion.
+  -n, --no-cache                - optional flag.
+                                  default value is false.
+                                  switches off all caching. suitable for one
+                                  time runs, where there is no advantage in
+                                  caching large downloaded files.

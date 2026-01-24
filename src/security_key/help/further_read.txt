@@ -1,0 +1,2 @@
+type sca security_key <subcommand> --help for further information on each of the
+security key related commands.

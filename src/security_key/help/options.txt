@@ -1,0 +1,3 @@
+security_key_options:
+
+  -h, --help                    - display security key command help and exit

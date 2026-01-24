@@ -1,0 +1,3 @@
+The initialize OpenSSL Certificate Authority Database command is used for
+initializing a OpenSSL ca directories and files required for it to properly
+function.

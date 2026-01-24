@@ -1,0 +1,19 @@
+sca [<sca_options>] test [<test_options>] [<ubuntu_version_id>]
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The <ubuntu_version_id> parameter is optional. The default value is the latest
+Ubuntu version. The form of this parameter is "<major>.<minor>.<fix>-<release_name>" - for
+example "18.04.01-bionic". Below list contains all supported ubuntu version ids:
+  - 18.04.01-bionic
+  - 16.04.04-xenial
+  - 16.04.03-xenial
+  - 16.04.02-xenial
+  - 16.04.01-xenial
+  - 14.04.05-trusty
+  - 14.04.04-trusty
+  - 14.04.03-trusty
+  - 14.04.02-trusty
+  - 14.04.01-trusty

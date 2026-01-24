@@ -1,0 +1,2 @@
+Run 'sca init <system> -h' for getting help specific to a the given system
+initialization.

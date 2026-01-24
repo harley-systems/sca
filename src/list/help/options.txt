@@ -1,0 +1,6 @@
+list_options:
+
+  -h, --help                    - print this help
+  -o, --output-format <format>  - output format. requires a
+
+allowed values for format are 'ids' and 'wide'.

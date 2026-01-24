@@ -1,0 +1,3 @@
+Used by an authority for issuing new certificate and creating it's certificate
+bundle archive. Encapsulates several document creation and exporting
+operations.

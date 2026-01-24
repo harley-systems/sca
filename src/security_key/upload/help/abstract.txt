@@ -1,0 +1,10 @@
+The security key upload command is used for uploading a security document into a
+cryptographic token secure storage device.
+
+The security documents that are stored in security keys include private keys and
+certificates. Each security key device can hold one or more private key - certificate
+pairs. For example, yubikey 4 can keep 25 such pairs.
+
+Unless the force flag had been specified, the upload will fail in case the
+target security key storage slot has been already occupied by certificate/key.
+Forcing replacing the current values in the security key storage slot.

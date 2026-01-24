@@ -1,0 +1,13 @@
+sca [<sca_options>] security_key [<security_key_options>] <security_key_command>
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The security key command is one of the following:
+
+  get_crt   - retrieving certificate for the given entity from a security key
+  id        - retrieving ids of the currently inserted security key
+  init      - first time initialization of security_key
+  upload    - upload security document to security key
+  wait_for  - awaits for specific security key connection

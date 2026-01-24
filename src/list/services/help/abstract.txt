@@ -1,0 +1,2 @@
+The list services command is used for listing id's of all of the
+services defined according to the current configuration.

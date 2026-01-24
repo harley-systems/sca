@@ -1,0 +1,3 @@
+The list subordinate certificate authorities command is used for listing id's of
+all of the subordinate certificate authorities defined according to the current
+configuration.

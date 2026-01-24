@@ -1,0 +1,2 @@
+The security key get certificate command is used for retrieving certificate for
+the given entity from a security key and according to the configuration.

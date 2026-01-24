@@ -1,0 +1,3 @@
+The list command is used for listing existing sca configurations and entities.
+The requested entities are listed by their entity ids, separated by space
+character.

@@ -1,0 +1,20 @@
+The security key init command is used for first time initialization of the
+currently inserted cryptographic token secure storage device as well as for
+security key access keys.
+
+A security key initialization consists of setting the three security key access
+keys: pin, puk and the management key. The passwords are randomly generated and
+saved to the keys file-system.
+
+You should write down the pin and remember the pin. It's 6 digits that you will
+need to use to access the keys stored on the token device.
+
+It is good to have the management key somewhere on paper as well although it is
+best used only in air-gapped environment where it's safe to attach the keys
+file-system.
+
+Rolling (assigning new values to) the access keys is also performed by this
+command when ran with appropriate parameters.
+
+IMPORTANT NOTE: this command shall be run in an air-gapped (offline,
+disconnected from the internet) environment.

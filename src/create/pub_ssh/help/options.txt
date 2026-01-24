@@ -1,0 +1,3 @@
+pub_ssh_options:
+
+  -h, --help              - print this help

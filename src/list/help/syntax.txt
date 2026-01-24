@@ -1,0 +1,14 @@
+sca [<sca_options>] list [<list_options>] <list_entity>
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the list_entity are:
+
+  - cas             - for listing existing certificate authorities
+  - subcas          - for listing existing sub-ordinate certificate authorities
+  - users           - for listing existing users
+  - hosts           - for listing existing hosts
+  - services        - for listing existing services
+  - configs         - for listing existing sca configuration files

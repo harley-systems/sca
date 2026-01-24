@@ -1,0 +1,8 @@
+Creation of private key for provided entity and according to it's configuration
+
+Each entity has it's own configuration for the number of bits to
+use, weather to store the key on security hardware key device, which slot to use
+and similar.
+
+In case the key file exists, the program will exist with error unless -f or --force
+flags were specified.

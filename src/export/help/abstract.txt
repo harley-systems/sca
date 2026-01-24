@@ -1,0 +1,2 @@
+Export command is used for exporting certificate documents. the resulting file
+is a tar gzip archive containing requested document type(s).

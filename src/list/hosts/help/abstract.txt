@@ -1,0 +1,2 @@
+The list hosts command is used for listing id's of all of the
+hosts defined according to the current configuration.

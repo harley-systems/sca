@@ -1,0 +1,2 @@
+Cryptography for humans - command line user interface for efficient use of
+modern cryptography in both personal and professional life.

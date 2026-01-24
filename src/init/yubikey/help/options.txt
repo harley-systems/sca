@@ -1,0 +1,5 @@
+yubikey_options:
+
+  -h, --help      - print this help
+  -r, --roll_keys - roll yubikey management key, pin and puk by changing the old
+                    values with newly randomized ones

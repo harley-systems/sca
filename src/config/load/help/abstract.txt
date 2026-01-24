@@ -1,0 +1,2 @@
+The configuration load command is used for loading the sca configuration from a
+file.

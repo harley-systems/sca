@@ -1,0 +1,15 @@
+While OpenSSL has been around for a while, there are not many people practicing
+the powerful encryption provided by it. When need to setup a ca, most just
+copy-paste the OpenSSL related commands blindly and get the temporary in-secure
+solution into production use, postponing dealing with it safely into the
+engineering backlogs that will never be addressed.
+
+In today's world where hardware security devices cheap and widely available, and
+virtually all OS's and services supporting PKI related industry standards,
+the only reason for not doing the PKI properly is cryptic parameters and
+numerous installations and configurations needed to get the things running.
+
+The simple certificate authority is a shell script that addresses this challenge
+by providing simple interface to cryptography tools arsenal. It uses standard
+bullet proof tools to provide it's function and exposes them in much more
+intuitive and usable way.

@@ -1,0 +1,2 @@
+The initialize command is used for initializing a security related system - a
+storage or device.

@@ -1,0 +1,10 @@
+sca [<sca_options>] config [<config_options>] load [<load_options>] <sca_config_file>
+
+@@@SCA OPTIONS@@@
+
+@@@CONFIG OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The sca_config_file should be an existing file containing the sca configuration.
+It is a plain bash script file exporting default variables settings.

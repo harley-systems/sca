@@ -1,0 +1,4 @@
+Import command is used for importing certificate documents.
+all the files present in the transfer_files_folder with tgz file extension
+are imported. those files are expected to be the products of the sca export
+command.

@@ -1,0 +1,19 @@
+sca [<sca_options>] <verb>
+
+@@@OPTIONS@@@
+
+allowed values for the verb are:
+
+  - request               - create request for a security document
+  - approve               - approve request
+  - create                - create security documents
+  - display               - display security documents
+  - export                - export security documents
+  - import                - import security documents
+  - security_key          - manage and use security keys
+  - init                  - initialize demo or sca usb stick
+  - install               - install sca and it's prerequisites
+  - config                - configuration management
+  - list                  - list existing entities and configurations
+  - completion            - get completion script
+  - test                  - run sca unit tests

@@ -1,0 +1,10 @@
+sca [<sca_options>] security_key [<security_key_options>] upload [<upload_options>] <entity> <document>
+
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@
+
+entity may be either ca, subca, user, host or service
+document may be either crt (for certificate) or key (for private key)

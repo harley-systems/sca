@@ -1,0 +1,15 @@
+sca [<sca_options>] create [<create_options>] <document_type>
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the document_type are:
+
+  - key                   - create new private key
+  - csr                   - create certificate signature request
+  - crt                   - create certificate
+  - pub                   - create public key by extracting it from certificate
+  - pub_ssh               - create public key in OpenSSH format
+  - crt_pub_ssh           - batch creation of certificate, public key and public
+                            key in ssh format

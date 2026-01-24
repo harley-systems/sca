@@ -1,0 +1,39 @@
+sca [<sca_options>] config [<config_options>] set [<set_options>] <entity> <entity_id> <entity_info>
+
+@@@SCA OPTIONS@@@
+
+@@@CONFIG OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+  - user          - for current user
+  - host          - for current host
+  - service       - for current service
+
+entity_id stands for the id of the
+
+the required entity_info depend on the entity requested:
+
+for entity ca entity info is as follows:
+
+  <name> <caps_name>
+
+for entity subca entity info is as follows:
+
+  <subca> <subca_name> <subca first name> <subca last name> <subca given name> <subca initials>
+
+for entity user entity info is as follows:
+
+  <user> <user_name> <user first name> <user last name> <user given name> <user initials>
+
+for entity host entity info is as follows:
+
+  <host name>
+
+for entity service entity info is as follows:
+
+  <service name>

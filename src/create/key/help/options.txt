@@ -1,0 +1,7 @@
+key_options:
+
+  -h, --help              - print create key help
+  -f, --force             - overwrite keys on disk and on hardware keys. use
+                            with special care as you may loose your keys.
+                            the old key is being backup-ed on the disk but not
+                            on the hardware key.

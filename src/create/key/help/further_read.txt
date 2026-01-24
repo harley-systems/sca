@@ -1,0 +1,4 @@
+For additional information on using yubikey for the first time, see help for
+yubikey initalization by issuing command:
+
+  'sca security_key init --help'

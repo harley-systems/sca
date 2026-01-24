@@ -1,0 +1,8 @@
+sca [<sca_options>] completion [<completion_options>] [<shell>]
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The shell parameter is optional and is intended for future use. Currently,
+the only supported value is 'bash'.

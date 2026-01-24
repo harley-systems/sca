@@ -1,0 +1,13 @@
+sca [<sca_options>] init [<init_options>] <system>
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the system are:
+
+  - yubikey        - initialize yubikey hardware security module - first time
+                     initialization
+  - openssl_ca_db  - initialize OpenSSL database
+  - sca_usb_stick  - initalize sca usb stick
+  - demo           - initialize demo certificate authority

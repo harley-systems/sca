@@ -1,0 +1,16 @@
+sca [<sca_options>] config [<config_options>] <config_command>
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the config_command are:
+
+  - get             - to retrieve current configuration information
+  - set             - to change current configuration information
+  - create          - to initially generate the configuration
+  - resolve         - to resolve configuration derived settings from the base
+                    settings
+  - load            - to load configuration from a file
+  - save            - to save configuration to a file
+  - reset           - reset configuration to defaults

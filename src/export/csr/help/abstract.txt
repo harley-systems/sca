@@ -1,0 +1,3 @@
+Export certificate signature request. The resulting file is a tar gzip
+suitable for exchange of the csr to subca/ca certification authority
+by email or other means.

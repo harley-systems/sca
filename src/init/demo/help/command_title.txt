@@ -1,0 +1,1 @@
+The initialize demo command help

@@ -1,0 +1,6 @@
+csr_options:
+
+  -h, --help              - print this help
+  -f, --force             - if there is an existing certificate signature
+                            request, instead of reporting and failing - backup
+                            and generate new a csr.

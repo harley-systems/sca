@@ -1,0 +1,7 @@
+sca [<sca_options>] security_key [<security_key_options>] wait_for [<wait_for_options>] <entity>
+
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@

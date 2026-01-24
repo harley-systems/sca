@@ -1,0 +1,3 @@
+The configuration resolve command is used for resolving the derived settings
+of sca configuration. It is used only in dot sourced loading scenario or within
+sca code itself.

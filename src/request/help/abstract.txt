@@ -1,0 +1,3 @@
+The request command is used for initializing new entity and creating it's csr
+request archive. It encapsulates several document creation and initialization
+operations.

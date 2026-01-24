@@ -1,0 +1,16 @@
+sca [<sca_options>] config [<config_options>] create [<create_options>] <entity>
+
+@@@SCA OPTIONS@@@
+
+@@@CONFIG OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - ca            - openssl.config generation for current certificate authority
+  - subca         - openssl.config generation for current sub-ordinate certificate authority
+  - user          - openssl.config generation for current user
+  - host          - openssl.config generation for current host
+  - service       - openssl.config generation for current service
+  - all           - for creation of all of the configuration files

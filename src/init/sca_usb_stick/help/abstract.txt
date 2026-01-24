@@ -1,0 +1,3 @@
+The initialize sca USB stick command is used for initializing USB stick
+used for booting into secure offline environment with sca and it's prerequisites
+already available.

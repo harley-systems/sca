@@ -1,0 +1,6 @@
+upload_options:
+
+  -h, --help      - print this help
+  -f, --force     - force will replace any existing key or certificate in the
+                    target security key storage slot.
+                    

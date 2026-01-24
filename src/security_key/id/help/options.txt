@@ -1,0 +1,6 @@
+id_options:
+
+  -h, --help                - print this help
+  -t, --security-key-type   - retrieve security keys only for security keys of
+                              specified type. currently supported type is
+                              yubikey only.
