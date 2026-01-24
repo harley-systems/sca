@@ -1,0 +1,1 @@
+-p, --password, -n, --friendly-name, -l, --legacy, -o, --output, -h, --help

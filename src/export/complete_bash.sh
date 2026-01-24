@@ -12,7 +12,7 @@ _sca_export_complete() {
   done
 
   if [ -z "${COMP_WORDS[$document_type_index]}" ]; then
-    suggestions=($(compgen -W "crt_pub_ssh csr" -- "$current_word"))
+    suggestions=($(compgen -W "crt_pub_ssh csr p12" -- "$current_word"))
   else
 
     local entity_index=$((document_type_index+1))
@@ -46,8 +46,28 @@ _sca_export_complete() {
           esac
         fi
         ;;
+      p12)
+        if [ -z "${COMP_WORDS[$entity_index]}" ]; then
+          suggestions=($(compgen -W "host service user" -- "$current_word"))
+        else
+          case "${COMP_WORDS[$entity_index]}" in
+            host|service|user)
+              local entities
+              if [ -z $config_file ]; then
+                entities=$(sca list ${COMP_WORDS[$entity_index]}s)
+              else
+                entities=$(sca -c $config_file list ${COMP_WORDS[$entity_index]}s)
+              fi
+              suggestions=($(compgen -W "$entities" -- "$current_word"))
+              ;;
+            *)
+              suggestions=($(compgen -W "host service user" -- "$current_word"))
+              ;;
+          esac
+        fi
+        ;;
       *)
-        suggestions=($(compgen -W "crt_pub_ssh csr" -- "$current_word"))
+        suggestions=($(compgen -W "crt_pub_ssh csr p12" -- "$current_word"))
         ;;
     esac
   fi

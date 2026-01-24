@@ -1,0 +1,11 @@
+sca export p12 [options] <entity>
+
+Arguments:
+  entity              The entity type: 'user', 'host', or 'service'
+
+Options:
+  -p, --password      Password to protect the p12 file (prompted if not provided)
+  -n, --friendly-name Friendly name for the certificate in the p12 bundle
+  -l, --legacy        Use legacy encryption algorithms for compatibility
+  -o, --output        Output file path (default: transfer folder)
+  -h, --help          Show this help message
