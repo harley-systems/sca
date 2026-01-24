@@ -126,6 +126,8 @@ Run `sca <command> --help` for detailed usage.
 - [Procedures](docs/procedures.md) - Step-by-step guides
 - [SSH Integration](docs/ssh-integration.md) - Certificate-based SSH
 - [Air-Gapped Operations](docs/air-gapped-operations.md) - Secure offline CA environment
+- [Configuration Reference](docs/configuration.md) - Config files and customization
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
 ## Architecture
 

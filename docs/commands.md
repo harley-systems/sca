@@ -212,38 +212,104 @@ sca config <subcommand> [arguments]
 
 | Subcommand | Description |
 |------------|-------------|
-| `get <key>` | Get configuration value |
+| `get [key]` | Get configuration value (all if no key) |
 | `set <key> <value>` | Set configuration value |
-| `create` | Generate initial configuration |
-| `resolve` | Resolve derived settings |
+| `create` | Generate initial configuration files |
+| `resolve` | Resolve derived settings from base config |
 | `load <file>` | Load configuration from file |
-| `save <file>` | Save configuration to file |
-| `reset` | Reset to defaults |
+| `save <file>` | Save current configuration to file |
+| `reset` | Reset to default values |
 
-**Configuration Keys:**
+#### Configuration Keys
 
 | Key | Description | Example |
 |-----|-------------|---------|
-| `ca` | CA name | `sb` |
-| `subca` | Sub-CA name | `harley` |
-| `service` | Current service | `gitlab` |
-| `host` | Current host | `yellow` |
-| `user` | Current user | `harley` |
-| `domain` | Domain suffix | `.sb.com` |
+| `ca` | CA name (organization) | `mycompany` |
+| `subca` | Sub-CA name (administrator) | `admin` |
+| `service` | Current service name | `gitlab` |
+| `host` | Current host name | `server1` |
+| `user` | Current user name | `john` |
+| `domain` | Domain suffix | `.mycompany.com` |
 
-**Examples:**
+**Additional keys:**
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `ca_bits` | CA key size | `4096` |
+| `subca_bits` | Sub-CA key size | `4096` |
+| `service_bits` | Service key size | `2048` |
+| `host_bits` | Host key size | `2048` |
+| `user_bits` | User key size | `2048` |
+
+#### config get
 
 ```bash
-# Get current CA
-sca config get ca
-
-# Set service name
-sca config set service gitlab
-
-# View all configuration
+# Get all configuration
 sca config get
 
-# Reset to defaults
+# Get specific value
+sca config get ca
+sca config get domain
+```
+
+#### config set
+
+```bash
+# Set CA name
+sca config set ca mycompany
+
+# Set domain
+sca config set domain .mycompany.com
+
+# Set current service
+sca config set service webapp
+```
+
+#### config create
+
+Generate initial configuration files in `~/.sca/config/`.
+
+```bash
+sca config create [options] <target>
+```
+
+| Target | Description |
+|--------|-------------|
+| `all` | Create all configuration files |
+| `openssl` | Create OpenSSL configuration template |
+| `conventions` | Create naming conventions file |
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--recreate` | Overwrite existing configuration |
+
+#### config resolve
+
+Resolve derived settings (file paths, full names) from base configuration. Used internally and in scripted scenarios.
+
+```bash
+sca config resolve
+```
+
+#### config load / save
+
+```bash
+# Save current configuration
+sca config save ~/my-sca-config.sh
+
+# Load configuration from file
+sca config load ~/my-sca-config.sh
+```
+
+The configuration file format is a bash script with exported variables.
+
+#### config reset
+
+Reset all configuration values to defaults.
+
+```bash
 sca config reset
 ```
 
@@ -260,25 +326,79 @@ sca security_key <subcommand> [arguments]
 | Subcommand | Description |
 |------------|-------------|
 | `init` | Initialize security key (first-time setup) |
-| `id` | Display security key identifier |
-| `upload <entity>` | Upload key/cert to security key |
-| `get_crt <entity>` | Retrieve certificate from key |
-| `wait_for <key_id>` | Wait for specific key to be inserted |
+| `id` | Display security key identifier/serial |
+| `upload <entity>` | Upload key and certificate to security key |
+| `get_crt <entity>` | Retrieve certificate from security key |
+| `wait_for <serial>` | Wait for specific key to be inserted |
 
-**Examples:**
+#### security_key init
+
+Initialize a new YubiKey for use with sca. This sets up new PIN, PUK, and management key.
 
 ```bash
-# Initialize new YubiKey
 sca security_key init
+```
 
-# Get YubiKey serial/ID
+**What it does:**
+- Generates new random management key
+- Prompts for new PIN (default: 123456)
+- Prompts for new PUK (default: 12345678)
+- Stores credentials securely
+
+**Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+
+#### security_key id
+
+Display the serial number of the currently inserted YubiKey.
+
+```bash
 sca security_key id
+```
 
+Useful for identifying which key is inserted when you have multiple YubiKeys.
+
+#### security_key upload
+
+Upload a private key and certificate to the YubiKey's PIV slot 9c (Digital Signature).
+
+```bash
+sca security_key upload <entity>
+```
+
+**Example:**
+```bash
 # Upload sub-CA to YubiKey
 sca security_key upload subca
+```
 
-# Retrieve certificate from YubiKey
+After upload, the private key on disk can be securely deleted - all signing operations will use the YubiKey.
+
+#### security_key get_crt
+
+Retrieve a certificate from the YubiKey.
+
+```bash
+sca security_key get_crt <entity>
+```
+
+**Example:**
+```bash
+# Get sub-CA certificate from YubiKey
 sca security_key get_crt subca
+```
+
+#### security_key wait_for
+
+Wait for a specific YubiKey (by serial number) to be inserted. Useful in scripts.
+
+```bash
+sca security_key wait_for <serial>
+```
+
+**Example:**
+```bash
+# Wait for YubiKey with serial 12345678
+sca security_key wait_for 12345678
 ```
 
 ---
@@ -295,8 +415,54 @@ sca init <target> [options]
 |--------|-------------|
 | `demo` | Create demo CA structure for testing |
 | `sca_usb_stick` | Create bootable USB for air-gapped CA operations |
-| `openssl_ca_db` | Initialize OpenSSL CA database |
+| `openssl_ca_db` | Initialize OpenSSL CA database for an entity |
 | `yubikey` | Initialize YubiKey for use with sca |
+
+#### demo
+
+Create a complete demo CA hierarchy for testing and learning.
+
+```bash
+sca init demo [demo_folder]
+```
+
+**What it creates:**
+- Root CA (key + self-signed certificate)
+- Sub-CA (key + certificate signed by root)
+- Sample service certificate
+- Sample user certificate
+
+**Example:**
+```bash
+# Create demo in default location (~/.sca/demo/)
+sca init demo
+
+# Create demo in custom location
+sca init demo /tmp/sca-demo
+```
+
+This is useful for:
+- Learning how sca works
+- Testing certificate workflows
+- Development and debugging
+
+#### openssl_ca_db
+
+Initialize the OpenSSL CA database files for a certificate authority.
+
+```bash
+sca init openssl_ca_db <entity>
+```
+
+Creates the `index.txt` and `serial` files required by OpenSSL for tracking issued certificates.
+
+#### yubikey
+
+Initialize a YubiKey for use with sca (alias for `sca security_key init`).
+
+```bash
+sca init yubikey
+```
 
 #### sca_usb_stick
 
@@ -340,23 +506,76 @@ See [Air-Gapped Operations](air-gapped-operations.md) for complete workflow docu
 Install SCA and prerequisites.
 
 ```bash
-sca install <component>
+sca install [options]
 ```
 
-| Component | Description |
-|-----------|-------------|
-| `prerequisites` | OpenSSL, YubiKey tools, etc. |
-| `sca` | Install sca to system |
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Display help |
+| `-a, --air-gapped` | Install in offline mode (from USB stick packages) |
+| `-f, --force` | Overwrite existing sca installation |
+| `-y, --yubikey-support` | Install YubiKey/Yubico tools |
+| `-x, --exclude-pkcs11-support` | Skip PKCS#11 package installation |
+
+**Examples:**
+
+```bash
+# Online installation with YubiKey support
+sca install --yubikey-support
+
+# Offline installation (from SCA USB stick)
+sca install --air-gapped
+
+# Force reinstall
+sca install --force
+```
+
+**Installed packages (online mode):**
+- `openssl`, `openssh-client` - Core crypto tools
+- `datefudge` - For backdating CA certificates
+- `opensc`, `pcscd`, `libccid` - Smart card support
+- `libengine-pkcs11-openssl` - PKCS#11 OpenSSL engine
+- `yubico-piv-tool` - YubiKey management (with `-y`)
+- `squashfs-tools`, `genisoimage`, `qemu-kvm` - USB image creation
 
 ---
 
 ### test
 
-Run SCA unit tests.
+Run SCA tests, including air-gapped environment tests using QEMU.
 
 ```bash
-sca test [test_name]
+sca test [options] [ubuntu_version_id]
 ```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Display help |
+| `-a, --air-gapped` | Run tests in offline mode |
+| `-s, --skip-air-gapped-tests` | Skip QEMU-based air-gapped tests |
+
+**Examples:**
+
+```bash
+# Run all tests (including QEMU air-gapped tests)
+sca test
+
+# Run only online tests (faster, no QEMU)
+sca test --skip-air-gapped-tests
+
+# Run tests for specific Ubuntu version
+sca test 18.04.1-bionic
+```
+
+The air-gapped tests:
+1. Create a test USB image with `sca init sca_usb_stick --test-image`
+2. Boot it in QEMU with no network
+3. Run test suite inside the VM
+4. Collect results via virtual disk
 
 ---
 
@@ -439,3 +658,5 @@ sca security_key upload subca
 - [Procedures](procedures.md) - Step-by-step guides
 - [YubiKey Setup](yubikey.md) - Hardware key configuration
 - [SSH Integration](ssh-integration.md) - Certificate-based SSH
+- [Air-Gapped Operations](air-gapped-operations.md) - Secure offline environment
+- [Configuration Reference](configuration.md) - Config files and customization
