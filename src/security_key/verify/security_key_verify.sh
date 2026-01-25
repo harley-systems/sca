@@ -69,14 +69,19 @@ security_key_verify() {
 
   if [ -n "$entity_pin_file" ] && [ -f "$entity_pin_file" ]; then
     pin=$(cat "$entity_pin_file")
-    log_detailed "security_key_verify: using PIN from file $entity_pin_file"
-  else
+    if [ -n "$pin" ]; then
+      log_detailed "security_key_verify: using PIN from file $entity_pin_file"
+    fi
+  fi
+
+  # If no PIN from file, prompt interactively
+  if [ -z "$pin" ]; then
     read -s -p "Enter YubiKey PIN: " pin
     echo ""
   fi
 
   if [ -z "$pin" ]; then
-    error "PIN is required. Either provide via prompt or configure ${entity}_yubikey_pin_file" 1
+    error "PIN is required" 1
   fi
 
   # Create temporary test file
