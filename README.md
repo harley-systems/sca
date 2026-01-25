@@ -2,6 +2,8 @@
 
 A command-line tool that makes PKI simple. Create and manage certificates with hardware security (YubiKey) support.
 
+![SCA Demo](docs/demo/demo.gif)
+
 ## Why SCA?
 
 OpenSSL is powerful but cryptic. Setting up a proper PKI usually means:
@@ -188,10 +190,10 @@ sca create pub_ssh user
 Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 Areas where help is appreciated:
-- Additional export formats (PKCS#12)
 - Certificate revocation (CRL generation)
 - More shell completions (zsh, fish)
 - Documentation improvements
+- YubiKey diagnostics (see issues #9, #10, #11)
 
 ## License
 
