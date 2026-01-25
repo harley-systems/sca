@@ -9,7 +9,7 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "get_crt id init upload wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "get_crt id info init upload wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
       get_crt )
@@ -17,6 +17,9 @@ _sca_security_key_complete() {
       ;;
       id )
         _sca_security_key_id_complete $subcommand_index
+      ;;
+      info )
+        _sca_security_key_info_complete $subcommand_index
       ;;
       init )
         _sca_security_key_init_complete $subcommand_index
@@ -28,7 +31,7 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "get_crt id init upload wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "get_crt id info init upload wait_for" -- "$current_word"))
       ;;
     esac
   fi
@@ -89,6 +92,13 @@ _sca_security_key_id_complete() {
         suggestions=($(compgen -W "ca subca host service user" -- "$current_word"))
         ;;
     esac
+  fi
+}
+_sca_security_key_info_complete() {
+  local info_index=$1
+  local option_index=$((info_index+1))
+  if [ $COMP_CWORD == $option_index ]; then
+    suggestions=($(compgen -W "-h --help" -- "$current_word"))
   fi
 }
 _sca_security_key_init_complete() {

@@ -1,0 +1,6 @@
+The security key info command displays the status of all PIV slots on a connected
+YubiKey, including certificate details and private key presence.
+
+For each populated slot, it shows the certificate subject, expiration date, and
+whether a private key is present. This is useful for verifying YubiKey contents
+and diagnosing issues with key storage.

@@ -560,6 +560,25 @@ security_key_id: src/security_key/id/security_key_id.sh security_key_id_help
 	sed -e '/@@@HELP@@@/{r build/security_key/id/help/help.txt' -e 'd}' \
 src/security_key/id/security_key_id.sh > build/security_key/id/security_key_id.sh
 
+security_key_info_help: common_help src/help/options.txt src/security_key/help/options.txt \
+									src/security_key/info/help/command_title.txt \
+									src/security_key/info/help/abstract.txt src/security_key/info/help/syntax.txt \
+									src/security_key/info/help/options.txt src/security_key/info/help/further_read.txt
+	mkdir -p build/security_key/info/help
+	sed -e '/@@@COMMAND TITLE@@@/{r src/security_key/info/help/command_title.txt' -e 'd}' \
+		  build/common/help/help.txt | \
+		  sed -e '/@@@ABSTRACT@@@/{r src/security_key/info/help/abstract.txt' -e 'd}' | \
+		  sed -e '/@@@SYNTAX@@@/{r src/security_key/info/help/syntax.txt' -e 'd}' | \
+		  sed -e '/@@@SCA OPTIONS@@@/{r src/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@SECURITY_KEY OPTIONS@@@/{r src/security_key/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@OPTIONS@@@/{r src/security_key/info/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@FURTHER READ@@@/{r src/security_key/help/further_read.txt' -e 'd}' > \
+			build/security_key/info/help/help.txt
+
+security_key_info: src/security_key/info/security_key_info.sh security_key_info_help
+	mkdir -p build/security_key/info
+	sed -e '/@@@HELP@@@/{r build/security_key/info/help/help.txt' -e 'd}' \
+		src/security_key/info/security_key_info.sh > build/security_key/info/security_key_info.sh
 
 security_key_init_help: common_help src/help/options.txt src/security_key/help/options.txt \
 									src/security_key/init/help/command_title.txt \
@@ -635,13 +654,14 @@ security_key_help: common_help src/help/options.txt \
 			sed -e '/@@@FURTHER READ@@@/{r src/security_key/help/further_read.txt' -e 'd}' > \
 			build/security_key/help/help.txt
 
-security_key: src/security_key/security_key.sh security_key_help security_key_get_crt security_key_id security_key_init \
-				security_key_upload security_key_wait_for
+security_key: src/security_key/security_key.sh security_key_help security_key_get_crt security_key_id security_key_info \
+				security_key_init security_key_upload security_key_wait_for
 	mkdir -p build/security_key
 	sed -e '/@@@HELP@@@/{r build/security_key/help/help.txt' -e 'd}' \
 			src/security_key/security_key.sh > build/security_key/security_key.sh
 	cat build/security_key/get_crt/security_key_get_crt.sh 	build/security_key/id/security_key_id.sh \
-			build/security_key/init/security_key_init.sh 				build/security_key/upload/security_key_upload.sh \
+			build/security_key/info/security_key_info.sh			build/security_key/init/security_key_init.sh \
+			build/security_key/upload/security_key_upload.sh \
 			build/security_key/wait_for/security_key_wait_for.sh \
 			>> build/security_key/security_key.sh
 

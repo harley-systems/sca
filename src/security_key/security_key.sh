@@ -13,13 +13,13 @@ security_key() {
   shift
   log_detailed "security_key: start (security_key_command=${security_key_command})"
   case "$security_key_command" in
-    get_crt|id|init|upload|wait_for )
+    get_crt|id|info|init|upload|wait_for )
       eval security_key_$security_key_command "$@"
       ;;
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$security_key_command' for security_key_command (first) argument.
-        supported values are 'get_crt', 'id', 'init', 'upload', and 'waitfor'.
+        supported values are 'get_crt', 'id', 'info', 'init', 'upload', and 'wait_for'.
         use sca security_key -h for help.
 ____EOM
       error "$message" 1
