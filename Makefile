@@ -1086,3 +1086,16 @@ completion: src/completion/completion.sh completion_help \
 
 clean:
 	rm -rf build/*
+
+INSTALL_DIR ?= $(HOME)/bin
+COMPLETION_DIR ?= $(HOME)/.local/share/bash-completion/completions
+
+deploy: sca
+	@mkdir -p $(INSTALL_DIR)
+	cp build/sca.sh $(INSTALL_DIR)/sca
+	chmod 755 $(INSTALL_DIR)/sca
+	@echo "Deployed sca to $(INSTALL_DIR)/sca"
+	@mkdir -p $(COMPLETION_DIR)
+	$(INSTALL_DIR)/sca completion bash > $(COMPLETION_DIR)/sca
+	@echo "Deployed completion to $(COMPLETION_DIR)/sca"
+	@echo "To reload completion in current shell: . $(COMPLETION_DIR)/sca"

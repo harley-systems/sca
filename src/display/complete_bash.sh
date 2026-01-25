@@ -18,7 +18,11 @@ _sca_display_complete() {
     local entity_index=$((document_type_index+1))
     while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
       if [ $COMP_CWORD == $entity_index ]; then
-        suggestions=($(compgen -W "-h --help" -- "$current_word"))
+        if [ "${COMP_WORDS[$document_type_index]}" = "crt" ]; then
+          suggestions=($(compgen -W "-h --help --from-disk --from-security-key" -- "$current_word"))
+        else
+          suggestions=($(compgen -W "-h --help" -- "$current_word"))
+        fi
         COMPREPLY=("${suggestions[@]}")
         return
       fi

@@ -1,3 +1,5 @@
 crt_options:
 
-  -h, --help      - print this help
+  -h, --help            - print this help
+  --from-disk           - read certificate from disk file (overrides config)
+  --from-security-key   - read certificate from security key (overrides config)

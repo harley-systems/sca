@@ -16,7 +16,7 @@ Thank you for your interest in contributing to SCA!
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
 3. Make your changes following the patterns below
-4. Test your changes (`make && cp build/sca.sh ~/bin/sca && sca <your-command>`)
+4. Test your changes (`make deploy && sca <your-command>`)
 5. Commit with a clear message
 6. Push and open a Pull Request
 
@@ -198,11 +198,11 @@ Where `entity` is one of: `ca`, `subca`, `user`, `host`, `service`
 ### Build and Test
 
 ```bash
-# Clean and build
-make clean && make
+# Build and install to ~/bin (with bash completion)
+make deploy
 
-# Install to ~/bin for testing
-cp build/sca.sh ~/bin/sca
+# Or specify a custom install location
+make deploy INSTALL_DIR=/usr/local/bin COMPLETION_DIR=/etc/bash_completion.d
 
 # Test your command
 sca <verb> <subcommand> --help
