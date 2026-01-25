@@ -147,80 +147,84 @@ map_yubikey_slot_id_to_pkcs11_slot_number () {
   echo $pkcs11_slot_number
 }
 map_pkcs11_id_to_yubikey_slot_id () {
+  # Maps ykcs11 PKCS#11 IDs to YubiKey PIV slot IDs
   local pkcs11_slot_number=$1
   local yubikey_slot_id=0
   case "$pkcs11_slot_number" in
-    "00" )
-      yubikey_slot_id="9a"
+    "01" )
+      yubikey_slot_id="9a"  # PIV Authentication
     ;;
     "02" )
-      yubikey_slot_id="9c"
+      yubikey_slot_id="9c"  # Digital Signature
     ;;
     "03" )
-      yubikey_slot_id="9d"
-    ;;
-    "01" )
-      yubikey_slot_id="9e"
+      yubikey_slot_id="9d"  # Key Management
     ;;
     "04" )
-      yubikey_slot_id="82"
+      yubikey_slot_id="9e"  # Card Authentication
     ;;
     "05" )
-      yubikey_slot_id="83"
+      yubikey_slot_id="82"  # Retired Key 1
     ;;
     "06" )
-      yubikey_slot_id="84"
+      yubikey_slot_id="83"  # Retired Key 2
     ;;
     "07" )
-      yubikey_slot_id="85"
+      yubikey_slot_id="84"  # Retired Key 3
     ;;
     "08" )
-      yubikey_slot_id="86"
+      yubikey_slot_id="85"  # Retired Key 4
     ;;
     "09" )
-      yubikey_slot_id="87"
+      yubikey_slot_id="86"  # Retired Key 5
+    ;;
+    "0a" )
+      yubikey_slot_id="87"  # Retired Key 6
+    ;;
+    "0b" )
+      yubikey_slot_id="88"  # Retired Key 7
+    ;;
+    "0c" )
+      yubikey_slot_id="89"  # Retired Key 8
+    ;;
+    "0d" )
+      yubikey_slot_id="8a"  # Retired Key 9
+    ;;
+    "0e" )
+      yubikey_slot_id="8b"  # Retired Key 10
+    ;;
+    "0f" )
+      yubikey_slot_id="8c"  # Retired Key 11
     ;;
     "10" )
-      yubikey_slot_id="88"
+      yubikey_slot_id="8d"  # Retired Key 12
     ;;
     "11" )
-      yubikey_slot_id="89"
+      yubikey_slot_id="8e"  # Retired Key 13
     ;;
     "12" )
-      yubikey_slot_id="8a"
+      yubikey_slot_id="8f"  # Retired Key 14
     ;;
     "13" )
-      yubikey_slot_id="8b"
+      yubikey_slot_id="90"  # Retired Key 15
     ;;
     "14" )
-      yubikey_slot_id="8c"
+      yubikey_slot_id="91"  # Retired Key 16
     ;;
     "15" )
-      yubikey_slot_id="8d"
+      yubikey_slot_id="92"  # Retired Key 17
     ;;
-    "16"  )
-      yubikey_slot_id="8e"
+    "16" )
+      yubikey_slot_id="93"  # Retired Key 18
     ;;
-    "17"  )
-      yubikey_slot_id="8f"
+    "17" )
+      yubikey_slot_id="94"  # Retired Key 19
     ;;
     "18" )
-      yubikey_slot_id="90"
+      yubikey_slot_id="95"  # Retired Key 20
     ;;
     "19" )
-      yubikey_slot_id="91"
-    ;;
-    "20" )
-      yubikey_slot_id="92"
-    ;;
-    "21" )
-      yubikey_slot_id="93"
-    ;;
-    "22" )
-      yubikey_slot_id="94"
-    ;;
-    "23" )
-      yubikey_slot_id="95"
+      yubikey_slot_id="f9"  # PIV Attestation
     ;;
     "24" )
       yubikey_slot_id="F9"

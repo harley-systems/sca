@@ -37,17 +37,17 @@ export ca_security_key_id_default="4C-35-1D-D2-5B-DE"
 #      82-95 is for Retired Key Management
 #      f9 is for Attestation
 # mapping between pkcs slot number and yubico slot number
-# 0  - ??
-# 1  - 9e
-# 2  - 9c
-# 3  - ??
-# ----------- from 4 and above, yubikey slot is derived from id as: 0x81 + id
-# 4  - 82
-# 5  - 83
+# ykcs11 PKCS#11 ID to YubiKey slot mapping:
+# 01 - 9a (PIV Authentication)
+# 02 - 9c (Digital Signature)
+# 03 - 9d (Key Management)
+# 04 - 9e (Card Authentication)
+# 05 - 82 (Retired Key 1)
+# 06 - 83 (Retired Key 2)
 # ...
-# 23 - 95
-# 24 - f9 ??
-export ca_pkcs11_id_default="04"
+# 18 - 95 (Retired Key 20)
+# 19 - f9 (PIV Attestation)
+export ca_pkcs11_id_default="05"
 # yubico-piv-tool help explains the pin-policy enumeration
 # --pin-policy=ENUM    Set pin policy for action generate or import-key.
 #                        Only available on YubiKey 4  (possible
@@ -147,8 +147,8 @@ export user_use_security_key_default=false
 export user_security_key_type_default=yubikey
 #
 export user_security_key_id_default="4C-35-1D-D2-5B-DE"
-# 9a is for PIV Authentication
-export user_pkcs11_id_default="00"
+# 9a is for PIV Authentication (ykcs11 ID: 01)
+export user_pkcs11_id_default="01"
 #
 export user_yubikey_pin_policy_default=never
 #
