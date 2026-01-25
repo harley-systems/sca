@@ -300,6 +300,7 @@ install_yubico_piv_tool() {
   fi
   # if running offline, the sources list has been updated for us
   install_package_from_repos yubico-piv-tool
+  install_package_from_repos ykcs11
   log_detailed "install_yubico_piv_tool: finish (mode=${mode})"
 }
 ################################################################################
