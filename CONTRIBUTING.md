@@ -114,7 +114,18 @@ Create these files in `src/export/p12/help/`:
 | `abstract.txt` | Detailed description paragraph |
 | `syntax.txt` | Usage syntax and options |
 | `options.txt` | Comma-separated list of options |
-| `further_read.txt` | Additional references (can be empty) |
+| `further_read.txt` | Additional references (see guidelines below) |
+
+**Help file guidelines:**
+
+- `command_title.txt` - Single line, no period at end (e.g., "Display PKCS#12 bundle contents")
+- `abstract.txt` - 2-3 sentences explaining what the command does and when to use it
+- `syntax.txt` - Include command syntax, arguments list, and options with descriptions
+- `options.txt` - Comma-separated short and long options (e.g., "-p, --password, -h, --help")
+- `further_read.txt` - Follow this pattern:
+  - **Parent commands** (e.g., `display`, `config`, `export`): Add text pointing to subcommands
+    - Example: "Run 'sca display <document_type> -h' for help on specific document types."
+  - **Leaf commands** (e.g., `display crt`, `export p12`): Leave **empty** for consistency
 
 #### 4. Update the parent command dispatcher
 

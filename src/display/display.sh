@@ -37,7 +37,7 @@ display() {
   log_detailed "display: start (document_type=${document_type}, entity=${entity}, entity_id=${entity_id})"
 
   case "$document_type" in
-    csr|crt)
+    csr|crt|p12)
       shift
       eval display_$document_type "$@"
     ;;
@@ -100,7 +100,7 @@ display() {
     *)
       read -r -d '' message <<- ____EOM
       invalid value '$document_type' for document_type (first) argument.
-      supported values are 'key' 'csr' 'crt' 'pub' 'pub_ssh'.
+      supported values are 'key' 'csr' 'crt' 'pub' 'pub_ssh' 'p12'.
       use sca display -h for help.
 ____EOM
       error "$message" 1

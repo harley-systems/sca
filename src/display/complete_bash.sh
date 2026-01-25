@@ -12,7 +12,7 @@ _sca_display_complete() {
   done
 
   if [ -z "${COMP_WORDS[$document_type_index]}" ]; then
-    suggestions=($(compgen -W "key csr crt pub pub_ssh" -- "$current_word"))
+    suggestions=($(compgen -W "key csr crt pub pub_ssh p12" -- "$current_word"))
   else
 
     local entity_index=$((document_type_index+1))
@@ -48,8 +48,12 @@ _sca_display_complete() {
           esac
         fi
         ;;
+      p12)
+        # Complete file paths for p12
+        suggestions=($(compgen -f -- "$current_word"))
+        ;;
       *)
-        suggestions=($(compgen -W "key csr crt pub pub_ssh" -- "$current_word"))
+        suggestions=($(compgen -W "key csr crt pub pub_ssh p12" -- "$current_word"))
         ;;
     esac
   fi
