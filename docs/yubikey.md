@@ -43,10 +43,11 @@ sca install prerequisites
 ### Verify YubiKey Detection
 
 ```bash
-# Check if YubiKey is detected
-ykman info
+# Using sca (recommended)
+sca security_key info
 
-# Check PIV status
+# Or using ykman
+ykman info
 ykman piv info
 ```
 
@@ -89,7 +90,7 @@ yubico-piv-tool -a change-puk
 
 ## PIV Slots
 
-YubiKey PIV has four certificate slots:
+YubiKey PIV has four standard slots plus 20 retired key slots:
 
 | Slot | Name | Typical Use |
 |------|------|-------------|
@@ -97,8 +98,15 @@ YubiKey PIV has four certificate slots:
 | 9c | Digital Signature | Code signing, sub-CA |
 | 9d | Key Management | Encryption |
 | 9e | Card Authentication | Physical access |
+| 82-95 | Retired Key Management | CA keys, key rotation |
 
 For PKI sub-CA, we use slot **9c** (Digital Signature).
+For root CA, we typically use slot **82** (Retired Key 1) to keep standard slots available.
+
+View current slot status:
+```bash
+sca security_key info
+```
 
 ## Upload Sub-CA to YubiKey
 
@@ -146,15 +154,32 @@ When you run `sca approve csr service`, it:
 ## View YubiKey Certificates
 
 ```bash
-# Using yubico-piv-tool
-yubico-piv-tool -a read-certificate -s 9c
+# View all slots and certificates (recommended)
+sca security_key info
 
-# Using pkcs11-tool
-pkcs11-tool --module /usr/lib/x86_64-linux-gnu/opensc-pkcs11.so --list-objects
+# Display certificate details directly from YubiKey
+sca display crt --from-security-key subca
+sca display crt --from-security-key ca
 
-# Using sca
+# Extract certificate to disk
 sca security_key get_crt subca
+
+# Using yubico-piv-tool (low-level)
+yubico-piv-tool -a read-certificate -s 9c
 ```
+
+## Verify Private Key Presence
+
+To confirm a private key is present and working on the YubiKey:
+
+```bash
+sca security_key verify subca
+sca security_key verify ca
+```
+
+This performs a test signing operation to verify the key is functional.
+Note: Tools like `ykman piv info` may incorrectly report "Private key: Not present"
+even when keys exist - use `sca security_key verify` for reliable detection.
 
 ## PIN Management
 
