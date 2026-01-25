@@ -143,42 +143,19 @@ case "$document_type" in
 
 Edit `src/export/complete_bash.sh` to include the new subcommand in completions.
 
-#### 6. Add Makefile targets
+#### 6. Update the Makefile
 
-Add to `Makefile`:
-
-```makefile
-export_p12_help: common_help src/help/options.txt src/export/help/options.txt \
-                 src/export/p12/help/command_title.txt \
-                 src/export/p12/help/abstract.txt src/export/p12/help/syntax.txt \
-                 src/export/p12/help/options.txt src/export/p12/help/further_read.txt
-	mkdir -p build/export/p12/help
-	sed -e '/@@@COMMAND TITLE@@@/{r src/export/p12/help/command_title.txt' -e 'd}' \
-	    build/common/help/help.txt | \
-	    sed -e '/@@@ABSTRACT@@@/{r src/export/p12/help/abstract.txt' -e 'd}' | \
-	    sed -e '/@@@SYNTAX@@@/{r src/export/p12/help/syntax.txt' -e 'd}' | \
-	    sed -e '/@@@SCA OPTIONS@@@/{r src/help/options.txt' -e 'd}' | \
-	    sed -e '/@@@EXPORT OPTIONS@@@/{r src/export/help/options.txt' -e 'd}' | \
-	    sed -e '/@@@OPTIONS@@@/{r src/export/p12/help/options.txt' -e 'd}' | \
-	    sed -e '/@@@FURTHER READ@@@/{r src/export/help/further_read.txt' -e 'd}' > \
-	    build/export/p12/help/help.txt
-
-export_p12: src/export/p12/export_p12.sh export_p12_help
-	mkdir -p build/export/p12
-	sed -e '/@@@HELP@@@/{r build/export/p12/help/help.txt' -e 'd}' \
-	    src/export/p12/export_p12.sh > build/export/p12/export_p12.sh
-```
-
-Then update the parent target to depend on and include the new subcommand:
+The Makefile uses macros to generate build rules automatically. Simply add your new subcommand to the appropriate `*_SUBCMDS` list:
 
 ```makefile
-export: src/export/export.sh export_help export_csr export_crt_pub_ssh export_p12
-	mkdir -p build/export
-	sed -e '/@@@HELP@@@/{r build/export/help/help.txt' -e 'd}' \
-	    src/export/export.sh > build/export/export.sh
-	cat build/export/csr/export_csr.sh build/export/crt_pub_ssh/export_crt_pub_ssh.sh \
-	    build/export/p12/export_p12.sh >> build/export/export.sh
+# Find this line in the Makefile:
+EXPORT_SUBCMDS := crt_pub_ssh csr
+
+# Add your new subcommand:
+EXPORT_SUBCMDS := crt_pub_ssh csr p12
 ```
+
+That's it! The macros will automatically generate the help and build rules for your new subcommand.
 
 #### 7. Update documentation
 
