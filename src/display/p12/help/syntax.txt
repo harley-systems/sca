@@ -1,0 +1,8 @@
+sca display p12 [options] <file>
+
+Arguments:
+  file                Path to the .p12 file to display
+
+Options:
+  -p, --password      Password for the p12 file (prompted if not provided)
+  -h, --help          Show this help message

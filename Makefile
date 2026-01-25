@@ -220,6 +220,26 @@ display_csr: src/display/csr/display_csr.sh display_csr_help
 	sed -e '/@@@HELP@@@/{r build/display/csr/help/help.txt' -e 'd}' \
 	  src/display/csr/display_csr.sh > build/display/csr/display_csr.sh
 
+display_p12_help: common_help src/help/options.txt src/display/help/options.txt \
+									src/display/p12/help/command_title.txt \
+									src/display/p12/help/abstract.txt src/display/p12/help/syntax.txt \
+									src/display/p12/help/options.txt src/display/p12/help/further_read.txt
+	mkdir -p build/display/p12/help
+	sed -e '/@@@COMMAND TITLE@@@/{r src/display/p12/help/command_title.txt' -e 'd}' \
+		  build/common/help/help.txt | \
+		  sed -e '/@@@ABSTRACT@@@/{r src/display/p12/help/abstract.txt' -e 'd}' | \
+		  sed -e '/@@@SYNTAX@@@/{r src/display/p12/help/syntax.txt' -e 'd}' | \
+		  sed -e '/@@@SCA OPTIONS@@@/{r src/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@DISPLAY OPTIONS@@@/{r src/display/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@OPTIONS@@@/{r src/display/p12/help/options.txt' -e 'd}' | \
+		  sed -e '/@@@FURTHER READ@@@/{r src/display/help/further_read.txt' -e 'd}' > \
+			build/display/p12/help/help.txt
+
+display_p12: src/display/p12/display_p12.sh display_p12_help
+	mkdir -p build/display/p12
+	sed -e '/@@@HELP@@@/{r build/display/p12/help/help.txt' -e 'd}' \
+	  src/display/p12/display_p12.sh > build/display/p12/display_p12.sh
+
 display_help: common_help src/help/options.txt \
 								src/display/help/command_title.txt src/display/help/abstract.txt \
 								src/display/help/syntax.txt src/display/help/options.txt \
@@ -249,14 +269,14 @@ display_generic_help: common_help src/help/options.txt src/display/help/options.
 			build/display/generic_help/generic_help.txt
 
 display: src/display/display.sh display_help display_generic_help display_crt \
-					display_csr
+					display_csr display_p12
 	mkdir -p build/display
 	sed -e '/@@@HELP@@@/{r build/display/help/help.txt' -e 'd}' \
 			src/display/display.sh | \
 			sed -e '/@@@GENERIC HELP@@@/{r build/display/generic_help/generic_help.txt' -e 'd}' > \
 			build/display/display.sh
 	cat build/display/crt/display_crt.sh build/display/csr/display_csr.sh \
-			>> build/display/display.sh
+			build/display/p12/display_p12.sh >> build/display/display.sh
 
 
 export_crt_pub_ssh_help: common_help src/help/options.txt src/export/help/options.txt \

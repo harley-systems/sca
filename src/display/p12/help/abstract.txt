@@ -1,0 +1,3 @@
+Shows the contents of a PKCS#12 (.p12) bundle file including the certificates,
+private key presence, and encryption methods used. Useful for verifying p12
+files before importing them into applications like VPN clients or browsers.
