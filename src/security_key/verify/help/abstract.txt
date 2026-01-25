@@ -1,0 +1,7 @@
+The security key verify command tests whether a private key is present and
+functional on the YubiKey for a given entity. It does this by attempting to
+sign test data with the key.
+
+This is the only reliable way to detect private key presence, as tools like
+ykman and yubico-piv-tool may incorrectly report keys as missing due to
+display bugs.

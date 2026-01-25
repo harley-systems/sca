@@ -1,0 +1,3 @@
+sca [<sca_options>] security_key [<security_key_options>] verify [<verify_options>] <entity>
+
+entity is one of: ca, subca, user, service, host
