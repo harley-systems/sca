@@ -7,20 +7,20 @@ Complete reference for all SCA commands.
 ## Installation
 
 ```bash
-make
-./build/sca.sh install prerequisites
+# Build and install to ~/bin with bash completion
+make deploy
+
+# Reload completion in current shell
+. ~/.local/share/bash-completion/completions/sca
+
+# Install prerequisites
+sca install --yubikey-support
 ```
 
 For system-wide installation:
 
 ```bash
-sudo cp build/sca.sh /usr/local/bin/sca
-```
-
-Enable bash completion:
-
-```bash
-source <(sca completion bash)
+sudo make deploy INSTALL_DIR=/usr/local/bin COMPLETION_DIR=/etc/bash_completion.d
 ```
 
 ## Command Overview
@@ -125,6 +125,13 @@ sca display crt ca
 
 # Display service certificate details
 sca display crt service
+
+# Display certificate directly from YubiKey (without extracting to disk)
+sca display crt --from-security-key subca
+sca display crt --from-security-key ca
+
+# Force reading from disk (overrides config)
+sca display crt --from-disk subca
 
 # Display certificate signing request
 sca display csr service
@@ -350,11 +357,56 @@ sca security_key <subcommand> [arguments]
 
 | Subcommand | Description |
 |------------|-------------|
+| `info` | Display all PIV slots and certificates |
+| `verify <entity>` | Verify private key is present and working |
 | `init` | Initialize security key (first-time setup) |
 | `id` | Display security key identifier/serial |
 | `upload <entity>` | Upload key and certificate to security key |
 | `get_crt <entity>` | Retrieve certificate from security key |
 | `wait_for <serial>` | Wait for specific key to be inserted |
+
+#### security_key info
+
+Display the status of all PIV slots on the YubiKey, including certificates and expiry dates.
+
+```bash
+sca security_key info
+```
+
+**Example output:**
+```
+YubiKey PIV Slot Information
+============================
+
+Slot 9c (Digital Signature):
+  Subject:   MyCompany SubCA - admin
+  Expires:   Jan 21 19:16:13 2036 GMT
+  Algorithm: rsaEncryption
+
+Slot 82 (Retired Key 1 (CA)):
+  Subject:   MyCompany CA
+  Expires:   Jan 21 19:44:49 2036 GMT
+  Algorithm: rsaEncryption
+```
+
+#### security_key verify
+
+Verify that a private key is present and functional by performing a test signing operation.
+
+```bash
+sca security_key verify <entity>
+```
+
+**Example:**
+```bash
+# Verify sub-CA private key on YubiKey
+sca security_key verify subca
+
+# Verify CA private key (if stored on YubiKey)
+sca security_key verify ca
+```
+
+This is the most reliable way to confirm a key exists, as tools like `ykman piv info` may incorrectly report "Private key: Not present" even when keys are working.
 
 #### security_key init
 

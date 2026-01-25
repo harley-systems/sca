@@ -123,6 +123,7 @@ Run `sca <command> --help` for detailed usage.
 
 ## Documentation
 
+- **[Demo Walkthrough](docs/demo-walkthrough.md)** - Complete tutorial from install to user certificate
 - [Command Reference](docs/commands.md) - Detailed command documentation
 - [YubiKey Setup](docs/yubikey.md) - Hardware security key configuration
 - [Procedures](docs/procedures.md) - Step-by-step guides
