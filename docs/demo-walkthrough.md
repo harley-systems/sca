@@ -2,6 +2,8 @@
 
 [← Back to README](../README.md)
 
+![SCA Walkthrough Demo](demo/walkthrough.gif)
+
 A comprehensive step-by-step guide from installation to issuing your first user certificate using YubiKey hardware security.
 
 ## Overview
