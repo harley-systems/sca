@@ -2,6 +2,8 @@ approve_options:
 
   -h, --help      - optional. if used the operation is completed by presenting
                     this help.
+  -f, --force     - optional. if an existing certificate, pub or pub_ssh file
+                    exists, back it up and generate a new one.
   -s, --sign-by   - optional. if used, specifies the entity to use for signing
                     on the issued certificate. valid values are the ids of the
                     existing entities with certificates capable of signing

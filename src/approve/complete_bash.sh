@@ -10,7 +10,7 @@ _sca_approve_complete() {
     # in case the cursor is at the current $sca_verb_index word, return
     # sca options as completion suggestions
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h --help -s --sign-by" -- "$current_word"))
+      suggestions=($(compgen -W "-h --help -f --force -s --sign-by" -- "$current_word"))
       COMPREPLY=("${suggestions[@]}")
       return
     fi

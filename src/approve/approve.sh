@@ -19,7 +19,8 @@
 approve() {
 
   # read the options
-  local OPTS=`getopt -o hs: --long help,sign-by: -n 'approve' -- "$@"`
+  local force=false
+  local OPTS=`getopt -o hfs: --long help,force,sign-by: -n 'approve' -- "$@"`
   local sign_by_entity
   if [ $? != 0 ] ; then error "failed parsing options. use sca approve -h for help." 1; fi
   eval set -- "$OPTS"
@@ -28,6 +29,10 @@ approve() {
       -h | --help )
         approve_help
         return
+        ;;
+      -f | --force )
+        force=true
+        shift
         ;;
       -s | --sign-by)
         sign_by_entity=$2
@@ -103,7 +108,9 @@ ____EOM
       ;;
   esac
 
-  create crt_pub_ssh $entity $sign_by_entity
+  local use_force=''
+  [ $force = true ] && use_force='--force'
+  create crt_pub_ssh $use_force $entity $sign_by_entity
   export_ crt_pub_ssh $entity
 
   # now we want to restore the original current entity info
