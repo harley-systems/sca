@@ -175,22 +175,26 @@ get_relative_subfolder() {
    local __ref_parent_folder=$2
    local __file_fullpath=$3
    log_extreemly_detailed "get_relative_subfolder start (__resultvar=${__resultvar},__ref_parent_folder=${__ref_parent_folder},__file_fullpath=${__file_fullpath})"
-   local __base_name=$(basename $__file_fullpath)
+   if [ -z "$__file_fullpath" ]; then
+     eval $__resultvar="''"
+     return
+   fi
+   local __base_name=$(basename "$__file_fullpath")
    local folder_suffix=${__file_fullpath:${#__ref_parent_folder}:`expr ${#__file_fullpath} - ${#__ref_parent_folder} - ${#__base_name}`}
    eval $__resultvar="'$folder_suffix'"
    log_extreemly_detailed "get_relative_subfolder finish (__resultvar=${__resultvar},__ref_parent_folder=${__ref_parent_folder},__file_fullpath=${__file_fullpath})"
 }
 log_extreemly_detailed() {
   message="${@}"
-  [[ $verbosity == vvv* ]] && log "${message}"
+  [[ $verbosity == vvv* ]] && log "${message}" || true
 }
 log_detailed() {
   message="${@}"
-  [[ $verbosity == vv* ]] && log "${message}"
+  [[ $verbosity == vv* ]] && log "${message}" || true
 }
 log_verbose() {
   message="${@}"
-  [[ $verbosity == v* ]] && log "${message}"
+  [[ $verbosity == v* ]] && log "${message}" || true
 }
 log() {
   message="${@}"

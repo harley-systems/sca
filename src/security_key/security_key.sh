@@ -239,19 +239,16 @@ map_pkcs11_id_to_yubikey_slot_id () {
 #
 get_yubikey_pin_parameter() {
   local entity="$1"
-  local apply_pin=""
+  local pin=""
   local entity_yubikey_pin_policy=$(eval echo \$${entity}_yubikey_pin_policy)
-  # TODO: implement that in case of yubikey if pkcs11 key id is 2 then PIN always
-  # checked - according to yubikey documentation
-  if [ $entity_yubikey_pin_policy = true ]; then
-    local entity_pin_file=$(eval echo \$${entity}_pin_file)
+  # if pin policy requires PIN, read it from file and return the raw PIN
+  if [ "$entity_yubikey_pin_policy" = "always" ] || [ "$entity_yubikey_pin_policy" = "once" ]; then
+    local entity_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
     if [ -f "$entity_pin_file" ]; then
-      local pin=`cat ${entity_pin_file}`
-      apply_pin="
-      -passin pass:$pin"
+      pin=$(cat "${entity_pin_file}")
     fi
   fi
-  echo $apply_pin
+  echo "$pin"
 }
 warn_yubikey_touch_expected() {
   local entity=$1

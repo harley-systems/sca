@@ -43,8 +43,6 @@ create_crt_pub_ssh() {
   create crt $use_force ${entity} ${sign_by_entity}
   local crt=$(display_crt ${entity})
   log_detailed "${crt}"
-  create pub $use_force ${entity}
-  create pub_ssh $use_force ${entity}
   log_detailed "create_crt_pub_ssh: finish (entity='${entity}', sign_by_entity='${sign_by_entity}', force='${force}')"
 }
 create_crt_pub_ssh_help() {

@@ -238,6 +238,44 @@ install_datefudge_packages_offline() {
   log_detailed "install_datefudge_packages_offline: finish"
 }
 ################################################################################
+# builds and installs pkcs11-provider from source (required for OpenSSL 3
+# provider API). the pkcs11-provider package is not available in standard
+# Ubuntu repos, so we build from the latchset/pkcs11-provider GitHub project.
+install_pkcs11_provider_from_source() {
+  local version="${1:-v1.1.0}"
+  local provider_target="/usr/lib/x86_64-linux-gnu/engines-3/pkcs11prov.so"
+
+  # Skip if already installed
+  if [ -f "$provider_target" ]; then
+    log_detailed "install_pkcs11_provider_from_source: pkcs11prov.so already present at $provider_target"
+    return 0
+  fi
+
+  log_detailed "install_pkcs11_provider_from_source: building pkcs11-provider $version from source"
+
+  # Build dependencies
+  install_package_from_repos meson
+  install_package_from_repos pkg-config
+  install_package_from_repos libssl-dev
+  install_package_from_repos gcc
+
+  local build_dir=$(mktemp -d /tmp/pkcs11-provider-build.XXXXXX)
+  git clone --depth 1 --branch "$version" \
+    https://github.com/latchset/pkcs11-provider.git "$build_dir/pkcs11-provider"
+  cd "$build_dir/pkcs11-provider"
+  meson setup builddir
+  meson compile -C builddir
+
+  # Install the provider .so to the OpenSSL engines directory
+  sudo cp builddir/src/pkcs11.so "$provider_target"
+  sudo chmod 644 "$provider_target"
+
+  cd - > /dev/null
+  rm -rf "$build_dir"
+
+  log_detailed "install_pkcs11_provider_from_source: installed pkcs11prov.so to $provider_target"
+}
+################################################################################
 # installs pkcs11 related packages in online mode
 # we need pkcs11 packages for openssl integration with yubikey.
 install_pkcs11_packages_online() {
@@ -254,7 +292,7 @@ install_pkcs11_packages_offline() {
 
   log_detailed "install_pkcs11_packages_offline: start (packages_folder=${packages_folder})"
 
-  local packages=("libengine-pkcs11-openssl" "libccid" "pcscd"  "opensc-pkcs11" "opensc")
+  local packages=("libccid" "pcscd" "libengine-pkcs11-openssl" "opensc-pkcs11" "opensc")
   for package_name in "${packages[@]}"
   do
     local package_deb_file=$(get_available_package_version "$package_name" "$packages_folder")

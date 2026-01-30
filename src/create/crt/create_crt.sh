@@ -59,6 +59,7 @@ create_crt() {
   local entity_crt_file=$(eval echo \${${entity}_crt_file})
   local entity_extensions="${entity}_with_san_ext"
   local openssl_command=""
+  local entity_pin=""
 
   # check if the certificate file already exists in the file system
   if [ -f $entity_crt_file ]; then
@@ -96,7 +97,10 @@ create_crt() {
       log_detailed "create_crt: opensc reader slot number '${security_key_opensc_reader_slot_number}' mapped to pkcs11 id is '${slot_map[${security_key_opensc_reader_slot_number}]::-1}'."
       log_detailed "create_crt: sign_by_entity_pkcs11_id '${sign_by_entity_pkcs11_id}'."
       local mapped_slot_id="${slot_map[${security_key_opensc_reader_slot_number}]::-1}"
-      local apply_pin=$(get_yubikey_pin_parameter $sign_by_entity)
+      local entity_pin=$(get_yubikey_pin_parameter $sign_by_entity)
+      local pin_uri_fragment=""
+      [ -n "$entity_pin" ] && pin_uri_fragment=";pin-value=${entity_pin}"
+      local pkcs11_keyfile="pkcs11:id=%${sign_by_entity_pkcs11_id};type=private${pin_uri_fragment}"
       warn_yubikey_touch_expected $sign_by_entity
       openssl_command="$redirect_err openssl ca \
         -name $sign_by_entity \
@@ -107,8 +111,8 @@ create_crt() {
         -extensions $entity_extensions \
         -engine pkcs11 \
         -keyform engine \
-        -keyfile ${sign_by_entity_pkcs11_id} \
-        -preserveDN $apply_pin $selfsign"
+        -keyfile \"${pkcs11_keyfile}\" \
+        -preserveDN $selfsign"
       #  -keyfile ${mapped_slot_id}:${sign_by_entity_pkcs11_id} \
     else
       error "create_crt: Unable to find key file $sign_by_entity_key_file for"\
@@ -157,7 +161,11 @@ create_crt() {
   #   > ${service_key_file_prefix}bundle-crt.pem
 
   log_verbose "$openssl_command"
-  eval "$openssl_command"
+  if [ -n "$entity_pin" ]; then
+    eval "$openssl_command" <<< "$entity_pin"
+  else
+    eval "$openssl_command"
+  fi
   [ ! "$?" = "0" ] && error "create_crt: error while running the openssl command." 1
 
   # if [ $should_upload_to_security_key = true ]; then

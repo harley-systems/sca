@@ -128,9 +128,7 @@ export pkcs11_engine=${pkcs11_engine:-$pkcs11_engine_default}
 # full path to pkcs11 module library
 export opensc_pkcs11_module=${opensc_pkcs11_module:-$opensc_pkcs11_module_default}
 
-export ykcs11_engine=${ykcs11_engine:-$ykcs11_engine_default}
-
-export p11kit_engine_default=${p11kit_engine:-$p11kit_engine_default}
+export ykcs11_module=${ykcs11_module:-$ykcs11_module_default}
 
 #################################################
 # derived settings
@@ -169,16 +167,16 @@ export ca_crt_file=${ca_filename_prefix}crt.pem
 #
 export ca_crt_relative_file=${ca_filename_relative_prefix}crt.pem
 #
-export ca_crt_filename=$(basename $ca_crt_file)
+export ca_crt_filename=$(basename "${ca_crt_file}")
 # name of the selected root ca authority public key file
 export ca_pub_file=${ca_filename_prefix}pub.pem
 #
-export ca_pub_filename=$(basename $ca_pub_file)
+export ca_pub_filename=$(basename "${ca_pub_file}")
 # name of the selected root ca authority public key file in ssh format suitable
 # for ssh for example
 export ca_pub_ssh_file=${ca_filename_prefix}pub.ssh
 #
-export ca_pub_ssh_filename=$(basename $ca_pub_ssh_file)
+export ca_pub_ssh_filename=$(basename "${ca_pub_ssh_file}")
 #
 export ca_transfer_files_folder=${transfer_folder}${ca_files_folder_suffix}
 # name of the selected subca certificate signing request file
@@ -240,22 +238,22 @@ export subca_crt_file=${subca_filename_prefix}crt.pem
 #
 export subca_crt_relative_file=${subca_filename_relative_prefix}crt.pem
 #
-export subca_crt_filename=$(basename $subca_crt_file)
+export subca_crt_filename=$(basename "${subca_crt_file}")
 # name of the selected subca authority public key file
 export subca_pub_file=${subca_filename_prefix}pub.pem
 #
-export subca_pub_filename=$(basename $subca_pub_file)
+export subca_pub_filename=$(basename "${subca_pub_file}")
 # name of the selected subca authority public key file in ssh format suitable
 # for ssh for example
 export subca_pub_ssh_file=${subca_filename_prefix}pub.ssh
 #
-export subca_pub_ssh_filename=$(basename $subca_pub_ssh_file)
+export subca_pub_ssh_filename=$(basename "${subca_pub_ssh_file}")
 #
 export subca_transfer_files_folder=${transfer_folder}${subca_files_folder_suffix}
 # name of the selected subca certificate signing request file
 export subca_csr_file=${subca_filename_prefix}csr.pem
 #
-export subca_csr_filename=$(basename $subca_csr_file)
+export subca_csr_filename=$(basename "${subca_csr_file}")
 # name of the selected subca authority certificate signature request signing
 # configuration file
 export subca_csr_ini_file=${subca_filename_prefix}csr.ini
@@ -316,19 +314,19 @@ export service_crt_file=${service_filename_prefix}crt.pem
 #
 export service_crt_relative_file=${serice_filename_relative_prefix}crt.pem
 #
-export service_crt_filename=$(basename $service_crt_file)
+export service_crt_filename=$(basename "${service_crt_file}")
 # name of the selected user public key file
 export service_pub_file=${service_filename_prefix}pub.pem
 #
-export service_pub_filename=$(basename $service_pub_file)
+export service_pub_filename=$(basename "${service_pub_file}")
 # name of the selected user public key file
 export service_pub_ssh_file=${service_filename_prefix}pub.ssh
 #
-export service_pub_ssh_filename=$(basename $service_pub_ssh_file)
+export service_pub_ssh_filename=$(basename "${service_pub_ssh_file}")
 # name of the selected service certificate signing request file
 export service_csr_file=${service_filename_prefix}csr.pem
 #
-export service_csr_filename=$(basename $service_csr_file)
+export service_csr_filename=$(basename "${service_csr_file}")
 #
 export service_transfer_files_folder=${transfer_folder}${service_files_folder_suffix}
 # name of the selected service certificate signature request signing
@@ -370,19 +368,19 @@ export host_crt_file=${host_filename_prefix}crt.pem
 #
 export host_crt_relative_file=${host_filename_relative_prefix}crt.pem
 #
-export host_crt_filename=$(basename $host_crt_file)
+export host_crt_filename=$(basename "${host_crt_file}")
 # name of the selected user public key file
 export host_pub_file=${host_filename_prefix}pub.pem
 #
-export host_pub_filename=$(basename $host_pub_file)
+export host_pub_filename=$(basename "${host_pub_file}")
 # name of the selected user public key file
 export host_pub_ssh_file=${host_filename_prefix}pub.ssh
 #
-export host_pub_ssh_filename=$(basename $host_pub_ssh_file)
+export host_pub_ssh_filename=$(basename "${host_pub_ssh_file}")
 #
 export host_csr_file=${host_filename_prefix}csr.pem
 #
-export host_csr_filename=$(basename $host_csr_file)
+export host_csr_filename=$(basename "${host_csr_file}")
 #
 export host_transfer_files_folder=${transfer_folder}${host_files_folder_suffix}
 #
@@ -422,22 +420,22 @@ export user_crt_file=${user_filename_prefix}crt.pem
 #
 export user_crt_relative_file=${user_filename_relative_prefix}crt.pem
 #
-export user_crt_filename=$(basename $user_crt_file)
+export user_crt_filename=$(basename "${user_crt_file}")
 # name of the selected user public key file
 export user_pub_file=${user_filename_prefix}pub.pem
 #
-export user_pub_filename=$(basename $user_pub_file)
+export user_pub_filename=$(basename "${user_pub_file}")
 # name of the selected user public key file in ssh format suitable
 # for ssh for example
 export user_pub_ssh_file=${user_filename_prefix}pub.ssh
 #
 export user_transfer_files_folder=${transfer_folder}${user_files_folder_suffix}
 #
-export user_pub_ssh_filename=$(basename $user_pub_ssh_file)
+export user_pub_ssh_filename=$(basename "${user_pub_ssh_file}")
 #
 export user_csr_file=${user_filename_prefix}csr.pem
 #
-export user_csr_filename=$(basename $user_csr_file)
+export user_csr_filename=$(basename "${user_csr_file}")
 #
 export user_csr_ini_file=${user_filename_prefix}csr.ini
 #

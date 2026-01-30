@@ -123,7 +123,7 @@ ____EOM
     local current_entity_openssl_config_file=${sca_conf_folder}$current_entity.ini
     log_detailed "config_create: the entity ${current_entity} use security key configuration is set to '${current_entity_use_security_key}'."
     log_detailed "config_create: the entity ${current_entity} openssl config file location '${current_entity_openssl_config_file}'."
-    if [ $current_entity_use_security_key = true ]; then
+    if [ "$current_entity_use_security_key" = true ]; then
       log_detailed "config_create: the entity ${current_entity} uses security key. adding pkcs section"
       # insert pkcs11 related lines if current default entity is using security key
       # by replacing the comment #PKCS11. also, change the [ entity_req ] section

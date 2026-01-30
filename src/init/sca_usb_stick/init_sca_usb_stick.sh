@@ -869,7 +869,7 @@ download_pkcs11_packages() {
 
   download_package_with_dependencies $live_filesystem_packages_folder $ubuntu_version_name "pcscd"
 
-  download_package_with_dependencies $live_filesystem_packages_folder $ubuntu_version_name "libengine-pkcs11-openssl"
+  # pkcs11prov.so must be pre-staged in the packages folder (built from source on online machine)
 
   log_detailed "download_pkcs11_packages: finish ("\
     "live_filesystem_packages_folder=${live_filesystem_packages_folder})"

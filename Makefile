@@ -71,7 +71,8 @@ $(foreach s,$(DISPLAY_SUBCMDS),$(eval $(call build_subcmd,display,$(s))))
 build/display/display.sh: src/display/display.sh build/display/help/help.txt \
 		$(foreach s,$(DISPLAY_SUBCMDS),build/display/$(s)/display_$(s).sh)
 	@mkdir -p build/display
-	sed -e '/@@@HELP@@@/{r build/display/help/help.txt' -e 'd}' $< > $@
+	sed -e '/@@@HELP@@@/{r build/display/help/help.txt' -e 'd}' \
+		-e '/@@@GENERIC HELP@@@/{r build/display/help/help.txt' -e 'd}' $< > $@
 	cat $(foreach s,$(DISPLAY_SUBCMDS),build/display/$(s)/display_$(s).sh) >> $@
 
 display: build/display/display.sh
@@ -163,17 +164,36 @@ approve: build/approve/approve.sh
 #------------------------------------------------------------------------------
 # CONFIG command and subcommands
 #------------------------------------------------------------------------------
-CONFIG_SUBCMDS := create get load reset resolve save set
+# config_create has extra placeholders, so it gets a custom build rule below
+CONFIG_SUBCMDS := get load reset resolve save set
+CONFIG_ALL_SUBCMDS := create $(CONFIG_SUBCMDS)
 
 $(eval $(call build_help,config,))
-$(foreach s,$(CONFIG_SUBCMDS),$(eval $(call build_help,config,$(s))))
+$(foreach s,$(CONFIG_ALL_SUBCMDS),$(eval $(call build_help,config,$(s))))
 $(foreach s,$(CONFIG_SUBCMDS),$(eval $(call build_subcmd,config,$(s))))
 
+# Custom build rule for config_create: substitutes @@@HELP@@@ plus the 4 embedded
+# config/ini placeholders that get written to ~/.sca/config/ at runtime.
+CONFIG_CREATE_SRC := src/config/create
+build/config/create/config_create.sh: src/config/create/config_create.sh \
+		build/config/create/help/help.txt \
+		$(CONFIG_CREATE_SRC)/default_sca_config.sh \
+		$(CONFIG_CREATE_SRC)/default_conventions.sh \
+		$(CONFIG_CREATE_SRC)/default_openssl_config.ini \
+		$(CONFIG_CREATE_SRC)/pkcs11_openssl_config.ini
+	@mkdir -p $(dir $@)
+	sed -e '/@@@HELP@@@/{r build/config/create/help/help.txt' -e 'd}' $< | \
+		sed -e '/@@@DEFAULT SCA CONFIG@@@/{r $(CONFIG_CREATE_SRC)/default_sca_config.sh' -e 'd}' | \
+		sed -e '/@@@DEFAULT CONVENTIONS@@@/{r $(CONFIG_CREATE_SRC)/default_conventions.sh' -e 'd}' | \
+		sed -e '/@@@DEFAULT OPENSSL CONFIG@@@/{r $(CONFIG_CREATE_SRC)/default_openssl_config.ini' -e 'd}' | \
+		sed -e '/@@@PKCS11 OPENSSL CONFIG@@@/{r $(CONFIG_CREATE_SRC)/pkcs11_openssl_config.ini' -e 'd}' \
+		> $@
+
 build/config/config.sh: src/config/config.sh build/config/help/help.txt \
-		$(foreach s,$(CONFIG_SUBCMDS),build/config/$(s)/config_$(s).sh)
+		$(foreach s,$(CONFIG_ALL_SUBCMDS),build/config/$(s)/config_$(s).sh)
 	@mkdir -p build/config
 	sed -e '/@@@HELP@@@/{r build/config/help/help.txt' -e 'd}' $< > $@
-	cat $(foreach s,$(CONFIG_SUBCMDS),build/config/$(s)/config_$(s).sh) >> $@
+	cat $(foreach s,$(CONFIG_ALL_SUBCMDS),build/config/$(s)/config_$(s).sh) >> $@
 
 config: build/config/config.sh
 

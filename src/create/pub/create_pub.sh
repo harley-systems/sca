@@ -37,7 +37,7 @@ create_pub() {
   local entity_crt_file=$(eval echo \$${entity}_crt_file)
   if [ -f "$entity_pub_file" ]; then
     if [ $force = false ]; then
-      error "create_pub: the pub file already exists. use --force to backup and overwrite."
+      error "create_pub: the pub file already exists. use --force to backup and overwrite." 1
     else
       mv "$entity_pub_file" "$entity_pub_file.$RANDOM.bak"
     fi

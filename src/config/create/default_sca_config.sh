@@ -18,10 +18,12 @@ export ca_bits_default=2048
 export ca_use_security_key_default=true
 #
 export ca_security_key_type_default=yubikey
-# security_key_id is the first 6 hex digits of the key serial number. the yubikey
-# or any other smart card serial may be retrieved using opensc-tool --serial
-# command.
-export ca_security_key_id_default="4C-35-1D-D2-5B-DE"
+# security_key_id identifies the hardware security key.
+# For YubiKeys (when ykman is installed): use the decimal hardware serial number
+#   from ykman info, grep Serial (stable, does not change with cert uploads).
+# For other smart cards: use the hex digits of the card serial from
+#   opensc-tool (CHUID format, e.g. 4C-35-1D-D2-5B-DE).
+export ca_security_key_id_default="5414483"
 # yubico-piv-tool help explains the slots enumeration
 # -s, --slot=ENUM          What key slot to operate on  (possible
 #                            values="9a", "9c", "9d", "9e", "82",
@@ -77,7 +79,7 @@ export subca_use_security_key_default=true
 #
 export subca_security_key_type_default=yubikey
 #
-export subca_security_key_id_default="4C-35-1D-D2-5B-DE"
+export subca_security_key_id_default="5414483"
 # 9c is for Digital Signature (PIN always checked)
 export subca_pkcs11_id_default="02"
 #export subca_pkcs11_id_default="pkcs11:model=PKCS%2315%20emulated;manufacturer=piv_II;serial=f6907938c58b8aeb;token=PIV%20Card%20Holder%20pin%20%28PIV_II%29;id=%01;object=PIV%20AUTH%20pubkey;type=public"
@@ -100,7 +102,7 @@ export service_use_k8s_secret_default=true
 #
 export service_security_key_type_default=
 #
-export service_security_key_id_default="4C-35-1D-D2-5B-DE"
+export service_security_key_id_default="5414483"
 #
 export service_pkcs11_id_default="05"
 #
@@ -119,7 +121,7 @@ export host_use_security_key_default=false
 #
 export host_security_key_type_default=yubikey
 #
-export host_security_key_id_default="4C-35-1D-D2-5B-DE"
+export host_security_key_id_default="5414483"
 #
 export host_pkcs11_id_default="06"
 #
@@ -146,7 +148,7 @@ export user_use_security_key_default=false
 #
 export user_security_key_type_default=yubikey
 #
-export user_security_key_id_default="4C-35-1D-D2-5B-DE"
+export user_security_key_id_default="5414483"
 # 9a is for PIV Authentication (ykcs11 ID: 01)
 export user_pkcs11_id_default="01"
 #
@@ -171,13 +173,9 @@ export transfer_folder_default=~/.sca/transfer/
 export sca_conf_folder_default=~/.sca/config/
 ################################################
 # library files locations
-# full path to pkcs11 engine library
-# for use of libp11-3 package, use below engine:
-# export pkcs11_engine=/usr/lib/x86_64-linux-gnu/libp11.so.3
+# full path to pkcs11 engine library (libp11 engine_pkcs11.so)
 export pkcs11_engine_default=/usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so
 # full path to pkcs11 module library
 export opensc_pkcs11_module_default=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 #
-export ykcs11_engine_default=/usr/lib/x86_64-linux-gnu/libykcs11.so
-#
-export p11kit_engine_default=/usr/lib/x86_64-linux-gnu/p11-kit-proxy.so
+export ykcs11_module_default=/usr/lib/x86_64-linux-gnu/libykcs11.so

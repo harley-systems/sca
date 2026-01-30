@@ -45,6 +45,7 @@ create_csr() {
     fi
   fi
   local openssl_command=""
+  local entity_pin=""
   # check if the key file exists in the file system
   if [ -f "$entity_key_file" ]; then
     log_detailed "create_csr: entity key file '${entity_key_file}' was found. using it to create the csr."
@@ -71,7 +72,10 @@ create_csr() {
       local security_key_opensc_reader_slot_number=$(security_key_wait_for $entity | tail -n 1)
       local sign_by_entity_pkcs11_id=$(eval echo \${${entity}_pkcs11_id})
       # check if entity key is protected by pin
-      local apply_pin=$(get_yubikey_pin_parameter $entity)
+      entity_pin=$(get_yubikey_pin_parameter $entity)
+      local pin_uri_fragment=""
+      [ -n "$entity_pin" ] && pin_uri_fragment=";pin-value=${entity_pin}"
+      local pkcs11_keyfile="pkcs11:id=%${sign_by_entity_pkcs11_id};type=private${pin_uri_fragment}"
       warn_yubikey_touch_expected $entity
       openssl_command="${redirect_err} openssl req \
         -config $use_openssl_config_file \
@@ -80,8 +84,8 @@ create_csr() {
         -nodes \
         -engine pkcs11 \
         -keyform engine \
-        -keyfile ${sign_by_entity_pkcs11_id} \
-        -out $entity_csr_file ${apply_pin}"
+        -keyfile \"${pkcs11_keyfile}\" \
+        -out $entity_csr_file"
     else
       # the entity key file doesn't exist and it has not been configured to
       # reside within yubikey
@@ -91,7 +95,11 @@ create_csr() {
     fi
   fi
   log_verbose "${openssl_command}"
-  eval "${openssl_command}"
+  if [ -n "$entity_pin" ]; then
+    eval "${openssl_command}" <<< "$entity_pin"
+  else
+    eval "${openssl_command}"
+  fi
 
   if [ ! "$?" = "0" ]; then
     error "create_csr: error while running the openssl command." 1
