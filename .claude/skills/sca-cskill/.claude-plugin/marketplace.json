@@ -1,8 +1,8 @@
 {
   "name": "sca-cskill",
   "owner": {
-    "name": "SCA Project",
-    "email": "noreply@example.com"
+    "name": "Harley Systems",
+    "email": "aharon.haravon@harley.systems"
   },
   "metadata": {
     "description": "SCA (Simple Certificate Authority) CLI assistant. Use when the user needs to manage PKI certificates, create keys, CSRs, or certificates, configure SCA, manage YubiKey hardware tokens, approve signing requests, export certificate bundles, or perform any certificate authority operations using the sca command-line tool.",

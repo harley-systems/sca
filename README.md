@@ -132,6 +132,20 @@ Run `sca <command> --help` for detailed usage.
 - [Configuration Reference](docs/configuration.md) - Config files and customization
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
+### Claude Code Integration
+
+This repo includes a [Claude Code](https://claude.com/claude-code) skill that provides AI-assisted guidance for SCA operations.
+
+**Automatic (project-level):** When you open this project in Claude Code, the skill activates automatically -- no installation needed.
+
+**Manual install (global):** To use the skill outside this repo, install it from the [claude-skills](https://github.com/harley-systems/claude-skills) marketplace:
+
+```
+/plugin marketplace add harley-systems/claude-skills
+```
+
+Then install "sca-plugin" when prompted.
+
 ## Architecture
 
 ```
