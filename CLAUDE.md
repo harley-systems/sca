@@ -1,5 +1,9 @@
 # Claude Instructions for SCA
 
+## Claude Skill
+
+A comprehensive Claude Code skill is available at `.claude/skills/sca-cskill/` with detailed command reference, YubiKey integration docs, and development guides. The skill activates automatically when working with SCA commands and PKI operations.
+
 ## Project Overview
 
 SCA (Simple Certificate Authority) is a bash-based CLI tool that simplifies PKI (Public Key Infrastructure) operations. It wraps OpenSSL complexity into simple commands and supports YubiKey hardware security keys for protecting CA private keys.
@@ -94,10 +98,10 @@ subca_pkcs11_id_default="02"   # ykcs11 ID for SubCA (maps to slot 9c)
 sca config set service myapp
 sca create key service
 sca create csr service
-sca approve service    # Uses YubiKey, prompts for PIN
-sca create crt service
-sca export crt_pub_ssh service
+sca approve service    # Signs CSR, creates crt + pub + pub_ssh, exports bundle
 ```
+
+**Note:** `sca approve` internally calls `create crt_pub_ssh` and `export crt_pub_ssh`, so no separate create/export steps are needed.
 
 ### YubiKey operations
 
