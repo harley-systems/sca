@@ -102,7 +102,7 @@ Creates a CSR that can be transferred to another system for signing.
 Approve a certificate signing request (requires CA/sub-CA access).
 
 ```bash
-sca approve csr <entity>
+sca approve <entity> [<entity_id>]
 ```
 
 When using a YubiKey, this will prompt for the PIN.
@@ -688,7 +688,7 @@ sca create key service
 sca create csr service
 
 # 4. Approve CSR (requires YubiKey PIN)
-sca approve csr service
+sca approve service
 
 # 5. Create certificate
 sca create crt service
@@ -711,7 +711,7 @@ sca create key subca
 sca create csr subca
 
 # 4. Sign with root CA (offline)
-sca approve csr subca
+sca approve subca
 
 # 5. Create certificate
 sca create crt subca

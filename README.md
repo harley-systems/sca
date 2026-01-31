@@ -18,7 +18,7 @@ SCA provides a simple interface to do PKI properly:
 sca config set service myapp
 sca create key service
 sca create csr service
-sca approve csr service    # Signs with YubiKey
+sca approve service    # Signs with YubiKey
 sca create crt service
 ```
 
@@ -80,7 +80,7 @@ sca security_key init
 sca config set subca admin
 sca create key subca
 sca create csr subca
-sca approve csr subca
+sca approve subca
 sca create crt subca
 
 # Upload to YubiKey
@@ -96,7 +96,7 @@ sca config set service webapp
 # Create and sign certificate
 sca create key service
 sca create csr service
-sca approve csr service    # Prompts for YubiKey PIN
+sca approve service    # Prompts for YubiKey PIN
 sca create crt service
 
 # Export for deployment

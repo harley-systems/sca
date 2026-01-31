@@ -105,7 +105,7 @@ Sleep 2s
 Type "# Sign with YubiKey-protected sub-CA (touch YubiKey if prompted)"
 Enter
 Sleep 500ms
-Type "sca approve csr user"
+Type "sca approve user"
 Enter
 Sleep 5s
 

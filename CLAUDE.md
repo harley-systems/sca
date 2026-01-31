@@ -94,7 +94,7 @@ subca_pkcs11_id_default="02"   # ykcs11 ID for SubCA (maps to slot 9c)
 sca config set service myapp
 sca create key service
 sca create csr service
-sca approve csr service    # Uses YubiKey, prompts for PIN
+sca approve service    # Uses YubiKey, prompts for PIN
 sca create crt service
 sca export crt_pub_ssh service
 ```

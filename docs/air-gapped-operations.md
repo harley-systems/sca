@@ -130,7 +130,7 @@ sca import csr subca /mnt/subca-csr.tar.gz
 
 # Review and approve
 sca display csr subca
-sca approve csr subca
+sca approve subca
 
 # Create signed certificate
 sca create crt subca
