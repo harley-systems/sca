@@ -69,7 +69,7 @@ sca create key subca
 sca create csr subca
 
 # Sign with root CA (requires root CA access)
-sca approve csr subca
+sca approve subca
 sca create crt subca
 
 # Upload to YubiKey
@@ -101,7 +101,7 @@ sca create csr service
 Insert YubiKey and approve:
 
 ```bash
-sca approve csr service
+sca approve service
 sca create crt service
 ```
 
@@ -133,7 +133,7 @@ sca config set user mobile1
 # Create client certificate
 sca create key user
 sca create csr user
-sca approve csr user
+sca approve user
 sca create crt user
 
 # Export for client device
@@ -148,7 +148,7 @@ sca config set host router
 
 sca create key host
 sca create csr host
-sca approve csr host
+sca approve host
 sca create crt host
 ```
 
@@ -178,7 +178,7 @@ sca config set user newuser
 
 sca create key user
 sca create csr user
-sca approve csr user
+sca approve user
 sca create crt user
 
 # Create SSH public key
@@ -199,7 +199,7 @@ sca display crt service | grep -A2 "Validity"
 sca create csr service
 
 # Sign new certificate
-sca approve csr service
+sca approve service
 sca create crt service
 
 # Deploy updated certificate
@@ -253,7 +253,7 @@ sca export csr subca
 ```bash
 # On machine with root CA access
 sca import csr subca newadmin-csr.tar.gz
-sca approve csr subca
+sca approve subca
 sca create crt subca
 sca export crt_pub_ssh subca
 ```

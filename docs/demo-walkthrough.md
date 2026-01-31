@@ -206,7 +206,7 @@ sca create csr subca
 
 ```bash
 # Approve the CSR (signs with root CA)
-sca approve csr subca
+sca approve subca
 ```
 
 ### 5.5 Create Sub-CA Certificate
@@ -290,7 +290,7 @@ sca create csr user
 This step uses the YubiKey - you'll be prompted for your PIN:
 
 ```bash
-sca approve csr user
+sca approve user
 ```
 
 **Touch your YubiKey** if touch policy is enabled, and enter your PIN when prompted.
@@ -446,7 +446,7 @@ sca config get
 # Create certificates
 sca create key <entity>
 sca create csr <entity>
-sca approve csr <entity>
+sca approve <entity>
 sca create crt <entity>
 
 # YubiKey operations

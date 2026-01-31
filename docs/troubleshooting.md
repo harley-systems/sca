@@ -132,7 +132,7 @@ openssl x509 -in cert.pem -noout -dates
 
 ```bash
 sca create csr service
-sca approve csr service
+sca approve service
 sca create crt service
 ```
 
