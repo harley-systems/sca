@@ -30,6 +30,7 @@ sca create crt service
 - **Offline root CA** - Keep root keys on air-gapped USB
 - **SSH integration** - Use certificates for SSH authentication
 - **Bash completion** - Tab completion for all commands
+- **Claude Code skill** - AI-assisted PKI operations and guidance
 
 ## Installation
 
@@ -131,6 +132,20 @@ Run `sca <command> --help` for detailed usage.
 - [Air-Gapped Operations](docs/air-gapped-operations.md) - Secure offline CA environment
 - [Configuration Reference](docs/configuration.md) - Config files and customization
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+
+### Claude Code Integration
+
+This repo includes a [Claude Code](https://claude.com/claude-code) skill that provides AI-assisted guidance for SCA operations.
+
+**Automatic (project-level):** When you open this project in Claude Code, the skill activates automatically -- no installation needed.
+
+**Manual install (global):** To use the skill outside this repo, install it from the [claude-skills](https://github.com/harley-systems/claude-skills) marketplace:
+
+```
+/plugin marketplace add harley-systems/claude-skills
+```
+
+Then install "sca-plugin" when prompted.
 
 ## Architecture
 
