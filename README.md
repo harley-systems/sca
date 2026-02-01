@@ -30,6 +30,7 @@ sca create crt service
 - **Offline root CA** - Keep root keys on air-gapped USB
 - **SSH integration** - Use certificates for SSH authentication
 - **Bash completion** - Tab completion for all commands
+- **Claude Code skill** - AI-assisted PKI operations and guidance
 
 ## Installation
 

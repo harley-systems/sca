@@ -159,7 +159,9 @@ That's it! The macros will automatically generate the help and build rules for y
 
 #### 7. Update documentation
 
-Add the new command to `docs/commands.md`.
+- Add the new command to `docs/commands.md`
+- Update the Claude Code skill at `.claude/skills/sca-cskill/SKILL.md` and its quick reference at `.claude/skills/sca-cskill/references/commands-quick-ref.md`
+- If publishing globally, also update the [claude-skills](https://github.com/harley-systems/claude-skills) marketplace repo
 
 ### Key Variables and Conventions
 
@@ -198,6 +200,7 @@ sca <verb> <subcommand> <args>
 ## Documentation
 
 - Update `docs/commands.md` if you change functionality
+- Update the Claude Code skill (`.claude/skills/sca-cskill/`) to reflect command changes
 - Add examples for new features
 - Keep the README.md current
 
