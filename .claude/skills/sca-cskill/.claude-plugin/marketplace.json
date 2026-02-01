@@ -1,0 +1,21 @@
+{
+  "name": "sca-cskill",
+  "owner": {
+    "name": "Harley Systems",
+    "email": "aharon.haravon@harley.systems"
+  },
+  "metadata": {
+    "description": "SCA (Simple Certificate Authority) CLI assistant. Use when the user needs to manage PKI certificates, create keys, CSRs, or certificates, configure SCA, manage YubiKey hardware tokens, approve signing requests, export certificate bundles, or perform any certificate authority operations using the sca command-line tool.",
+    "version": "1.0.0",
+    "created": "2026-01-31"
+  },
+  "plugins": [
+    {
+      "name": "sca-plugin",
+      "description": "SCA (Simple Certificate Authority) CLI assistant. Use when the user needs to manage PKI certificates, create keys, CSRs, or certificates, configure SCA, manage YubiKey hardware tokens, approve signing requests, export certificate bundles, or perform any certificate authority operations using the sca command-line tool.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./"]
+    }
+  ]
+}
