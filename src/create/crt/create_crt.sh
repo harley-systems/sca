@@ -101,6 +101,10 @@ create_crt() {
       local pin_uri_fragment=""
       [ -n "$entity_pin" ] && pin_uri_fragment=";pin-value=${entity_pin}"
       local pkcs11_keyfile="pkcs11:id=%${sign_by_entity_pkcs11_id};type=private${pin_uri_fragment}"
+      # Set PKCS11_MODULE_PATH so the engine can find the PKCS#11 module
+      # when loaded on demand via -engine pkcs11 (engine is no longer
+      # auto-loaded from the OpenSSL config to avoid an EVP regression).
+      export PKCS11_MODULE_PATH="${opensc_pkcs11_module}"
       warn_yubikey_touch_expected $sign_by_entity
       openssl_command="$redirect_err openssl ca \
         -name $sign_by_entity \
