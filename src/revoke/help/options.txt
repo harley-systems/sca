@@ -1,0 +1,8 @@
+revoke_options:
+
+  -h, --help      - optional. if used the operation is completed by presenting
+                    this help.
+  -s, --sign-by   - optional. if used, specifies the entity whose key was used
+                    to sign the certificate being revoked. valid values are
+                    'ca' and 'subca'. defaults to 'subca', or 'ca' if the
+                    entity being revoked is 'subca'.

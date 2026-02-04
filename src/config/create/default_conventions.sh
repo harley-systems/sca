@@ -273,17 +273,15 @@ export subca_crl_serial_file=${subca_filename_prefix}crl-srl.txt
 #
 export subca_crl_file=${subca_filename_prefix}crl.pem
 #
-export subca_crl_relative_file=${subca_filename_relative_prefix}crl-srl.txt
+export subca_crl_relative_file=${subca_filename_relative_prefix}crl.pem
 #
 export subca_yubikey_key_file=${subca_private_filename_prefix}yubikey-key.txt
 #
 export subca_yubikey_pin_file=${subca_private_filename_prefix}yubikey-pin.txt
 #
 export subca_yubikey_puk_file=${subca_private_filename_prefix}yubikey-puk.txt
-# TODO: fix below uri - use subca_crl_file below  !!!
 export subca_crl_uri=http://crl.${full_domain}/${subca_crl_relative_file}
-# TODO: fix below uri - use subca_crt_file below  !!!
-export subca_crt_uri=http://crl.${full_domain}/${subca}/${subca_crt_relative_file}
+export subca_crt_uri=http://crl.${full_domain}/${subca_crt_relative_file}
 #
 export subca_ocsp_uri=http://ocsp.${full_domain}/${subca}
 ################################################
