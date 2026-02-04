@@ -26,6 +26,7 @@ Activate when the user:
 - Works with YubiKey or hardware security tokens for PKI
 - Needs to approve/sign certificate signing requests
 - Wants to export certificate bundles (crt, pub, ssh, p12)
+- Needs to revoke certificates or manage certificate revocation lists (CRLs)
 - Asks about SCA commands, options, or workflows
 - Needs to list CAs, SubCAs, services, hosts, or users
 - Wants to initialize a demo CA or set up a new environment
@@ -80,6 +81,7 @@ sca [options] <command> [subcommand] [entity] [options]
 | `key` | `sca create key <entity> [-f\|--force]` | Generate RSA private key |
 | `csr` | `sca create csr <entity> [-f\|--force]` | Create Certificate Signing Request |
 | `crt` | `sca create crt <entity> [-f\|--force]` | Create signed certificate from CSR |
+| `crl` | `sca create crl <entity>` | Generate certificate revocation list |
 | `pub` | `sca create pub <entity>` | Extract public key from private key |
 | `pub_ssh` | `sca create pub_ssh <entity>` | Extract SSH-format public key |
 | `crt_pub_ssh` | `sca create crt_pub_ssh <entity>` | Create crt + pub + ssh in one step |
@@ -93,6 +95,29 @@ sca create csr service           # Create CSR for service
 sca create crt service           # Sign CSR to create certificate
 sca create crt_pub_ssh service   # All-in-one: crt + pub + ssh key
 sca create key service --force   # Overwrite existing key
+sca create crl subca             # Generate CRL for SubCA
+sca create crl ca                # Generate CRL for root CA
+```
+
+#### `sca revoke` - Revoke certificates
+
+```bash
+sca revoke <entity> [-s|--sign-by <signing_entity>]
+```
+
+Revokes the entity's certificate and automatically regenerates the CRL. The signing entity is resolved automatically: SubCA for service/host/user; CA for SubCA. Override with `-s`.
+
+**Options:**
+- `-h, --help` - Show help
+- `-s, --sign-by <entity>` - Override which entity's key was used to sign the certificate being revoked (`ca` or `subca`)
+
+**Entity values:** `subca`, `service`, `host`, `user`
+
+**Examples:**
+```bash
+sca revoke service               # Revoke service cert (signed by SubCA)
+sca revoke subca                 # Revoke SubCA cert (signed by CA)
+sca revoke -s subca host         # Revoke host cert, specifying signer
 ```
 
 #### `sca approve` - Approve/sign CSRs and issue certificates
@@ -415,6 +440,30 @@ sca approve subca      # Signs with offline root CA key
 sca import subca           # Import signed certificate
 ```
 
+### Workflow 6: Revoke a Certificate
+
+```bash
+# 1. Set the entity to revoke (if not already current)
+sca config set service compromised-app
+
+# 2. Revoke the certificate (CRL is regenerated automatically)
+sca revoke service               # SubCA key needed (YubiKey PIN if on hardware)
+
+# 3. Distribute updated CRL to relying parties
+scp ~/.sca/keys/<ca>/<subca>/<subca>-crl.pem root@router:/etc/ipsec.d/crls/
+```
+
+**Note:** `sca revoke` internally calls `create_crl` after revocation, so the CRL is always up to date. To regenerate a CRL without revoking (e.g., to refresh expiry), use `sca create crl subca` directly.
+
+### CRL Distribution Server
+
+A Docker-based CRL distribution server is available at `docker/crl-server/`:
+
+```bash
+docker build -t sca-crl-server docker/crl-server/
+docker run -d -p 80:80 -v ~/.sca/keys:/usr/share/nginx/html/crl:ro sca-crl-server
+```
+
 ## Configuration Details
 
 ### Configuration File
@@ -568,4 +617,4 @@ sca config resolve              # Check resolved file paths
 
 ## Keywords for Detection
 
-SCA, Simple Certificate Authority, PKI, certificate authority, X.509, SSL, TLS, CSR, certificate signing request, private key, public key, YubiKey, PKCS#11, PIV, security key, hardware token, OpenSSL, SubCA, root CA, service certificate, host certificate, user certificate, approve CSR, sign certificate, export certificate, p12, PKCS#12, SSH key, air-gapped, offline CA, certificate chain, trust chain, ykcs11, piv-tool
+SCA, Simple Certificate Authority, PKI, certificate authority, X.509, SSL, TLS, CSR, certificate signing request, private key, public key, YubiKey, PKCS#11, PIV, security key, hardware token, OpenSSL, SubCA, root CA, service certificate, host certificate, user certificate, approve CSR, sign certificate, export certificate, p12, PKCS#12, SSH key, air-gapped, offline CA, certificate chain, trust chain, ykcs11, piv-tool, CRL, certificate revocation list, revoke certificate, revocation
