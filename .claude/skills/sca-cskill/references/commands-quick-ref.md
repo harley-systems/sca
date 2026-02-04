@@ -3,7 +3,7 @@
 ## Certificate Lifecycle
 
 ```
-create key → create csr → approve (creates crt + pub + pub_ssh + exports)
+create key → create csr → approve (creates crt + pub + pub_ssh + exports) → revoke (revokes + regenerates CRL)
 ```
 
 ## All Commands at a Glance
@@ -26,6 +26,11 @@ sca create crt <entity>          # Create certificate from CSR
 sca create pub <entity>          # Extract public key
 sca create pub_ssh <entity>      # Extract SSH public key
 sca create crt_pub_ssh <entity>  # All-in-one: crt + pub + ssh
+sca create crl <entity>          # Generate CRL (entity: ca or subca)
+
+# Revoke
+sca revoke <entity>              # Revoke cert + regenerate CRL (SubCA signs svc/host/user, CA signs subca)
+sca revoke <entity> -s ca        # Override signing entity
 
 # Approve/sign
 sca approve <entity> [entity_id]  # Sign CSR (NO "csr" subcommand! SubCA signs svc/host/user, CA signs subca)
