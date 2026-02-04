@@ -9,6 +9,7 @@ allowed values for the document_type are:
   - key                   - create new private key
   - csr                   - create certificate signature request
   - crt                   - create certificate
+  - crl                   - generate certificate revocation list
   - pub                   - create public key by extracting it from certificate
   - pub_ssh               - create public key in OpenSSH format
   - crt_pub_ssh           - batch creation of certificate, public key and public

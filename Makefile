@@ -45,7 +45,7 @@ build/help/help.txt: build/common/help/help.txt src/help/command_title.txt \
 #------------------------------------------------------------------------------
 # CREATE command and subcommands
 #------------------------------------------------------------------------------
-CREATE_SUBCMDS := key csr crt pub pub_ssh crt_pub_ssh
+CREATE_SUBCMDS := key csr crt crl pub pub_ssh crt_pub_ssh
 
 $(eval $(call build_help,create,))
 $(foreach s,$(CREATE_SUBCMDS),$(eval $(call build_help,create,$(s))))
@@ -162,6 +162,17 @@ build/approve/approve.sh: src/approve/approve.sh build/approve/help/help.txt
 approve: build/approve/approve.sh
 
 #------------------------------------------------------------------------------
+# REVOKE command (no subcommands)
+#------------------------------------------------------------------------------
+$(eval $(call build_help,revoke,))
+
+build/revoke/revoke.sh: src/revoke/revoke.sh build/revoke/help/help.txt
+	@mkdir -p build/revoke
+	sed -e '/@@@HELP@@@/{r build/revoke/help/help.txt' -e 'd}' $< > $@
+
+revoke: build/revoke/revoke.sh
+
+#------------------------------------------------------------------------------
 # CONFIG command and subcommands
 #------------------------------------------------------------------------------
 # config_create has extra placeholders, so it gets a custom build rule below
@@ -239,7 +250,8 @@ install: build/install/install.sh
 #------------------------------------------------------------------------------
 # COMPLETION command
 #------------------------------------------------------------------------------
-COMPLETION_SCRIPTS := src/approve/complete_bash.sh src/completion/complete_bash.sh \
+COMPLETION_SCRIPTS := src/approve/complete_bash.sh src/revoke/complete_bash.sh \
+	src/completion/complete_bash.sh \
 	src/config/complete_bash.sh src/create/complete_bash.sh src/display/complete_bash.sh \
 	src/export/complete_bash.sh src/import/complete_bash.sh src/init/complete_bash.sh \
 	src/list/complete_bash.sh src/request/complete_bash.sh src/test/complete_bash.sh \
@@ -272,13 +284,14 @@ common: build/common/common.sh
 #------------------------------------------------------------------------------
 # Main SCA script
 #------------------------------------------------------------------------------
-COMMANDS := create display export import init request security_key approve config list test install completion common
+COMMANDS := create display export import init request security_key approve revoke config list test install completion common
 
 sca: src/sca.sh src/run.sh build/help/help.txt $(COMMANDS)
 	sed -e '/@@@HELP@@@/{r build/help/help.txt' -e 'd}' src/sca.sh > build/sca.sh
 	cat build/create/create.sh build/display/display.sh build/export/export.sh \
 		build/import/import.sh build/init/init.sh build/request/request.sh \
-		build/security_key/security_key.sh build/approve/approve.sh build/config/config.sh \
+		build/security_key/security_key.sh build/approve/approve.sh build/revoke/revoke.sh \
+		build/config/config.sh \
 		build/list/list.sh build/test/test.sh build/install/install.sh \
 		build/completion/completion.sh build/common/common.sh src/run.sh >> build/sca.sh
 	chmod 755 build/sca.sh

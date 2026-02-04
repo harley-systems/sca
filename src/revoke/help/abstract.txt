@@ -1,0 +1,1 @@
+Revoke a certificate and regenerate the certificate revocation list (CRL).

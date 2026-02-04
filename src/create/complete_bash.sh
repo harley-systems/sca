@@ -12,7 +12,7 @@ _sca_create_complete() {
   done
 
   if [ -z "${COMP_WORDS[$document_type_index]}" ]; then
-    suggestions=($(compgen -W "key csr crt pub pub_ssh crt_pub_ssh" -- "$current_word"))
+    suggestions=($(compgen -W "key csr crt crl pub pub_ssh crt_pub_ssh" -- "$current_word"))
   else
     case "${COMP_WORDS[$document_type_index]}" in
       key)
@@ -24,6 +24,9 @@ _sca_create_complete() {
       crt)
         _sca_create_crt_complete $document_type_index
         ;;
+      crl)
+        _sca_create_crl_complete $document_type_index
+        ;;
       pub)
         _sca_create_pub_complete $document_type_index
         ;;
@@ -34,7 +37,7 @@ _sca_create_complete() {
         _sca_create_crt_pub_ssh_complete $document_type_index
         ;;
       *)
-        suggestions=($(compgen -W "key csr crt pub pub_ssh crt_pub_ssh" -- "$current_word"))
+        suggestions=($(compgen -W "key csr crt crl pub pub_ssh crt_pub_ssh" -- "$current_word"))
         ;;
     esac
   fi
@@ -64,6 +67,32 @@ _sca_create_crt_complete() {
         ;;
       *)
         suggestions=($(compgen -W "ca subca host service user" -- "$current_word"))
+        ;;
+    esac
+  fi
+}
+_sca_create_crl_complete() {
+  local crl_index=$1
+  local entity_index=$((crl_index+1))
+
+  while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
+    if [ $COMP_CWORD == $entity_index ]; then
+      suggestions=($(compgen -W "-h --help" -- "$current_word"))
+      COMPREPLY=("${suggestions[@]}")
+      return
+    fi
+    entity_index=$((entity_index+1))
+  done
+
+  if [ -z "${COMP_WORDS[$entity_index]}" ]; then
+    suggestions=($(compgen -W "ca subca" -- "$current_word"))
+  else
+    case  "${COMP_WORDS[$entity_index]}" in
+      ca|subca)
+        :
+        ;;
+      *)
+        suggestions=($(compgen -W "ca subca" -- "$current_word"))
         ;;
     esac
   fi

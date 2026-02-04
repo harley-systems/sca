@@ -57,6 +57,7 @@ sca create <document_type> <entity>
 | `crt` | Certificate |
 | `pub` | Public key (extracted from cert) |
 | `pub_ssh` | Public key in OpenSSH format |
+| `crl` | Certificate revocation list |
 | `crt_pub_ssh` | Batch: certificate + public keys |
 
 | Entity | Description |
@@ -81,7 +82,43 @@ sca create crt service
 
 # Batch create cert + public keys
 sca create crt_pub_ssh service
+
+# Generate CRL for sub-CA
+sca create crl subca
+
+# Generate CRL for root CA
+sca create crl ca
 ```
+
+---
+
+### revoke
+
+Revoke a certificate and regenerate the CRL.
+
+```bash
+sca revoke <entity>
+```
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Print help |
+| `-s, --sign-by` | Entity that signed the certificate (`ca` or `subca`) |
+
+**Examples:**
+
+```bash
+# Revoke a service certificate (signed by subca)
+sca revoke service
+
+# Revoke a sub-CA certificate (signed by ca)
+sca revoke subca
+
+# Revoke a host certificate specifying the signer
+sca revoke -s subca host
+```
+
+After revocation, the CRL is automatically regenerated. Distribute the updated CRL to relying parties.
 
 ---
 

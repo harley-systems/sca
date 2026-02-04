@@ -33,14 +33,14 @@ create() {
   local document_type=$1
   log_detailed "create: start (document_type=${document_type})"
   case "$document_type" in
-    key|csr|crt|pub|pub_ssh|crt_pub_ssh)
+    key|csr|crt|crl|pub|pub_ssh|crt_pub_ssh)
       shift
       eval create_$document_type "$@"
       ;;
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$document_type' for document_type (first) argument.
-        supported values are 'key' 'csr' 'crt' 'pub' 'pub_ssh' 'crt_pub_ssh'.
+        supported values are 'key' 'csr' 'crt' 'crl' 'pub' 'pub_ssh' 'crt_pub_ssh'.
 ____EOM
       error "$message" 1
       ;;

@@ -215,16 +215,20 @@ sca export crt_pub_ssh service
 ### Revoke and Update CRL
 
 ```bash
-# Revoke the certificate (requires root CA)
-openssl ca -revoke ~/.sca/keys/sb/harley/badservice/*-crt.pem \
-  -config ~/.sca/config/ca.ini
+# Configure the entity to revoke
+sca config set service badservice
 
-# Generate updated CRL
-openssl ca -gencrl -out ~/.sca/keys/sb/sb-crl.pem \
-  -config ~/.sca/config/ca.ini
+# Revoke the certificate (CRL is regenerated automatically)
+sca revoke service
+
+# If revoking a sub-CA certificate
+sca revoke subca
+
+# To regenerate CRL without revoking (e.g., after expiry update)
+sca create crl subca
 
 # Distribute CRL to services
-scp ~/.sca/keys/sb/sb-crl.pem root@router:/etc/ipsec.d/crls/
+scp ~/.sca/keys/<ca>/<subca>/<subca>-crl.pem root@router:/etc/ipsec.d/crls/
 ```
 
 ---

@@ -15,6 +15,7 @@
 #       - request
 #       - security_key
 #       - approve
+#       - revoke
 #       - config
 #       - list
 #       - completion
@@ -122,7 +123,7 @@ exiting.
   # eval set -- "$OPTS"
 
   case "$verb" in
-    create|display|export|import|init|request|security_key|approve|config|list|completion|install|test)
+    create|display|export|import|init|request|security_key|approve|revoke|config|list|completion|install|test)
       shift
       log_detailed "sca: calling function for the verb $verb "$@""
       if [ $verb == 'export' ]; then eval ${verb}_ "${@@Q}"; else eval $verb "${@@Q}"; fi
@@ -131,7 +132,7 @@ exiting.
       read -r -d '' message <<- ____EOM
         invalid value '$verb' for first argument - the command.
         supported commands are 'create' 'display' 'export' 'import' 'init' 'install'
-        'request' 'security_key' 'approve' 'completion' 'test'.
+        'request' 'security_key' 'approve' 'revoke' 'completion' 'test'.
 ____EOM
       error "$message" 1
       ;;
