@@ -1,0 +1,25 @@
+name: Notify skill update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/sca-cskill/**'
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch sync event to marketplace
+        env:
+          GH_TOKEN: ${{ secrets.SKILL_SYNC_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/harley-systems/claude-skills/dispatches \
+            -f "event_type=sync-skill" \
+            -f "client_payload[skill]=sca-cskill" \
+            -f "client_payload[source_repo]=harley-systems/sca" \
+            -f "client_payload[source_path]=.claude/skills/sca-cskill" \
+            -f "client_payload[source_sha]=${{ github.sha }}"

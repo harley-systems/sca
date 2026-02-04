@@ -6,6 +6,20 @@ Complete reference for all SCA commands.
 
 ## Installation
 
+### From release
+
+```bash
+# Download latest release
+curl -L https://github.com/harley-systems/sca/releases/latest/download/sca -o ~/bin/sca
+chmod +x ~/bin/sca
+
+# Download bash completion
+curl -L https://github.com/harley-systems/sca/releases/latest/download/sca-completion.bash \
+  -o ~/.local/share/bash-completion/completions/sca
+```
+
+### From source
+
 ```bash
 # Build and install to ~/bin with bash completion
 make deploy
