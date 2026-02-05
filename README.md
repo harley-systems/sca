@@ -46,6 +46,20 @@ sudo systemctl enable --now pcscd
 
 ### Install SCA
 
+#### From release (recommended)
+
+```bash
+# Download latest release
+curl -L https://github.com/harley-systems/sca/releases/latest/download/sca -o ~/bin/sca
+chmod +x ~/bin/sca
+
+# Enable bash completion
+curl -L https://github.com/harley-systems/sca/releases/latest/download/sca-completion.bash \
+  -o ~/.local/share/bash-completion/completions/sca
+```
+
+#### From source
+
 ```bash
 # Build
 make
