@@ -11,8 +11,8 @@ This skill provides Claude with comprehensive knowledge of the SCA CLI tool to a
 
 ## Tool Location
 
-- **Source code**: This repository (root directory)
-- **Installed executable**: `~/bin/sca` (after `make deploy`)
+- **Source code**: https://github.com/harley-systems/sca
+- **Installed executable**: `~/bin/sca` (after `make deploy` or download from releases)
 - **Configuration**: `~/.sca/config/sca.config`
 - **Keys/certs storage**: `~/.sca/keys/<ca>/<subca>/<entity>/`
 
