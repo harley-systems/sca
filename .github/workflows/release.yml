@@ -22,12 +22,9 @@ jobs:
       - name: Build SCA
         run: make clean && make
 
-      - name: Generate bash completion
-        run: build/sca.sh completion bash > build/sca-completion.bash
-
       - name: Generate checksums
         working-directory: build
-        run: sha256sum sca.sh sca-completion.bash > SHA256SUMS
+        run: sha256sum sca.sh > SHA256SUMS
 
       - name: Create GitHub release
         env:
@@ -37,7 +34,6 @@ jobs:
             --title "${{ github.ref_name }}" \
             --generate-notes \
             build/sca.sh#sca \
-            build/sca-completion.bash \
             build/SHA256SUMS
 
   build-container:

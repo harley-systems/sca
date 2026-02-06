@@ -13,9 +13,8 @@ Complete reference for all SCA commands.
 curl -L https://github.com/harley-systems/sca/releases/latest/download/sca -o ~/bin/sca
 chmod +x ~/bin/sca
 
-# Download bash completion
-curl -L https://github.com/harley-systems/sca/releases/latest/download/sca-completion.bash \
-  -o ~/.local/share/bash-completion/completions/sca
+# Generate bash completion
+~/bin/sca completion bash > ~/.local/share/bash-completion/completions/sca
 ```
 
 ### From source
