@@ -618,3 +618,4 @@ sca config resolve              # Check resolved file paths
 ## Keywords for Detection
 
 SCA, Simple Certificate Authority, PKI, certificate authority, X.509, SSL, TLS, CSR, certificate signing request, private key, public key, YubiKey, PKCS#11, PIV, security key, hardware token, OpenSSL, SubCA, root CA, service certificate, host certificate, user certificate, approve CSR, sign certificate, export certificate, p12, PKCS#12, SSH key, air-gapped, offline CA, certificate chain, trust chain, ykcs11, piv-tool, CRL, certificate revocation list, revoke certificate, revocation
+
