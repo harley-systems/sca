@@ -87,8 +87,9 @@ sca security_key id
 # Initialize YubiKey PIV applet (sets PIN, PUK, management key)
 sca security_key init
 
-# Upload a key+cert to YubiKey
-sca security_key upload subca
+# Upload a certificate and a private key to YubiKey (two separate calls)
+sca security_key upload subca crt
+sca security_key upload subca key
 
 # Retrieve a cert from YubiKey
 sca security_key get_crt subca
@@ -109,6 +110,6 @@ sca security_key wait_for
 | `PKCS#11 engine error` | `sudo apt install libengine-pkcs11-openssl` |
 | `PIN incorrect` | Check PIN file or re-initialize with `sca security_key init` |
 | `YubiKey not detected` | Unplug/replug, try `sca security_key wait_for` |
-| `Slot empty` | Upload key first: `sca security_key upload <entity>` |
+| `Slot empty` | Upload first: `sca security_key upload <entity> crt`, then `sca security_key upload <entity> key` |
 | `Touch timeout` | Touch the YubiKey when it blinks during signing |
 | `Wrong slot` | Check `sca config get` for correct `pkcs11_id` mapping |

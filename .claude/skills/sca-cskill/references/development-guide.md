@@ -1,5 +1,11 @@
 # SCA Development Guide
 
+All commands below run from the repository root:
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+```
+
 ## Build & Deploy
 
 ```bash

@@ -276,7 +276,7 @@ sca config resolve               # Show all resolved file paths
 | `info` | `sca security_key info` | Display all PIV slots on YubiKey |
 | `id` | `sca security_key id` | Get YubiKey serial number |
 | `init` | `sca security_key init` | Initialize YubiKey PIV (set PIN/PUK) |
-| `upload` | `sca security_key upload <entity>` | Upload key+cert to YubiKey slot |
+| `upload` | `sca security_key upload <entity> <document>` | Upload a private key or a certificate to a YubiKey slot (document: `crt` or `key`) |
 | `get_crt` | `sca security_key get_crt <entity>` | Retrieve cert from YubiKey |
 | `verify` | `sca security_key verify <entity>` | Test signing with YubiKey key |
 | `wait_for` | `sca security_key wait_for` | Wait for YubiKey insertion |
@@ -287,7 +287,8 @@ sca security_key info            # Show all PIV slot contents
 sca security_key verify ca       # Test CA key on YubiKey
 sca security_key verify subca    # Test SubCA key
 sca security_key id              # Get YubiKey serial number
-sca security_key upload subca    # Upload SubCA key to YubiKey
+sca security_key upload subca crt  # Upload SubCA certificate to YubiKey
+sca security_key upload subca key  # Upload SubCA private key to YubiKey
 ```
 
 #### `sca init` - Initialize environments
@@ -398,8 +399,9 @@ sca create csr subca
 # 4. Approve (signs CSR with Root CA, creates crt + pub + ssh, exports)
 sca approve subca                # Requires CA key access
 
-# 5. Upload to YubiKey
-sca security_key upload subca
+# 5. Upload to YubiKey (certificate and private key are separate calls)
+sca security_key upload subca crt
+sca security_key upload subca key
 
 # 6. Verify
 sca security_key verify subca
