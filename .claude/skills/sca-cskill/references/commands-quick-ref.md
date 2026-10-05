@@ -65,7 +65,8 @@ sca list configs                 # List config files
 sca security_key info            # Show all PIV slots
 sca security_key id              # Get serial number
 sca security_key init            # Initialize PIV (set PIN/PUK)
-sca security_key upload <entity> # Upload key+cert to YubiKey
+sca security_key upload <entity> crt # Upload certificate to YubiKey
+sca security_key upload <entity> key # Upload private key to YubiKey
 sca security_key get_crt <entity># Get cert from YubiKey
 sca security_key verify <entity> # Test signing with key
 sca security_key wait_for        # Wait for key insertion
