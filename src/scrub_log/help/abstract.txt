@@ -1,0 +1,5 @@
+Logs written by older versions of sca can contain the YubiKey PIN or the
+management key in cleartext. The scrub_log command replaces them with
+<REDACTED> in place, using the same patterns sca applies to every new log line,
+and leaves the file with mode 0600. Run it once after upgrading, and before
+attaching a log to a bug report.

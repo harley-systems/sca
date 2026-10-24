@@ -1,0 +1,4 @@
+scrub_log_options:
+
+  -h, --help      - optional. if used the operation is completed by presenting
+                    this help.
