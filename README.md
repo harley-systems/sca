@@ -98,7 +98,8 @@ sca approve subca
 sca create crt subca
 
 # Upload to YubiKey
-sca security_key upload subca
+sca security_key upload subca crt
+sca security_key upload subca key
 ```
 
 ### 3. Issue Certificates

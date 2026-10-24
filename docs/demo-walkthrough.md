@@ -230,10 +230,11 @@ You should see:
 ### 5.7 Upload Sub-CA to YubiKey
 
 ```bash
-sca security_key upload subca
+sca security_key upload subca crt
+sca security_key upload subca key
 ```
 
-This uploads both the private key and certificate to the YubiKey's slot 9c (Digital Signature).
+Each call uploads one document: `crt` uploads the certificate and `key` uploads the private key. Both go to the sub-CA's slot, which is 9c (Digital Signature) with the default `pkcs11_id` of `02`.
 
 ### 5.8 Verify YubiKey Contents
 
@@ -452,7 +453,8 @@ sca create crt <entity>
 # YubiKey operations
 sca security_key info
 sca security_key verify <entity>
-sca security_key upload <entity>
+sca security_key upload <entity> crt
+sca security_key upload <entity> key
 
 # Display and export
 sca display crt <entity>
