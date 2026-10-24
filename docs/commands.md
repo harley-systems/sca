@@ -458,6 +458,8 @@ sca security_key verify ca
 
 This is the most reliable way to confirm a key exists, as tools like `ykman piv info` may incorrectly report "Private key: Not present" even when keys are working.
 
+The ykcs11 module path comes from the `ykcs11_module` config setting. If that file doesn't exist, common install locations are searched before failing. See [YubiKey Setup](yubikey.md#verify-private-key-presence).
+
 #### security_key init
 
 Initialize a new YubiKey for use with sca. This sets up new PIN, PUK, and management key.
