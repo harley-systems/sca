@@ -350,6 +350,9 @@ sca export p12 user
 
 You'll be prompted for a password to protect the P12 file.
 
+To use it as a browser client certificate for mTLS, see
+[Browser Client Certificates (mTLS)](procedures.md#browser-client-certificates-mtls).
+
 ### 7.3 List Created Certificates
 
 ```bash

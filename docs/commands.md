@@ -267,6 +267,10 @@ sca export p12 --legacy service
 | `-l, --legacy` | Use legacy encryption for compatibility with older software |
 | `-o, --output` | Custom output file path |
 
+To use a p12 as a browser client certificate for mTLS (importing it into
+Chrome/Firefox/Safari and configuring NGINX), see
+[Browser Client Certificates (mTLS)](procedures.md#browser-client-certificates-mtls).
+
 ---
 
 ### import
