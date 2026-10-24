@@ -3,4 +3,6 @@ upload_options:
   -h, --help      - print this help
   -f, --force     - force will replace any existing key or certificate in the
                     target security key storage slot.
-                    
+  --device SERIAL - use the security key with this serial instead of the one
+                    configured for the entity. needed to reach a second
+                    (backup) key of the same entity.

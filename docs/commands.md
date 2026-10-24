@@ -439,18 +439,35 @@ sca security_key <subcommand> [arguments]
 |------------|-------------|
 | `info` | Display all PIV slots and certificates |
 | `verify <entity>` | Verify private key is present and working |
-| `init` | Initialize security key (first-time setup) |
+| `init <entity>` | Initialize security key (first-time setup) |
 | `id` | Display security key identifier/serial |
 | `upload <entity> <document>` | Upload a certificate (`crt`) or private key (`key`) to security key |
 | `get_crt <entity>` | Retrieve certificate from security key |
-| `wait_for <serial>` | Wait for specific key to be inserted |
+| `wait_for <entity>` | Wait for the entity's key to be inserted |
+
+#### Choosing a key: `--device SERIAL`
+
+Every `security_key` subcommand accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
+
+- `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
+- `get_crt`, `init`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
+- `id`: lists only the named key, and fails if it is not attached.
+
+```bash
+sca security_key id                         # 12345678 0
+                                            # 87654321 1
+sca security_key info --device 87654321
+sca security_key upload --device 87654321 subca crt
+```
+
+If one attached reader's name is contained in another's, `yubico-piv-tool` cannot tell those two keys apart. In that case `sca` refuses and asks you to attach only the key you want to use.
 
 #### security_key info
 
 Display the status of all PIV slots on the YubiKey, including certificates and expiry dates.
 
 ```bash
-sca security_key info
+sca security_key info [--device SERIAL]
 ```
 
 **Example output:**
@@ -474,7 +491,7 @@ Slot 82 (Retired Key 1 (CA)):
 Verify that a private key is present and functional by performing a test signing operation.
 
 ```bash
-sca security_key verify <entity>
+sca security_key verify [--device SERIAL] <entity>
 ```
 
 **Example:**
@@ -495,7 +512,7 @@ The ykcs11 module path comes from the `ykcs11_module` config setting. If that fi
 Initialize a new YubiKey for use with sca. This sets up new PIN, PUK, and management key.
 
 ```bash
-sca security_key init
+sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
 ```
 
 **What it does:**
@@ -511,17 +528,17 @@ sca security_key init
 Display the serial number of the currently inserted YubiKey.
 
 ```bash
-sca security_key id
+sca security_key id [--device SERIAL]
 ```
 
-Useful for identifying which key is inserted when you have multiple YubiKeys.
+Useful for identifying which key is inserted when you have multiple YubiKeys: each attached key is printed on its own line as `<serial> <reader number>`.
 
 #### security_key upload
 
 Upload a certificate or a private key to the entity's YubiKey PIV slot. Each call uploads one document, so uploading both the certificate and the private key takes two calls.
 
 ```bash
-sca security_key upload [-f|--force] <entity> <document>
+sca security_key upload [-f|--force] [--device SERIAL] <entity> <document>
 ```
 
 - `entity`: `ca`, `subca`, `user`, `host` or `service`
@@ -544,7 +561,7 @@ After upload, the private key on disk can be securely deleted - all signing oper
 Retrieve a certificate from the YubiKey.
 
 ```bash
-sca security_key get_crt <entity>
+sca security_key get_crt [--device SERIAL] <entity>
 ```
 
 **Example:**
@@ -555,16 +572,19 @@ sca security_key get_crt subca
 
 #### security_key wait_for
 
-Wait for a specific YubiKey (by serial number) to be inserted. Useful in scripts.
+Wait for the entity's YubiKey (by the serial configured in `<entity>_security_key_id`, or the one given with `--device`) to be inserted. The last output line is the number of the reader the key is in. Useful in scripts.
 
 ```bash
-sca security_key wait_for <serial>
+sca security_key wait_for [--device SERIAL] <entity>
 ```
 
 **Example:**
 ```bash
-# Wait for YubiKey with serial 12345678
-sca security_key wait_for 12345678
+# Wait for the sub-CA's configured YubiKey
+sca security_key wait_for subca
+
+# Wait for the sub-CA's backup YubiKey, serial 12345678
+sca security_key wait_for --device 12345678 subca
 ```
 
 ---

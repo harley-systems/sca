@@ -1,3 +1,6 @@
 wait_for_options:
 
   -h, --help      - print this help
+  --device SERIAL - use the security key with this serial instead of the one
+                    configured for the entity. needed to reach a second
+                    (backup) key of the same entity.

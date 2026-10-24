@@ -1,3 +1,7 @@
 info_options:
 
   -h, --help                - print this help
+  --device SERIAL           - act on the security key with this serial. when
+                              more than one key is attached, it is required:
+                              the command lists the attached serials and
+                              exits rather than pick one.

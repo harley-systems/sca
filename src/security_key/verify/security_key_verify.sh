@@ -1,5 +1,6 @@
 security_key_verify() {
-  local OPTS=$(getopt -o h --long help -n "sca security_key verify" -- "$@")
+  local device=''
+  local OPTS=$(getopt -o h --long help,device: -n "sca security_key verify" -- "$@")
   if [ $? != 0 ]; then error "failed parsing options. use sca security_key verify -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -7,6 +8,10 @@ security_key_verify() {
       -h | --help )
         security_key_verify_help
         return
+        ;;
+      --device )
+        device=$2
+        shift;shift
         ;;
       -- )
         shift
@@ -19,7 +24,7 @@ security_key_verify() {
   done
 
   local entity=$1
-  log_detailed "security_key_verify: started (entity='$entity')"
+  log_detailed "security_key_verify: started (entity='$entity', device:'$device')"
 
   # Validate entity
   local allowed_values=(ca subca user service host)
@@ -57,6 +62,25 @@ security_key_verify() {
   if ! command -v pkcs11-tool &> /dev/null; then
     error "pkcs11-tool not found. Install with: sudo apt install opensc" 1
   fi
+
+  # pkcs11-tool signs with the first token it finds unless told which one, so
+  # more than one key attached is refused unless --device names one. ykcs11
+  # labels each token "YubiKey PIV #<serial>", and that label is how the named
+  # key is selected. with a single key and no --device nothing is added, as
+  # before.
+  local selected_device
+  selected_device=$(security_key_select_device "$device") || exit $?
+  local device_serial="${selected_device%%$'\t'*}"
+  local token_option=()
+  local ykman_device_option=''
+  if [ -n "$device" ]; then
+    [[ "$device_serial" =~ ^[0-9]+$ ]] || \
+      error "security_key_verify: the key '$device' has no YubiKey hardware "\
+"serial to select it by. check that ykman is installed." 1
+    token_option=(--token-label "YubiKey PIV #${device_serial}")
+    ykman_device_option="--device ${device_serial} "
+  fi
+  log_detailed "security_key_verify: selected device '${device_serial}'"
 
   # Get the PKCS#11 ID for the entity from configuration
   local entity_pkcs11_id=$(eval echo \$${entity}_pkcs11_id)
@@ -116,7 +140,8 @@ security_key_verify() {
 
   # Attempt to sign with the provided PIN
   local sign_output
-  sign_output=$(pkcs11-tool --module "$ykcs11_module" --sign --mechanism RSA-PKCS \
+  sign_output=$(pkcs11-tool --module "$ykcs11_module" "${token_option[@]}" \
+    --sign --mechanism RSA-PKCS \
     --id "$entity_pkcs11_id" --pin "$pin" -i "$test_file" -o "$sig_file" 2>&1)
   local sign_result=$?
 
@@ -150,7 +175,7 @@ security_key_verify() {
       echo "              on a slot with touch-policy 'always' or 'cached' this"
       echo "              is usually a touch that was not given, rather than a"
       echo "              PIN problem -- ykcs11 reports both the same way."
-      echo "              check with: ykman piv keys info $yubikey_slot"
+      echo "              check with: ykman ${ykman_device_option}piv keys info $yubikey_slot"
     else
       echo "  Details:    $sign_output"
     fi

@@ -1,6 +1,7 @@
 security_key_upload() {
   local force=false
-  local OPTS=`getopt -o hf --long help,force -n "sca security_key upload" -- "$@"`
+  local device=''
+  local OPTS=`getopt -o hf --long help,force,device: -n "sca security_key upload" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca security_key upload -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -12,6 +13,10 @@ security_key_upload() {
       -f | --force )
         force=true
         shift
+      ;;
+      --device )
+        device=$2
+        shift;shift
       ;;
       -- )
         shift
@@ -31,12 +36,18 @@ security_key_upload() {
     error "security_key_upload: invalid value supplied for entity. use sca "\
 "security_key upload -h for help." 1
 
-  # TODO: check how to put to use the reader id we got in below commands
-  # it is useful when having multiple yubikeys inserted.
-  local wait_for_response=$(security_key_wait_for "$entity")
+  # the key is waited for once, and then named on every yubico-piv-tool call:
+  # left to itself, yubico-piv-tool uses the first reader it finds, which with
+  # more than one key attached need not be the one just waited for.
+  local device_option=()
+  [ -n "$device" ] && device_option=(--device "$device")
+  local reader_slot_number
+  reader_slot_number=$(security_key_wait_for "${device_option[@]}" "$entity") || exit $?
+  local reader_name
+  reader_name=$(security_key_reader_name "$reader_slot_number") || exit $?
 
   local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
-  log_detailed "security_key_upload: the wait for response was '${wait_for_response}'. "
+  log_detailed "security_key_upload: the key is in reader '${reader_slot_number}' ('${reader_name}'). "
   log_detailed "security_key_upload: the entity security_key_type '${entity_security_key_type}'. "
 
   # the slot is available for upload, so go ahead and do it
@@ -49,6 +60,9 @@ security_key_upload() {
       log_detailed "security_key_upload: the configured entity pkcs11 id '${entity_pkcs11_id}'. "
       log_detailed "security_key_upload: mapped yubikey slot id '${entity_yubikey_slot}'."
       log_detailed "security_key_upload: the management key file '${entity_management_key_file}'."
+      # left unexpanded until eval, as the reader name has spaces in it
+      local reader_option=''
+      [ -n "$reader_name" ] && reader_option=' --reader "${reader_name}"'
       local command_result=0
       local command_output=""
       case "$document" in
@@ -60,7 +74,7 @@ security_key_upload() {
           # occupied, and upload could not succeed without --force.
           # capturing stderr also keeps that message off the terminal, where it
           # appeared on every upload into an empty slot.
-          yubico_piv_tool_command='yubico-piv-tool -a "read-certificate" \
+          yubico_piv_tool_command='yubico-piv-tool'"${reader_option}"' -a "read-certificate" \
             -s $entity_yubikey_slot'
           log_verbose "security_key_upload: running command ${yubico_piv_tool_command}"
           local slot_read_output=$(eval "${yubico_piv_tool_command}" 2>&1)
@@ -73,7 +87,7 @@ security_key_upload() {
             # slot contains a certificate
             if [ $force = true ]; then
               log_detailed "security_key_upload: due to force flag, deleting the existing certificate."
-              yubico_piv_tool_command='yubico-piv-tool -a delete-certificate -s "$entity_yubikey_slot"'
+              yubico_piv_tool_command='yubico-piv-tool'"${reader_option}"' -a delete-certificate -s "$entity_yubikey_slot"'
               run_yubico_piv_tool_command "${yubico_piv_tool_command}" "${entity_management_key}"
             else
               error "security_key_upload: destination slot '$entity_yubikey_slot' already contains a "\
@@ -87,7 +101,7 @@ security_key_upload() {
           fi
           local entity_crt_file=$(eval echo \$${entity}_crt_file)
           log_detailed "security_key_upload: uploading the certificate ${entity_crt_file} to yubikey."
-          yubico_piv_tool_command='<"${entity_crt_file}" yubico-piv-tool -a import-certificate -s "$entity_yubikey_slot"'
+          yubico_piv_tool_command='<"${entity_crt_file}" yubico-piv-tool'"${reader_option}"' -a import-certificate -s "$entity_yubikey_slot"'
           run_yubico_piv_tool_command "${yubico_piv_tool_command}" "${entity_management_key}"
         ;;
         key )
@@ -100,7 +114,7 @@ security_key_upload() {
           # the entity_yubikey_slot. maybe it is possibly to determine by it's usage trial
           # in case it exists, we should err unless force is applied
           log_detailed "security_key_upload: uploading the key '${entity_key_file}' to yubikey."
-          yubico_piv_tool_command='<"${entity_key_file}" yubico-piv-tool --pin-policy="${entity_yubikey_pin_policy}" --touch-policy="${entity_yubikey_touch_policy}" -a import-key -s "${entity_yubikey_slot}"'
+          yubico_piv_tool_command='<"${entity_key_file}" yubico-piv-tool'"${reader_option}"' --pin-policy="${entity_yubikey_pin_policy}" --touch-policy="${entity_yubikey_touch_policy}" -a import-key -s "${entity_yubikey_slot}"'
           run_yubico_piv_tool_command "${yubico_piv_tool_command}" "${entity_management_key}"
         ;;
         * )

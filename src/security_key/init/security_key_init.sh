@@ -1,6 +1,7 @@
 security_key_init() {
   local roll_keys=false
-  OPTS=`getopt -o hr --long help,roll-keys -n "sca security_key init" -- "$@"`
+  local device=''
+  OPTS=`getopt -o hr --long help,roll-keys,device: -n "sca security_key init" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca security_key init -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -12,6 +13,10 @@ security_key_init() {
       -r | --roll-keys )
         roll_keys=true
         shift
+      ;;
+      --device )
+        device=$2
+        shift;shift
       ;;
       -- )
         shift
@@ -28,7 +33,15 @@ security_key_init() {
   [[ ! " ${allowed_values[@]} " =~ " ${entity} " ]] && \
     error "security_key_wait_for: invalid value supplied for entity. use sca "\
 "security_key wait_for -h for help." 1
-  local reader_slot_number=$(security_key_wait_for "$entity")
+  # the key is waited for once, and then named on every yubico-piv-tool call:
+  # left to itself, yubico-piv-tool uses the first reader it finds, which with
+  # more than one key attached need not be the one just waited for.
+  local device_option=()
+  [ -n "$device" ] && device_option=(--device "$device")
+  local reader_slot_number
+  reader_slot_number=$(security_key_wait_for "${device_option[@]}" "$entity") || exit $?
+  local reader_name
+  reader_name=$(security_key_reader_name "$reader_slot_number") || exit $?
   # TODO: default access keys depend on security_key_type - add case for it
   local default_management_key='010203040506070801020304050607080102030405060708'
   local default_pin='123456'
@@ -82,19 +95,22 @@ security_key_init() {
   local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
   case "$entity_security_key_type" in
     yubikey )
-      eval yubico-piv-tool -k ${old_management_key} -a set-mgm-key -n ${management_key} ${redirect_err_out}
+      # quoted for eval: the reader name has spaces in it
+      local reader_option=''
+      [ -n "$reader_name" ] && reader_option='--reader "${reader_name}"'
+      eval yubico-piv-tool ${reader_option} -k ${old_management_key} -a set-mgm-key -n ${management_key} ${redirect_err_out}
       if [ $? != 0 ]; then
         error "security_key_init: Error while setting the management key. Was your yubikey already "\
 "initialized? If so, you need to configure your yubikey management key, pin "\
 "and puk. For further information type 'sca init yubikey --help'" 1
       fi
-      eval yubico-piv-tool -k ${management_key} -a change-pin -P ${old_pin} -N ${pin} ${redirect_err_out}
+      eval yubico-piv-tool ${reader_option} -k ${management_key} -a change-pin -P ${old_pin} -N ${pin} ${redirect_err_out}
       if [ $? != 0 ]; then
         error "security_key_init: Error while setting the pin access code. Was your yubikey already "\
 "initialized? If so, you need to configure your yubikey management key, pin "\
 "and puk. For further information type 'sca init yubikey --help'" 1
       fi
-      eval yubico-piv-tool -k ${management_key} -a change-puk -P ${old_puk} -N ${puk} ${redirect_err_out}
+      eval yubico-piv-tool ${reader_option} -k ${management_key} -a change-puk -P ${old_puk} -N ${puk} ${redirect_err_out}
       if [ $? != 0 ]; then
         error "security_key_init: Error while setting the puk access code. Was your yubikey already "\
 "initialized? If so, you need to configure your yubikey management key, pin "\

@@ -1,5 +1,6 @@
 security_key_info() {
-  local OPTS=$(getopt -o h --long help -n "sca security_key info" -- "$@")
+  local device=''
+  local OPTS=$(getopt -o h --long help,device: -n "sca security_key info" -- "$@")
   if [ $? != 0 ]; then error "failed parsing options. use sca security_key info -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -7,6 +8,10 @@ security_key_info() {
       -h | --help )
         security_key_info_help
         return
+        ;;
+      --device )
+        device=$2
+        shift;shift
         ;;
       -- )
         shift
@@ -18,16 +23,23 @@ security_key_info() {
     esac
   done
 
-  log_detailed "security_key_info: started"
+  log_detailed "security_key_info: started (device:'$device')"
 
   # Check if yubico-piv-tool is available
   if ! command -v yubico-piv-tool &> /dev/null; then
     error "yubico-piv-tool not found. Install with: sudo apt install yubico-piv-tool" 1
   fi
 
+  # every yubico-piv-tool call names the reader of the selected key. left to
+  # itself, yubico-piv-tool reads whichever key it finds first.
+  local selected_device
+  selected_device=$(security_key_select_device "$device") || exit $?
+  local reader_option=()
+  [ -n "$selected_device" ] && reader_option=(--reader "${selected_device#*$'\t'}")
+
   # Get status from yubico-piv-tool
   local status_output
-  status_output=$(yubico-piv-tool -a status 2>&1)
+  status_output=$(yubico-piv-tool "${reader_option[@]}" -a status 2>&1)
   if [ $? -ne 0 ]; then
     if echo "$status_output" | grep -q "Failed to connect"; then
       error "No YubiKey detected. Please insert a YubiKey." 1
@@ -48,7 +60,7 @@ security_key_info() {
 
     # Try to read certificate from slot
     local cert_output
-    cert_output=$(yubico-piv-tool -a read-certificate -s "$slot" 2>&1)
+    cert_output=$(yubico-piv-tool "${reader_option[@]}" -a read-certificate -s "$slot" 2>&1)
 
     if echo "$cert_output" | grep -q "Failed\|error"; then
       continue

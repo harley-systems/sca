@@ -1,6 +1,7 @@
 security_key_id() {
   local security_key_type=''
-  local OPTS=`getopt -o ht: --long help,security-key-type: -n "sca security_key id" -- "$@"`
+  local device=''
+  local OPTS=`getopt -o ht: --long help,security-key-type:,device: -n "sca security_key id" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca security_key id -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -13,6 +14,10 @@ security_key_id() {
         security_key_type=$2
         shift;shift
       ;;
+      --device )
+        device=$2
+        shift;shift
+      ;;
       -- )
         shift
         break
@@ -22,25 +27,13 @@ security_key_id() {
       ;;
     esac
   done
-  log_detailed "security_key_id: started (security_key_type:'$security_key_type')"
+  log_detailed "security_key_id: started (security_key_type:'$security_key_type', device:'$device')"
   local current_security_key_id=''
-  # the reader NAME is carried alongside the number, not discarded: ykman has to
-  # be told which device to talk to, and the reader name is the only handle that
-  # ties an opensc reader to a particular key. the Name column offset is taken
-  # from the header row rather than assumed, because the Features column between
-  # them is usually empty but not always.
-  local readers_output=$(opensc-tool --list-readers 2>&1)
-  log_detailed "security_key_id: opensc readers:'${readers_output}'"
   local reader_filter='.'
   [ "$security_key_type" = "yubikey" ] && reader_filter='[Yy]ubi[Kk]ey'
-  local readers=$(printf '%s\n' "$readers_output" | awk -v want="$reader_filter" '
-    /^Nr\./ { namecol = index($0, "Name"); next }
-    namecol && /^[0-9]+[[:space:]]+Yes/ {
-      name = substr($0, namecol)
-      sub(/[[:space:]]+$/, "", name)
-      if (name ~ want) printf "%s\t%s\n", $1, name
-    }')
+  local readers=$(security_key_list_readers "$reader_filter")
   log_detailed "security_key_id: readers with a card:'${readers}'"
+  local device_found=false
   if ! [ -z "$readers" ]; then
     # there may be several readers with a card in them. each one is asked for its
     # own serial; asking ykman without naming a reader fails outright as soon as
@@ -70,12 +63,20 @@ security_key_id() {
       # an empty field, so it cannot be mistaken for a key with a blank serial.
       [ -z "$current_security_key_id" ] && current_security_key_id='-'
       log_detailed "security_key_id: current_security_key_id:'${current_security_key_id}'"
+      # with --device, only the key asked for is listed
+      if [ -n "$device" ]; then
+        [ "$current_security_key_id" != "$device" ] && continue
+        device_found=true
+      fi
       echo "$current_security_key_id $reader_slot_number"
     done <<< "$readers"
     # For YubiKeys: security_key_id is the hardware serial number (stable).
     # For other devices: security_key_id is the first 6 hex digits of the card serial.
-  else
+  elif [ -z "$device" ]; then
     echo "- -"
+  fi
+  if [ -n "$device" ] && [ $device_found = false ]; then
+    error "security_key_id: no security key with serial '$device' is attached." 1
   fi
   log_detailed "security_key_id: finished (security_key_type:'$security_key_type')"
 }
