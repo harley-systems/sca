@@ -143,6 +143,7 @@ Run `sca <command> --help` for detailed usage.
 - [YubiKey Setup](docs/yubikey.md) - Hardware security key configuration
 - [Procedures](docs/procedures.md) - Step-by-step guides
 - [SSH Integration](docs/ssh-integration.md) - Certificate-based SSH
+- [SSH with a YubiKey: Choosing a Method](docs/ssh-yubikey-options.md) - PIV vs OpenPGP (GPG) vs FIDO2
 - [Air-Gapped Operations](docs/air-gapped-operations.md) - Secure offline CA environment
 - [Configuration Reference](docs/configuration.md) - Config files and customization
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
