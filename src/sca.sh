@@ -56,7 +56,9 @@ sca() {
   done
   verb=$1
 
-  [ -f ${log_file} ] && touch ${log_file}
+  # tighten a log left behind by an older version, which created it at the
+  # caller's umask and so usually world-readable.
+  [ -f ${log_file} ] && { touch ${log_file}; chmod 600 ${log_file}; }
 
   log_detailed "sca: start (verb=${verb})"
 
@@ -197,7 +199,28 @@ log_verbose() {
   message="${@}"
   [[ $verbosity == v* ]] && log "${message}" || true
 }
+# a credential must never reach the log. the redaction happens here rather than
+# at each log_* call site, because this is the single point every one of them
+# funnels through -- which also covers call sites nobody has written yet.
+# the case test keeps the sed fork off the overwhelming majority of lines.
+redact_secrets() {
+  sed -E \
+    -e 's/(pin-value=)[^"[:space:];]+/\1<REDACTED>/g' \
+    -e 's/(pass(in|out) pass:)[^"[:space:]]+/\1<REDACTED>/g' \
+    -e 's/(OPENSSL_PKCS11_PIN=)[^"[:space:]]+/\1<REDACTED>/g' \
+    -e 's/(--key=)"?[0-9a-fA-F]{16,}"?/\1<REDACTED>/g' \
+    -e 's/(-k[[:space:]]+)[0-9a-fA-F]{16,}/\1<REDACTED>/g' \
+    -e "s/(key is set,? ')[0-9a-fA-F]{16,}'/\\1<REDACTED>'/g"
+}
 log() {
   message="${@}"
+  case "${message}" in
+    *pin-value=*|*"pass:"*|*OPENSSL_PKCS11_PIN=*|*--key=*|*"-k "*|*"key is set"*)
+      message=$(printf '%s' "${message}" | redact_secrets)
+      ;;
+  esac
+  # the log can still hold a path, a subject or a serial, so it is created
+  # 0600 rather than at the caller's umask -- which is what left it 0644.
+  [ -e "${log_file}" ] || ( umask 077; : >> "${log_file}" )
   echo "${message}" >> ${log_file}
 }
