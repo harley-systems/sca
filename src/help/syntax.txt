@@ -7,6 +7,7 @@ allowed values for the verb are:
   - request               - create request for a security document
   - approve               - approve request
   - revoke                - revoke a certificate and regenerate CRL
+  - scrub_log             - redact secrets from an existing log file
   - create                - create security documents
   - display               - display security documents
   - export                - export security documents

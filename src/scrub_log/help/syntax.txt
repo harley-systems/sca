@@ -1,0 +1,7 @@
+sca [<sca_options>] scrub_log [<scrub_log_options>] [<file>]
+
+@@@SCA OPTIONS@@@
+
+@@@OPTIONS@@@
+
+The <file> parameter is optional. It defaults to the sca log file, ~/.sca/log .

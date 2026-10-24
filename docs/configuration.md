@@ -29,9 +29,11 @@ SCA stores all configuration and data in `~/.sca/`:
 │
 ├── transfer/                    # Export/import staging area
 ├── downloads/                   # Downloaded files (ISO images)
-├── log                          # Operation log file
+├── log                          # Operation log file (mode 0600, see note below)
 └── demo/                        # Demo CA (if created)
 ```
+
+The log is created with mode `0600`, and secrets are redacted before they are written. A log written by an older version may still contain the YubiKey PIN or management key in cleartext. Run `sca scrub_log` to redact them, and don't share the log unredacted.
 
 ## Configuration File (sca.config)
 

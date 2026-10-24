@@ -32,6 +32,9 @@ sca create crl <entity>          # Generate CRL (entity: ca or subca)
 sca revoke <entity>              # Revoke cert + regenerate CRL (SubCA signs svc/host/user, CA signs subca)
 sca revoke <entity> -s ca        # Override signing entity
 
+# Log
+sca scrub_log [file]             # Redact PINs/management keys from an old log (default ~/.sca/log)
+
 # Approve/sign
 sca approve <entity> [entity_id]  # Sign CSR (NO "csr" subcommand! SubCA signs svc/host/user, CA signs subca)
 sca approve <entity> -f           # Force (overwrite existing cert)

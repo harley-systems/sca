@@ -1,0 +1,1 @@
+Redact PINs and management keys from an existing log file

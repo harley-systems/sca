@@ -343,6 +343,8 @@ cat ~/.sca/log
 tail -f ~/.sca/log  # Watch in real-time
 ```
 
+> **Warning:** a log written by an older version of sca may contain your YubiKey PIN or management key in cleartext. Run `sca scrub_log` once to redact them. See [scrub_log](commands.md#scrub_log).
+
 ### Report Issues
 
 Include the following when reporting issues:
@@ -352,7 +354,7 @@ Include the following when reporting issues:
 3. OpenSSL version: `openssl version`
 4. Command run (with `-d` flag)
 5. Full error output
-6. Relevant log entries from `~/.sca/log`
+6. Relevant log entries from `~/.sca/log`. Run `sca scrub_log` first: a log written by an older version may contain your YubiKey PIN or management key. Review the entries before you post them.
 
 ---
 
