@@ -41,17 +41,32 @@ security_key_wait_for() {
   local previous_security_key_ids=()
   local first_time=true
   while true; do
-    local current_security_key_ids=$(security_key_id --security-key-type $entity_security_key_type)
+    # the flag is omitted entirely when no type is configured. passing it with an
+    # empty, unquoted value made the word vanish, so getopt saw
+    # --security-key-type with nothing after it and rejected the call -- and
+    # security_key_id already treats an unset type as "any reader".
+    local type_option=()
+    [ -n "$entity_security_key_type" ] && \
+      type_option=(--security-key-type "$entity_security_key_type")
+    local current_security_key_ids=$(security_key_id "${type_option[@]}")
     if [ "$current_security_key_ids" != "- -" ]; then
       # we've retrieved some security key ids and their related reader numbers
       # now check if there's the one we're looking for
       local non_matched_keys=()
       local matched_keys=()
+      local unreadable_keys=()
       while read -r current_security_key_id; do
         # if it is not the one we are looking for and it was not present in previous
         # itteration of the outer infinite loop, then we need to present the user
         # that they had just inserted a wrong security key.
         log_detailed "security_key_wait_for: now checking '$current_security_key_id' matches the configured one '$entity_security_key_id'"
+        # a serial of '-' means the reader holds a card whose serial could not be
+        # read. that is not a key with the wrong serial and must not be reported
+        # as one.
+        if [ "${current_security_key_id%% *}" = "-" ]; then
+          unreadable_keys+=("$current_security_key_id")
+          continue
+        fi
         if [[ "$current_security_key_id" = "$entity_security_key_id"* ]]; then
           # we've got the correct security key inserted, se exit infinte loop
           matched_keys+=($current_security_key_id)
@@ -76,6 +91,12 @@ security_key_wait_for() {
 "the configured security key id for the '$entity' or if the security "\
 "key inseted is the intended one.")
           previous_security_key_ids+=("${non_matched_keys[@]}")
+        fi
+        if [ ${#unreadable_keys[@]} -ne 0 ] && [ $first_time = true ]; then
+          (>&2 echo "a card is present whose serial could not be read, so it "\
+"cannot be compared with the one configured for the '$entity'. check that the "\
+"security key type configured for '$entity' is correct and that the tooling "\
+"for it is installed.")
         fi
       fi
     else
