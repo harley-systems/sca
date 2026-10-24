@@ -1,1 +1,17 @@
-The test command is used for testing sca features.
+The test command runs named checks of sca and prints PASS or FAIL for each:
+
+  - init demo completes
+  - a service key, csr and certificate issued by the demo subca pass
+    openssl verify against the demo chain
+  - openssl version is 3 or newer
+  - the pkcs11 engine and opensc module files named in the config exist
+  - pcscd is installed
+  - ykcs11 is installed
+  - ykman runs, if it is installed (otherwise SKIP)
+
+Unless --skip-air-gapped-tests is given, it then rebuilds the sca usb stick
+test image, boots it in qemu without network, runs the same checks inside it
+and prints the results the guest left on a test disk.
+
+Exit code is 0 when every check passed, and 1 when any check failed or the
+air-gapped guest left no results. Details are in ~/.sca/log.
