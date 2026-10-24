@@ -67,12 +67,17 @@ security_key_init() {
       old_puk="$default_puk"
     fi
   fi
+  # printf, not echo: the PIN file is handed to libp11 as pin-source=file:, and
+  # libp11 only started ignoring a trailing newline in 0.4.17. Below that it
+  # reads the newline as part of the PIN, the token rejects it, and the attempt
+  # spends one of three retries. The other two are read with $(cat), which
+  # strips it either way -- written the same here so the files stay consistent.
   local management_key=`dd if=/dev/random bs=1 count=24 2>/dev/null | hexdump -v -e '/1 "%02X"'`
-  echo "${management_key}" > "${entity_management_key_file}"
+  printf '%s' "${management_key}" > "${entity_management_key_file}"
   local pin=`dd if=/dev/random bs=1 count=6 2>/dev/null | hexdump -v -e '/1 "%u"'|cut -c1-6`
-  echo "${pin}" > ${entity_pin_file}
+  printf '%s' "${pin}" > ${entity_pin_file}
   local puk=`dd if=/dev/random bs=1 count=6 2>/dev/null | hexdump -v -e '/1 "%u"'|cut -c1-8`
-  echo "${puk}" > ${entity_puk_file}
+  printf '%s' "${puk}" > ${entity_puk_file}
   # set the management key, pin and puk
   local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
   case "$entity_security_key_type" in
