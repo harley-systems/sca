@@ -114,7 +114,8 @@ sca security_key info
 
 ```bash
 # After creating sub-CA certificate
-sca security_key upload subca
+sca security_key upload subca crt
+sca security_key upload subca key
 ```
 
 ### Manual Upload
