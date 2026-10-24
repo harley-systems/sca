@@ -5,3 +5,10 @@ key_options:
                             with special care as you may loose your keys.
                             the old key is being backup-ed on the disk but not
                             on the hardware key.
+  --format <format>       - private key file format. allowed values are:
+                              pkcs1 - traditional RSA format
+                                      (-----BEGIN RSA PRIVATE KEY-----),
+                                      needed by e.g. StrongSwan on OpenWRT
+                              pkcs8 - (-----BEGIN PRIVATE KEY-----)
+                            when not given, openssl's default is used
+                            (pkcs8 on openssl 3.x, pkcs1 on 1.1.x).

@@ -155,9 +155,17 @@ _sca_create_key_complete() {
 
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h -f --help --force" -- "$current_word"))
+      suggestions=($(compgen -W "-h -f --help --force --format" -- "$current_word"))
       COMPREPLY=("${suggestions[@]}")
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == "--format" ]; then
+      entity_index=$((entity_index+1))
+      if [ $COMP_CWORD == $entity_index ]; then
+        suggestions=($(compgen -W "pkcs1 pkcs8" -- "$current_word"))
+        COMPREPLY=("${suggestions[@]}")
+        return
+      fi
     fi
     entity_index=$((entity_index+1))
   done
