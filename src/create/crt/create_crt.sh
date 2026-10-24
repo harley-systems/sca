@@ -98,8 +98,11 @@ create_crt() {
       log_detailed "create_crt: sign_by_entity_pkcs11_id '${sign_by_entity_pkcs11_id}'."
       local mapped_slot_id="${slot_map[${security_key_opensc_reader_slot_number}]::-1}"
       local entity_pin=$(get_yubikey_pin_parameter $sign_by_entity)
+      # pin-source hands openssl a file to read the PIN from; pin-value would
+      # put the PIN itself on the command line, where ps can read it.
+      local entity_pin_file=$(get_yubikey_pin_file_parameter $sign_by_entity)
       local pin_uri_fragment=""
-      [ -n "$entity_pin" ] && pin_uri_fragment=";pin-value=${entity_pin}"
+      [ -n "$entity_pin_file" ] && pin_uri_fragment=";pin-source=file:${entity_pin_file}"
       local pkcs11_keyfile="pkcs11:id=%${sign_by_entity_pkcs11_id};type=private${pin_uri_fragment}"
       # Set PKCS11_MODULE_PATH so the engine can find the PKCS#11 module
       # when loaded on demand via -engine pkcs11 (engine is no longer

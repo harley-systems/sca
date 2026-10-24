@@ -69,8 +69,11 @@ create_crl() {
       log_detailed "create_crl: opensc reader slot number '${security_key_opensc_reader_slot_number}' mapped to pkcs11 id is '${slot_map[${security_key_opensc_reader_slot_number}]::-1}'."
       local mapped_slot_id="${slot_map[${security_key_opensc_reader_slot_number}]::-1}"
       local entity_pin=$(get_yubikey_pin_parameter $entity)
+      # pin-source hands openssl a file to read the PIN from; pin-value would
+      # put the PIN itself on the command line, where ps can read it.
+      local entity_pin_file=$(get_yubikey_pin_file_parameter $entity)
       local pin_uri_fragment=""
-      [ -n "$entity_pin" ] && pin_uri_fragment=";pin-value=${entity_pin}"
+      [ -n "$entity_pin_file" ] && pin_uri_fragment=";pin-source=file:${entity_pin_file}"
       local pkcs11_keyfile="pkcs11:id=%${entity_pkcs11_id};type=private${pin_uri_fragment}"
       export PKCS11_MODULE_PATH="${opensc_pkcs11_module}"
       warn_yubikey_touch_expected $entity
