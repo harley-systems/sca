@@ -261,7 +261,11 @@ get_yubikey_pin_file_parameter() {
   local entity_yubikey_pin_policy=$(eval echo \$${entity}_yubikey_pin_policy)
   if [ "$entity_yubikey_pin_policy" = "always" ] || [ "$entity_yubikey_pin_policy" = "once" ]; then
     local entity_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
-    [ -f "$entity_pin_file" ] && pin_file="$entity_pin_file"
+    # -s, not -f: an empty PIN file means "no PIN" by the convention security
+    # key verify already follows. Pointing pin-source at it would make openssl
+    # log in with an empty PIN and fail, where returning nothing leaves openssl
+    # to prompt as it did before pin-source was used here.
+    [ -s "$entity_pin_file" ] && pin_file="$entity_pin_file"
   fi
   echo "$pin_file"
 }
