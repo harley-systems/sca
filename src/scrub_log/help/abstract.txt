@@ -3,3 +3,6 @@ management key in cleartext. The scrub_log command replaces them with
 <REDACTED> in place, using the same patterns sca applies to every new log line,
 and leaves the file with mode 0600. Run it once after upgrading, and before
 attaching a log to a bug report.
+
+If the log is a symlink, the file it points to is scrubbed. Don't run it while
+other sca commands are running, or their new log lines may be lost.
