@@ -1,7 +1,7 @@
 # SCA Makefile - Simplified with macros
 # Uses scripts/build-help.sh to generate help text
 
-.PHONY: all clean deploy
+.PHONY: all clean deploy check
 
 all: sca
 
@@ -313,6 +313,12 @@ sca: src/sca.sh src/run.sh build/help/help.txt $(COMMANDS)
 #------------------------------------------------------------------------------
 clean:
 	rm -rf build/*
+
+# Run the test suite (tests/test_*.sh). Each test file gets its own temporary
+# HOME, so the real ~/.sca is never touched. Named 'check' because 'test'
+# builds the 'sca test' subcommand.
+check: sca
+	./scripts/run-tests.sh
 
 INSTALL_DIR ?= $(HOME)/bin
 COMPLETION_DIR ?= $(HOME)/.local/share/bash-completion/completions

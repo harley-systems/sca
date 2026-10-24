@@ -16,7 +16,7 @@ Thank you for your interest in contributing to SCA!
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/my-feature`)
 3. Make your changes following the patterns below
-4. Test your changes (`make deploy && sca <your-command>`)
+4. Test your changes (`make check`, then `make deploy && sca <your-command>`)
 5. Commit with a clear message
 6. Push and open a Pull Request
 
@@ -187,6 +187,60 @@ make deploy INSTALL_DIR=/usr/local/bin COMPLETION_DIR=/etc/bash_completion.d
 sca <verb> <subcommand> --help
 sca <verb> <subcommand> <args>
 ```
+
+## Tests
+
+The test suite lives in `tests/` and is plain bash: no extra tools to install.
+
+### Running the tests
+
+```bash
+make check
+```
+
+This builds `build/sca.sh` and runs every `tests/test_*.sh`. It prints a
+summary and exits non-zero if any test fails. The tests run offline and need no
+YubiKey; YubiKey checks stay manual (see `docs/yubikey.md`).
+
+To run a single test file: `make && bash tests/test_smoke.sh`.
+
+(`make check` rather than `make test`: the `test` target builds the
+`sca test` environment-check subcommand.)
+
+### Your real `~/.sca` is safe
+
+Every test file sources `tests/lib.sh`, which points `HOME` at a fresh temporary
+folder for that file (deleted when it exits) and clears `sca_conf_folder`,
+`config_file`, `conventions_file` and `demo_folder` from the environment. So
+`sca config create all` and friends in a test only ever write under that
+temporary `HOME`.
+
+### Writing a test
+
+Create `tests/test_<topic>.sh`:
+
+```bash
+#!/bin/bash
+# what this file tests
+# shellcheck source=tests/lib.sh
+. "$(dirname "$0")/lib.sh"
+
+assert_succeeds sca config create all
+assert_file_exists "$HOME/.sca/config/sca.config"
+assert_eq "expected" "$(some command)" "what is being compared"
+assert_fails sca config get no_such_setting
+
+test_done
+```
+
+- `sca ...` runs the freshly built `build/sca.sh`.
+- `assert_eq EXPECTED ACTUAL [MESSAGE]` compares two strings.
+- `assert_file_exists FILE [MESSAGE]` checks a regular file exists.
+- `assert_succeeds CMD...` / `assert_fails CMD...` check a command's exit status.
+- `test_done` must be the last line: it exits non-zero if any assertion failed.
+
+A failed assertion is reported and the file keeps going, so one run shows every
+failure. Test files should pass `shellcheck`.
 
 ## Code Style
 
