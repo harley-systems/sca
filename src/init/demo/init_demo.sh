@@ -26,6 +26,16 @@ init_demo() {
     esac
   done
 
+  # the demo must never touch hardware security keys: with the user's real
+  # sca.config it would otherwise sign with the yubikey and upload the demo
+  # subca certificate over the real one. the conventions only fall back to
+  # the *_default values when these are empty, so the override survives every
+  # config resolve below.
+  export ca_use_security_key=false
+  export subca_use_security_key=false
+  export user_use_security_key=false
+  export host_use_security_key=false
+  export service_use_security_key=false
   config_resolve
   local test_folder_data=${1:-$demo_folder}
   test_folder_data="$(cd "$(dirname "$test_folder_data")"; pwd)/$(basename "$test_folder_data")"/
