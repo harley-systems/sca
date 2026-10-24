@@ -53,13 +53,22 @@ security_key_upload() {
       local command_output=""
       case "$document" in
         crt )
-          # check if the crt already exists in the upload destination slot
+          # does the destination slot already hold a certificate? decided on a
+          # certificate actually coming back, not on an error string:
+          # yubico-piv-tool reports "Failed fetching certificate." on STDERR, so
+          # grepping its stdout for that never matched, every slot looked
+          # occupied, and upload could not succeed without --force.
+          # capturing stderr also keeps that message off the terminal, where it
+          # appeared on every upload into an empty slot.
           yubico_piv_tool_command='yubico-piv-tool -a "read-certificate" \
-            -s $entity_yubikey_slot | grep "Failed fetching certificate"'
+            -s $entity_yubikey_slot'
           log_verbose "security_key_upload: running command ${yubico_piv_tool_command}"
-          local entity_security_key_slot_empty=$(eval "${yubico_piv_tool_command}")
-          log_detailed "security_key_upload: certificate lookup result at that slot '${entity_security_key_slot_empty}'."
-          if [ -z "$entity_security_key_slot_empty" ]; then
+          local slot_read_output=$(eval "${yubico_piv_tool_command}" 2>&1)
+          local entity_security_key_slot_occupied=false
+          printf '%s\n' "$slot_read_output" | grep -q "BEGIN CERTIFICATE" && \
+            entity_security_key_slot_occupied=true
+          log_detailed "security_key_upload: slot '${entity_yubikey_slot}' occupied:'${entity_security_key_slot_occupied}', read output:'${slot_read_output}'."
+          if [ "$entity_security_key_slot_occupied" = true ]; then
             log_detailed "security_key_upload: certificate found in the slot."
             # slot contains a certificate
             if [ $force = true ]; then
@@ -68,10 +77,10 @@ security_key_upload() {
               run_yubico_piv_tool_command "${yubico_piv_tool_command}" "${entity_management_key}"
             else
               error "security_key_upload: destination slot '$entity_yubikey_slot' already contains a "\
-"certificate. please, check the "\
-"configuration to see if the yubikey slot for entity $entity has been "\
-"properly configured. remove any unwanted certificate from yubikey by "\
-"issuing the following command: TODO:<add command here>" 1
+"certificate. please, check the configuration to see if the yubikey slot for "\
+"entity $entity has been properly configured. to replace it, re-run this "\
+"command with --force. to remove it by hand: yubico-piv-tool -k "\
+"<management-key> -a delete-certificate -s $entity_yubikey_slot" 1
             fi
           else
             log_detailed "security_key_upload: certificate not found in the slot."
