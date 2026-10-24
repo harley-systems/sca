@@ -411,7 +411,7 @@ sca security_key <subcommand> [arguments]
 | `verify <entity>` | Verify private key is present and working |
 | `init` | Initialize security key (first-time setup) |
 | `id` | Display security key identifier/serial |
-| `upload <entity>` | Upload key and certificate to security key |
+| `upload <entity> <document>` | Upload a certificate (`crt`) or private key (`key`) to security key |
 | `get_crt <entity>` | Retrieve certificate from security key |
 | `wait_for <serial>` | Wait for specific key to be inserted |
 
