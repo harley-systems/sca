@@ -27,11 +27,31 @@ security_key_verify() {
     error "security_key_verify: invalid entity '$entity'. Supported: ca, subca, user, service, host" 1
   fi
 
-  # Check if ykcs11 module is available
-  local ykcs11_module="/usr/lib/x86_64-linux-gnu/libykcs11.so"
+  # Resolve the ykcs11 module: the configured ykcs11_module wins; if that file
+  # is missing, look in a few common install locations before giving up
+  local configured_ykcs11_module="${ykcs11_module:-$ykcs11_module_default}"
+  local ykcs11_module="$configured_ykcs11_module"
   if [ ! -f "$ykcs11_module" ]; then
-    error "ykcs11 module not found at $ykcs11_module. Install with: sudo apt install ykcs11" 1
+    log_detailed "security_key_verify: ykcs11 module not found at configured path '$configured_ykcs11_module', searching common locations"
+    ykcs11_module=""
+    local candidate
+    for candidate in \
+      /usr/lib/*-linux-gnu/libykcs11.so /usr/lib/*-linux-gnu/libykcs11.so.* \
+      /usr/lib64/libykcs11.so /usr/lib64/libykcs11.so.* \
+      /usr/lib/libykcs11.so /usr/lib/libykcs11.so.* \
+      /usr/local/lib/libykcs11.so /usr/local/lib/libykcs11.so.* \
+      /usr/local/lib/libykcs11.dylib /opt/homebrew/lib/libykcs11.dylib \
+      ~/.nix-profile/lib/libykcs11.so /run/current-system/sw/lib/libykcs11.so; do
+      if [ -f "$candidate" ]; then
+        ykcs11_module="$candidate"
+        break
+      fi
+    done
+    if [ -z "$ykcs11_module" ]; then
+      error "ykcs11 module not found at '$configured_ykcs11_module' or in common locations. Install the YubiKey PKCS#11 module (ykcs11, part of yubico-piv-tool) and set ykcs11_module in ${config_file:-~/.sca/config/sca.config} to its full path." 1
+    fi
   fi
+  log_detailed "security_key_verify: using ykcs11 module '$ykcs11_module'"
 
   # Check if pkcs11-tool is available
   if ! command -v pkcs11-tool &> /dev/null; then

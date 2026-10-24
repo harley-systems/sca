@@ -186,6 +186,13 @@ This performs a test signing operation to verify the key is functional.
 Note: Tools like `ykman piv info` may incorrectly report "Private key: Not present"
 even when keys exist - use `sca security_key verify` for reliable detection.
 
+`verify` loads the YubiKey PKCS#11 module from the `ykcs11_module` setting in
+`~/.sca/config/sca.config` (default `/usr/lib/x86_64-linux-gnu/libykcs11.so`).
+If that file is missing, it searches common locations (other `/usr/lib/*-linux-gnu`
+triplets, `/usr/lib64`, `/usr/lib`, `/usr/local/lib`, Homebrew and Nix profiles).
+If your libykcs11 is somewhere else, set `ykcs11_module` to its full path.
+Run with `-d` to see which module was used.
+
 ## PIN Management
 
 ### Change PIN
