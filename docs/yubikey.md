@@ -113,8 +113,9 @@ sca security_key info
 ### Using SCA
 
 ```bash
-# After creating sub-CA certificate
-sca security_key upload subca
+# After creating sub-CA certificate -- one call per document
+sca security_key upload subca key
+sca security_key upload subca crt
 ```
 
 ### Manual Upload

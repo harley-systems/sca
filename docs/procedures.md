@@ -72,8 +72,9 @@ sca create csr subca
 sca approve subca
 sca create crt subca
 
-# Upload to YubiKey
-sca security_key upload subca
+# Upload to YubiKey -- one call per document
+sca security_key upload subca key
+sca security_key upload subca crt
 ```
 
 ---
@@ -267,7 +268,8 @@ sca export crt_pub_ssh subca
 ```bash
 # On new admin's machine
 sca import crt subca signed-subca.tar.gz
-sca security_key upload subca
+sca security_key upload subca key
+sca security_key upload subca crt
 ```
 
 ---

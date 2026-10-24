@@ -486,16 +486,21 @@ Useful for identifying which key is inserted when you have multiple YubiKeys.
 
 #### security_key upload
 
-Upload a private key and certificate to the YubiKey's PIV slot 9c (Digital Signature).
+Upload a private key or a certificate to the YubiKey's PIV slot 9c (Digital
+Signature). Each call uploads one document, so moving both takes two calls.
 
 ```bash
-sca security_key upload <entity>
+sca security_key upload <entity> <document>
 ```
+
+`<document>` is either `key` (the private key) or `crt` (the certificate).
+Omitting it is rejected.
 
 **Example:**
 ```bash
-# Upload sub-CA to YubiKey
-sca security_key upload subca
+# Upload sub-CA to YubiKey -- the key, then the certificate
+sca security_key upload subca key
+sca security_key upload subca crt
 ```
 
 After upload, the private key on disk can be securely deleted - all signing operations will use the YubiKey.
@@ -766,8 +771,9 @@ sca approve subca
 # 5. Create certificate
 sca create crt subca
 
-# 6. Upload to YubiKey
-sca security_key upload subca
+# 6. Upload to YubiKey -- one call per document
+sca security_key upload subca key
+sca security_key upload subca crt
 ```
 
 ---

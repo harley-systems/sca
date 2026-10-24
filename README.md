@@ -97,8 +97,9 @@ sca create csr subca
 sca approve subca
 sca create crt subca
 
-# Upload to YubiKey
-sca security_key upload subca
+# Upload to YubiKey -- one call per document
+sca security_key upload subca key
+sca security_key upload subca crt
 ```
 
 ### 3. Issue Certificates
