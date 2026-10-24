@@ -73,6 +73,13 @@ sca create <document_type> <entity>
 | `crl` | Certificate revocation list |
 | `crt_pub_ssh` | Batch: certificate + public keys |
 
+`create key` options:
+
+| Option | Description |
+|--------|-------------|
+| `-f, --force` | Overwrite an existing key (the old key file is backed up) |
+| `--format pkcs1\|pkcs8` | Private key file format. `pkcs1` writes `BEGIN RSA PRIVATE KEY`, `pkcs8` writes `BEGIN PRIVATE KEY`. Default: OpenSSL's default (PKCS#8 on OpenSSL 3.x) |
+
 | Entity | Description |
 |--------|-------------|
 | `ca` | Certificate authority |
@@ -86,6 +93,9 @@ sca create <document_type> <entity>
 ```bash
 # Create a new service private key
 sca create key service
+
+# Create the key in PKCS#1 format (BEGIN RSA PRIVATE KEY), e.g. for StrongSwan on OpenWRT
+sca create key --format pkcs1 service
 
 # Create certificate signing request
 sca create csr service

@@ -6,9 +6,15 @@
 #     the entity for which to export public documents
 #     allowed values are 'ca' 'subca' 'user' 'host' and 'service'
 #
+# options
+#   --format pkcs1|pkcs8
+#     the private key file format. when not given, the key is written in
+#     openssl's default format (pkcs8 on openssl 3.x, pkcs1 on 1.1.x).
+#
 create_key() {
   local force=false
-  local OPTS=`getopt -o hf --long help,force -n 'create key' -- "$@"`
+  local format=""
+  local OPTS=`getopt -o hf --long help,force,format: -n 'create key' -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca create key -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -21,6 +27,10 @@ create_key() {
         force=true;
         shift
       ;;
+      --format )
+        format=$2
+        shift 2
+      ;;
       -- )
         shift
         break
@@ -31,7 +41,13 @@ create_key() {
     esac
   done
   local entity=$1
-  log_detailed "create_key: start (entity='${entity}', force='${force}')"
+  log_detailed "create_key: start (entity='${entity}', force='${force}', format='${format}')"
+  case "${format}" in
+    ""|pkcs1|pkcs8 ) ;;
+    * )
+      error "create_key: unsupported key format '${format}'. allowed values are 'pkcs1' and 'pkcs8'." 1
+    ;;
+  esac
   eval mkdir -p \${${entity}_private_folder}
   local entity_key_file=$(eval echo \$${entity}_key_file)
   local entity_bits=$(eval echo \$${entity}_bits)
@@ -158,6 +174,7 @@ create_key() {
   log_verbose "$openssl_command"
   # generate the key for the entity
   eval "$openssl_command"
+  create_key_convert_format "${entity_key_file}" "${format}"
 
   if [ $entity_use_security_key = true ]; then
 
@@ -206,6 +223,53 @@ create_key() {
   # echo generating ca private key $ca_key_file and certificate signing request $ca_csr_file
   #openssl req -new -newkey rsa:3744 -keyout ${ca_key_file} -out ${ca_csr_file} -nodes
   log_detailed "create_key: finish (entity='${entity}', force='${force}')"
+}
+
+################################################################################
+# convert the private key file to the requested format, if it isn't already
+#
+# genrsa writes pkcs8 on openssl 3.x and pkcs1 on 1.1.x, and 'genrsa -traditional'
+# only exists on 3.x. so instead of passing version specific flags, check the
+# pem header of the generated key and convert only when needed.
+#
+# parameters
+#   key_file
+#     the private key file to convert in place
+#   format
+#     'pkcs1', 'pkcs8', or empty to keep the key as generated
+#
+create_key_convert_format() {
+  local key_file=$1
+  local format=$2
+  local wanted_header openssl_command
+  case "${format}" in
+    pkcs1 )
+      wanted_header="-----BEGIN RSA PRIVATE KEY-----"
+      # openssl 3.x 'rsa' writes pkcs1 only with -traditional; 1.1.x never gets
+      # here because its genrsa already wrote pkcs1
+      openssl_command="openssl rsa -traditional"
+    ;;
+    pkcs8 )
+      wanted_header="-----BEGIN PRIVATE KEY-----"
+      # 'pkey' writes unencrypted pkcs8 on both openssl 1.1.x and 3.x
+      openssl_command="openssl pkey"
+    ;;
+    * )
+      return
+    ;;
+  esac
+  if [ "$(head -n 1 "${key_file}")" == "${wanted_header}" ]; then
+    log_detailed "create_key_convert_format: key '${key_file}' is already ${format}."
+    return
+  fi
+  local tmp_key_file="${key_file}.tmp.$$"
+  openssl_command="$redirect_err ${openssl_command} -in \"\${key_file}\" -out \"\${tmp_key_file}\""
+  log_verbose "$openssl_command"
+  if ! eval "$openssl_command" || [ "$(head -n 1 "${tmp_key_file}")" != "${wanted_header}" ]; then
+    rm -f "${tmp_key_file}"
+    error "create_key: failed converting key '${key_file}' to ${format}." 1
+  fi
+  mv "${tmp_key_file}" "${key_file}"
 }
 
 create_key_help() {
