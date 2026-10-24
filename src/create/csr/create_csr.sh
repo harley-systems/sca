@@ -34,6 +34,7 @@ create_csr() {
   local use_openssl_config_file="${sca_conf_folder}${entity}.ini"
   log_detailed "create_csr: start (entity='${entity}', use_openssl_config_file='${use_openssl_config_file}', force='${force}')"
   local entity_key_file=$(eval echo \$${entity}_key_file)
+  local entity_use_security_key=$(eval echo \$${entity}_use_security_key)
   local entity_csr_file=$(eval echo \$${entity}_csr_file)
   if [ -f "$entity_csr_file" ]; then
     if [ $force = false ]; then
@@ -47,7 +48,16 @@ create_csr() {
   local openssl_command=""
   local entity_pin=""
   # check if the key file exists in the file system
-  if [ -f "$entity_key_file" ]; then
+  # a configured security key wins over a key file. the file used to win
+  # whenever it existed, which silently reduced use_security_key=true to a
+  # no-op and signed with a copy of a key that is meant to be unexportable.
+  if [ "$entity_use_security_key" = true ] && [ -f "$entity_key_file" ]; then
+    (>&2 echo "warning: '$entity' is configured to use a security key, but a "\
+"private key file for it also exists at $entity_key_file - the security key will be "\
+"used. that file is a copy of a key meant to never leave the token, so "\
+"consider removing it.")
+  fi
+  if [ -f "$entity_key_file" ] && [ "$entity_use_security_key" != true ]; then
     log_detailed "create_csr: entity key file '${entity_key_file}' was found. using it to create the csr."
     openssl_command="$redirect_err openssl req \
       -config $use_openssl_config_file \
@@ -63,8 +73,8 @@ create_csr() {
     # if entity key is configured to reside in the yubikey, use it to sign the
     # certificate signature request
     # TODO: validate that the key within the yubikey is related to the entity at hand
-    local entity_use_security_key=$(eval echo \$${entity}_use_security_key)
     if [ $entity_use_security_key = true ]; then
+      log_detailed "create_csr: signing with the security key configured for '$entity'"
       log_detailed "create_csr: entity key file is stored in a security key."
       local entity_pkcs11_id=$(eval echo \$${entity}_pkcs11_id)
       # if not already connected, prompt and wait for the relevant security key
