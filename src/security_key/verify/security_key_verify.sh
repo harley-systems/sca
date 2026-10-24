@@ -109,6 +109,11 @@ security_key_verify() {
   local sig_file=$(mktemp)
   echo "sca-verify-test-$(date +%s)" > "$test_file"
 
+  # say so before blocking on the card. every other command that performs a
+  # private key operation already calls this; verify did not, so the command
+  # simply stopped with no hint that it was waiting for a finger.
+  warn_yubikey_touch_expected $entity
+
   # Attempt to sign with the provided PIN
   local sign_output
   sign_output=$(pkcs11-tool --module "$ykcs11_module" --sign --mechanism RSA-PKCS \
@@ -136,6 +141,16 @@ security_key_verify() {
       echo "  Reason:     No private key found in slot"
     elif echo "$sign_output" | grep -q "CKR_PIN"; then
       echo "  Reason:     PIN error (wrong PIN or PIN blocked)"
+    elif echo "$sign_output" | grep -q "CKR_USER_NOT_LOGGED_IN"; then
+      # ykcs11 reports an un-confirmed touch as CKR_USER_NOT_LOGGED_IN, which
+      # reads like a PIN or login fault and sends people off changing PIN
+      # policies. on a slot with touch-policy always or cached it is far more
+      # often a touch that was never given.
+      echo "  Reason:     the key did not confirm the operation"
+      echo "              on a slot with touch-policy 'always' or 'cached' this"
+      echo "              is usually a touch that was not given, rather than a"
+      echo "              PIN problem -- ykcs11 reports both the same way."
+      echo "              check with: ykman piv keys info $yubikey_slot"
     else
       echo "  Details:    $sign_output"
     fi

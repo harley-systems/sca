@@ -273,6 +273,8 @@ warn_yubikey_touch_expected() {
   local entity=$1
   local entity_yubikey_touch_policy=$(eval echo \$${entity}_yubikey_touch_policy)
     log_detailed "yubikey touch policiy for entity ${entity} is set to ${entity_yubikey_touch_policy}."
-  [ "$entity_yubikey_touch_policy" = "always" ] && echo "Please, touch the key to " \
+  # echo joins its arguments with a space, so the fragment must not end in one
+  # too -- that is where the stray double space in this prompt came from.
+  [ "$entity_yubikey_touch_policy" = "always" ] && echo "Please, touch the key to" \
     "confirm usage of the $entity key."
 }
