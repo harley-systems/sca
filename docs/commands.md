@@ -262,7 +262,7 @@ sca export csr service
 sca export p12 user
 
 # Export p12 with custom password and friendly name
-sca export p12 -p mypassword -n "My VPN Certificate" user
+sca export p12 -p mypassword -n My-VPN-Certificate user
 
 # Export p12 with legacy encryption for older software
 sca export p12 --legacy service
@@ -273,9 +273,13 @@ sca export p12 --legacy service
 | Option | Description |
 |--------|-------------|
 | `-p, --password` | Password to protect the p12 file (prompted if not provided) |
-| `-n, --friendly-name` | Friendly name for the certificate in the bundle |
+| `-n, --friendly-name` | Friendly name for the certificate in the bundle (no spaces) |
 | `-l, --legacy` | Use legacy encryption for compatibility with older software |
 | `-o, --output` | Custom output file path |
+
+To use a p12 as a browser client certificate for mTLS (importing it into
+Chrome/Firefox/Safari and configuring NGINX), see
+[Browser Client Certificates (mTLS)](procedures.md#browser-client-certificates-mtls).
 
 ---
 
