@@ -14,6 +14,10 @@ SSH can authenticate using:
 
 This guide covers using your PKI certificates for SSH access.
 
+This page covers the **PIV** (PKCS#11) method, which is the one SCA implements. A
+YubiKey can also do SSH via its OpenPGP applet (gpg-agent) or as a FIDO2 security key
+(`ed25519-sk`). See [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md).
+
 ## YubiKey SSH Authentication
 
 ### Extract SSH Public Key from YubiKey
@@ -286,6 +290,7 @@ Look for:
 
 ## See Also
 
+- [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md) - PIV vs OpenPGP vs FIDO2
 - [YubiKey Setup](yubikey.md) - Hardware key configuration
 - [Procedures](procedures.md) - Certificate creation procedures
 - [Command Reference](commands.md) - Command reference

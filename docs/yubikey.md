@@ -23,6 +23,8 @@ YubiKey provides hardware-based protection for private keys:
 | Security Key | No | No |
 
 The PIV (Personal Identity Verification) feature is required for certificate operations.
+Security Key series devices can still be used for SSH as FIDO2 keys; see
+[SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md).
 
 ## Prerequisites
 
@@ -318,3 +320,4 @@ Touch policies:
 - [Command Reference](commands.md) - Command reference
 - [Procedures](procedures.md) - Step-by-step guides
 - [SSH Integration](ssh-integration.md) - Use YubiKey for SSH
+- [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md) - PIV vs OpenPGP vs FIDO2 for SSH
