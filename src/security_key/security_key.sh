@@ -250,6 +250,21 @@ get_yubikey_pin_parameter() {
   fi
   echo "$pin"
 }
+# the path of the PIN file, for a pin-source= attribute in a PKCS#11 URI.
+# the PIN itself must never go in the URI: a URI is a command-line argument,
+# so the PIN would be readable in ps for as long as the call runs.
+# gated on the same pin policy as get_yubikey_pin_parameter, so a key that
+# needs no PIN still gets no attribute.
+get_yubikey_pin_file_parameter() {
+  local entity="$1"
+  local pin_file=""
+  local entity_yubikey_pin_policy=$(eval echo \$${entity}_yubikey_pin_policy)
+  if [ "$entity_yubikey_pin_policy" = "always" ] || [ "$entity_yubikey_pin_policy" = "once" ]; then
+    local entity_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
+    [ -f "$entity_pin_file" ] && pin_file="$entity_pin_file"
+  fi
+  echo "$pin_file"
+}
 warn_yubikey_touch_expected() {
   local entity=$1
   local entity_yubikey_touch_policy=$(eval echo \$${entity}_yubikey_touch_policy)
