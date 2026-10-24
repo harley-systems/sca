@@ -223,8 +223,9 @@ chain. You are prompted for an export password. Let SCA prompt for it rather tha
 passing `-p`, which leaves the password in your shell history and the process list.
 Give the password to the user over a different channel than the file.
 
-Use `-n "Alice @ dashboards"` to set the name the browser shows in its certificate
-picker, and `-o <file>` to choose the output path.
+Use `-n alice-dashboards` to set the name the browser shows in its certificate
+picker, and `-o <file>` to choose the output path. The name can't contain spaces
+yet: `sca` splits it into separate arguments and the export fails.
 
 **When to use `--legacy`:** by default OpenSSL 3 encrypts the bundle with
 AES-256/PBKDF2. Current Chrome, Firefox and Windows import this fine. Older macOS
