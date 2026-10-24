@@ -24,33 +24,54 @@ security_key_id() {
   done
   log_detailed "security_key_id: started (security_key_type:'$security_key_type')"
   local current_security_key_id=''
-  local filter_readers_with_cards='| grep -P "^\d\s*Yes"'
-
-  local filter_yubikey_readers=''
-  [ "$security_key_type" = "yubikey" ] && filter_yubikey_readers=' | grep -i yubikey '
-  local select_first_column=' | cut -c1 '
-  local get_readers_command="opensc-tool --list-readers $filter_readers_with_cards $filter_yubikey_readers $select_first_column"
-  local security_key_opensc_reader_slot_numbers=$(eval $get_readers_command)
-  log_detailed "security_key_id: security_key_opensc_reader_slot_numbers:'${security_key_opensc_reader_slot_numbers}' "
-  if ! [ -z "$security_key_opensc_reader_slot_numbers" ]; then
-    # above command may return multiple slot numbers. we shall loop over
-    # all security_key_opensc_reader_slot_numbers and extract all security_key_ids
-    while read -r reader_slot_number; do
-      log_detailed "security_key_id: reader_slot_number:'${reader_slot_number}'"
+  # the reader NAME is carried alongside the number, not discarded: ykman has to
+  # be told which device to talk to, and the reader name is the only handle that
+  # ties an opensc reader to a particular key. the Name column offset is taken
+  # from the header row rather than assumed, because the Features column between
+  # them is usually empty but not always.
+  local readers_output=$(opensc-tool --list-readers 2>&1)
+  log_detailed "security_key_id: opensc readers:'${readers_output}'"
+  local reader_filter='.'
+  [ "$security_key_type" = "yubikey" ] && reader_filter='[Yy]ubi[Kk]ey'
+  local readers=$(printf '%s\n' "$readers_output" | awk -v want="$reader_filter" '
+    /^Nr\./ { namecol = index($0, "Name"); next }
+    namecol && /^[0-9]+[[:space:]]+Yes/ {
+      name = substr($0, namecol)
+      sub(/[[:space:]]+$/, "", name)
+      if (name ~ want) printf "%s\t%s\n", $1, name
+    }')
+  log_detailed "security_key_id: readers with a card:'${readers}'"
+  if ! [ -z "$readers" ]; then
+    # there may be several readers with a card in them. each one is asked for its
+    # own serial; asking ykman without naming a reader fails outright as soon as
+    # more than one key is present.
+    while IFS=$'\t' read -r reader_slot_number reader_name; do
+      [ -z "$reader_slot_number" ] && continue
+      log_detailed "security_key_id: reader_slot_number:'${reader_slot_number}' reader_name:'${reader_name}'"
       local current_security_key_id=''
       if [ "$security_key_type" = "yubikey" ] && command -v ykman &> /dev/null; then
         # For YubiKeys, use ykman to get the hardware serial (stable, doesn't change)
         # opensc-tool --serial returns CHUID which changes when certificates are uploaded
-        current_security_key_id=$(ykman info 2>/dev/null | grep -i "serial number" | awk '{print $3}')
+        local ykman_output=$(ykman --reader "$reader_name" info 2>&1)
+        current_security_key_id=$(printf '%s\n' "$ykman_output" | grep -i "serial number" | awk '{print $3}')
+        # the error is logged rather than dropped. discarding it turned a plain
+        # "Multiple YubiKeys detected" into an empty serial, and an empty serial
+        # makes every wait_for-gated command spin forever on a line it can never
+        # match.
+        [ -z "$current_security_key_id" ] && \
+          log_detailed "security_key_id: ykman gave no serial for reader '${reader_name}':'${ykman_output}'"
         log_detailed "security_key_id: using ykman hardware serial"
       else
         # Fallback to opensc-tool for non-YubiKey devices
         current_security_key_id=$(opensc-tool --serial \
           --reader $reader_slot_number | cut -d ' ' -f 1,2,3,4,5,6 | tr ' ' '-')
       fi
+      # a reader whose serial could not be read is reported as '-' rather than as
+      # an empty field, so it cannot be mistaken for a key with a blank serial.
+      [ -z "$current_security_key_id" ] && current_security_key_id='-'
       log_detailed "security_key_id: current_security_key_id:'${current_security_key_id}'"
       echo "$current_security_key_id $reader_slot_number"
-    done <<< "$security_key_opensc_reader_slot_numbers"
+    done <<< "$readers"
     # For YubiKeys: security_key_id is the hardware serial number (stable).
     # For other devices: security_key_id is the first 6 hex digits of the card serial.
   else
