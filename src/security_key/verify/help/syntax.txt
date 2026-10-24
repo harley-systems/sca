@@ -1,3 +1,9 @@
 sca [<sca_options>] security_key [<security_key_options>] verify [<verify_options>] <entity>
 
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@
+
 entity is one of: ca, subca, user, service, host

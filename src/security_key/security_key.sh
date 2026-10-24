@@ -278,3 +278,98 @@ warn_yubikey_touch_expected() {
   [ "$entity_yubikey_touch_policy" = "always" ] && echo "Please, touch the key to" \
     "confirm usage of the $entity key."
 }
+################################################################################
+# the readers that hold a card, one per line: "<opensc reader number><TAB><name>"
+#
+# the reader NAME is carried alongside the number, not discarded: it is the only
+# handle that ties an opensc reader to a particular key. the Name column offset
+# is taken from the header row rather than assumed, because the Features column
+# between them is usually empty but not always.
+#
+# parameters
+#   reader_filter - optional regex the reader name has to match
+security_key_list_readers() {
+  local reader_filter="${1:-.}"
+  local readers_output=$(opensc-tool --list-readers 2>&1)
+  log_detailed "security_key_list_readers: opensc readers:'${readers_output}'"
+  printf '%s\n' "$readers_output" | awk -v want="$reader_filter" '
+    /^Nr\./ { namecol = index($0, "Name"); next }
+    namecol && /^[0-9]+[[:space:]]+Yes/ {
+      name = substr($0, namecol)
+      sub(/[[:space:]]+$/, "", name)
+      if (name ~ want) printf "%s\t%s\n", $1, name
+    }'
+}
+################################################################################
+# the name of the reader with the given opensc reader number, in the form
+# yubico-piv-tool --reader takes. prints nothing for an empty reader number.
+#
+# yubico-piv-tool connects to the first reader whose name CONTAINS the one it is
+# given. where one attached reader's name is part of another's (macOS names a
+# second key "... CCID 01" next to a first key's "... CCID"), it cannot be told
+# apart, and that is refused rather than left to act on whichever comes first.
+#
+# parameters
+#   reader_slot_number - opensc reader number, as printed by security_key id
+security_key_reader_name() {
+  local reader_slot_number="$1"
+  [ -z "$reader_slot_number" ] && return 0
+  local readers=$(security_key_list_readers)
+  local reader_name=$(printf '%s\n' "$readers" | \
+    awk -F'\t' -v nr="$reader_slot_number" '$1 == nr { print $2; exit }')
+  [ -z "$reader_name" ] && \
+    error "security_key_reader_name: no card found in reader '$reader_slot_number'." 1
+  local wanted=$(printf '%s' "$reader_name" | tr '[:upper:]' '[:lower:]')
+  local reader_number other_name
+  while IFS=$'\t' read -r reader_number other_name; do
+    [ -z "$reader_number" ] || [ "$reader_number" = "$reader_slot_number" ] && continue
+    other_name=$(printf '%s' "$other_name" | tr '[:upper:]' '[:lower:]')
+    if [[ "$other_name" == *"$wanted"* ]]; then
+      error "security_key_reader_name: the reader '$reader_name' can not be "\
+"told apart from another attached reader whose name contains it, so "\
+"yubico-piv-tool could act on either key. attach only the key you want to "\
+"use." 1
+    fi
+  done <<< "$readers"
+  log_detailed "security_key_reader_name: reader '$reader_slot_number' is '$reader_name'"
+  echo "$reader_name"
+}
+################################################################################
+# selects the yubikey a command that does not wait for a key acts on, and prints
+# "<serial><TAB><reader name>" for it.
+#
+# with no device asked for, behaviour with a single key is what it always was:
+# no key found prints nothing, leaving the tool to report it; one key is that
+# key; more than one is refused with the attached serials listed, rather than
+# letting the tool act on whichever it finds first.
+#
+# parameters
+#   device - the serial asked for with --device, or empty
+security_key_select_device() {
+  local device="$1"
+  local ids=$(security_key_id --security-key-type yubikey)
+  local attached=$(printf '%s\n' "$ids" | awk '$2 != "-" && $2 != ""')
+  local serials=$(printf '%s\n' "$attached" | awk 'NF { printf "%s%s", sep, $1; sep=", " }')
+  log_detailed "security_key_select_device: device:'$device' attached:'$serials'"
+  local selected=''
+  if [ -z "$device" ]; then
+    local count=$(printf '%s\n' "$attached" | awk 'NF' | wc -l)
+    [ "$count" -eq 0 ] && return 0
+    if [ "$count" -gt 1 ]; then
+      error "more than one security key is attached (serials: $serials). "\
+"choose one with --device SERIAL." 1
+    fi
+    selected="$attached"
+  else
+    selected=$(printf '%s\n' "$attached" | awk -v want="$device" '$1 == want { print; exit }')
+    if [ -z "$selected" ]; then
+      error "no security key with serial '$device' is attached "\
+"(attached: ${serials:-none})." 1
+    fi
+  fi
+  local serial="${selected%% *}"
+  local reader_slot_number="${selected##* }"
+  local reader_name
+  reader_name=$(security_key_reader_name "$reader_slot_number") || exit $?
+  printf '%s\t%s\n' "$serial" "$reader_name"
+}

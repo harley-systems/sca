@@ -10,7 +10,8 @@
 #   log_detailed "security_key_init: piv card is not inserted"
 # fi
 security_key_wait_for() {
-  local OPTS=`getopt -o h --long help -n "sca security_key wait_for" -- "$@"`
+  local device=''
+  local OPTS=`getopt -o h --long help,device: -n "sca security_key wait_for" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca security_key wait_for -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -18,6 +19,10 @@ security_key_wait_for() {
       -h | --help )
         security_key_wait_for_help
         return
+      ;;
+      --device )
+        device=$2
+        shift;shift
       ;;
       -- )
         shift
@@ -30,12 +35,16 @@ security_key_wait_for() {
   done
   local entity="$1"
   shift
-  log_detailed "security_key_wait_for: started (entity='$entity')"
+  log_detailed "security_key_wait_for: started (entity='$entity', device:'$device')"
   local allowed_values=(ca subca user service host)
   [[ ! " ${allowed_values[@]} " =~ " ${entity} " ]] && \
     error "security_key_wait_for: invalid value supplied for entity. use sca "\
 "security_key wait_for -h for help." 1
   local entity_security_key_id=$(eval echo \$${entity}_security_key_id)
+  # --device names the key for this run, in place of the configured one: that is
+  # how a backup key of the same entity is reached. it is matched exactly, not as
+  # a prefix, so one serial can not stand in for a longer one.
+  [ -n "$device" ] && entity_security_key_id="$device"
   local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
   # wait for the relevant yubikey_id (entity_yubikey_id)
   local previous_security_key_ids=()
@@ -55,6 +64,16 @@ security_key_wait_for() {
       local non_matched_keys=()
       local matched_keys=()
       local unreadable_keys=()
+      # with no key configured or asked for, every key would match, and the first
+      # one listed would be used. that is a guess, so it is refused as soon as
+      # there is more than one to guess from.
+      if [ -z "$entity_security_key_id" ] && \
+        [ "$(printf '%s\n' "$current_security_key_ids" | awk 'NF' | wc -l)" -gt 1 ]; then
+        error "security_key_wait_for: more than one security key is attached "\
+"(serials: $(printf '%s\n' "$current_security_key_ids" | awk 'NF { printf "%s%s", sep, $1; sep=", " }')) "\
+"and none is configured for '$entity'. choose one with --device SERIAL, or set "\
+"${entity}_security_key_id." 1
+      fi
       while read -r current_security_key_id; do
         # if it is not the one we are looking for and it was not present in previous
         # itteration of the outer infinite loop, then we need to present the user
@@ -67,7 +86,13 @@ security_key_wait_for() {
           unreadable_keys+=("$current_security_key_id")
           continue
         fi
-        if [[ "$current_security_key_id" = "$entity_security_key_id"* ]]; then
+        local id_matches=false
+        if [ -n "$device" ]; then
+          [ "${current_security_key_id%% *}" = "$device" ] && id_matches=true
+        else
+          [[ "$current_security_key_id" = "$entity_security_key_id"* ]] && id_matches=true
+        fi
+        if [ $id_matches = true ]; then
           # we've got the correct security key inserted, se exit infinte loop
           matched_keys+=($current_security_key_id)
           break

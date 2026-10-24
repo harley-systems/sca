@@ -44,8 +44,15 @@ _sca_security_key_get_crt_complete() {
   local entity_index=$((get_crt_index+1))
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h --help" -- "$current_word"))
+      suggestions=($(compgen -W "-h --help --device" -- "$current_word"))
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
     fi
     entity_index=$((entity_index+1))
   done
@@ -68,8 +75,15 @@ _sca_security_key_id_complete() {
   local type=''
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h -t --help --security-key-type" -- "$current_word"))
+      suggestions=($(compgen -W "-h -t --help --security-key-type --device" -- "$current_word"))
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
     fi
     if [ ${COMP_WORDS[$entity_index]} == --security-key-type ] || [ ${COMP_WORDS[$entity_index]} == -t ]; then
       if [  $((entity_index+1)) == $COMP_CWORD ]; then
@@ -100,8 +114,18 @@ _sca_security_key_id_complete() {
 _sca_security_key_info_complete() {
   local info_index=$1
   local option_index=$((info_index+1))
+  while [ $option_index -lt $COMP_CWORD ]; do
+    if [ "${COMP_WORDS[$option_index]}" == --device ]; then
+      if [ $((option_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      option_index=$((option_index+1))
+    fi
+    option_index=$((option_index+1))
+  done
   if [ $COMP_CWORD == $option_index ]; then
-    suggestions=($(compgen -W "-h --help" -- "$current_word"))
+    suggestions=($(compgen -W "-h --help --device" -- "$current_word"))
   fi
 }
 _sca_security_key_init_complete() {
@@ -109,8 +133,15 @@ _sca_security_key_init_complete() {
   local entity_index=$((init_index+1))
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h -r --help --roll-keys" -- "$current_word"))
+      suggestions=($(compgen -W "-h -r --help --roll-keys --device" -- "$current_word"))
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
     fi
     entity_index=$((entity_index+1))
   done
@@ -132,8 +163,15 @@ _sca_security_key_upload_complete() {
   local entity_index=$((upload_index+1))
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h -f --help --force" -- "$current_word"))
+      suggestions=($(compgen -W "-h -f --help --force --device" -- "$current_word"))
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
     fi
     entity_index=$((entity_index+1))
   done
@@ -158,8 +196,15 @@ _sca_security_key_verify_complete() {
   local entity_index=$((verify_index+1))
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h --help" -- "$current_word"))
+      suggestions=($(compgen -W "-h --help --device" -- "$current_word"))
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
     fi
     entity_index=$((entity_index+1))
   done
@@ -181,8 +226,15 @@ _sca_security_key_wait_for_complete() {
   local entity_index=$((wait_for_index+1))
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h --help" -- "$current_word"))
+      suggestions=($(compgen -W "-h --help --device" -- "$current_word"))
       return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
     fi
     entity_index=$((entity_index+1))
   done
@@ -198,4 +250,8 @@ _sca_security_key_wait_for_complete() {
         ;;
     esac
   fi
+}
+# the serials of the attached yubikeys, for the value of --device
+_sca_security_key_device_complete() {
+  suggestions=($(compgen -W "$(ykman list --serials 2>/dev/null)" -- "$current_word"))
 }

@@ -4,3 +4,5 @@ id_options:
   -t, --security-key-type   - retrieve security keys only for security keys of
                               specified type. currently supported type is
                               yubikey only.
+  --device SERIAL           - list only the security key with this serial, and
+                              exit with an error if it is not attached.
