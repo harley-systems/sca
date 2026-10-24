@@ -55,6 +55,7 @@ create_crt() {
   [[ "$entity" == "$sign_by_entity" ]] && selfsign="-selfsign"
   export OPENSSL_CONF="${sca_conf_folder}${sign_by_entity}.ini"
   local sign_by_entity_key_file=$(eval echo \$${sign_by_entity}_key_file)
+  local sign_by_entity_use_security_key=$(eval echo \$${sign_by_entity}_use_security_key)
   local entity_csr_file=$(eval echo \${${entity}_csr_file})
   local entity_crt_file=$(eval echo \${${entity}_crt_file})
   local entity_extensions="${entity}_with_san_ext"
@@ -71,8 +72,17 @@ create_crt() {
       mv $entity_crt_file $entity_crt_file.$RANDOM.bak
     fi
   fi
-  # check if the sign_by_entity_key_file exists in the filesystem.
-  if [ -f "$sign_by_entity_key_file" ]; then
+  # a configured security key wins over a key file. the file used to win
+  # whenever it existed, which silently reduced use_security_key=true to a
+  # no-op and signed with a copy of a key that is meant to be unexportable.
+  if [ "$sign_by_entity_use_security_key" = true ] && [ -f "$sign_by_entity_key_file" ]; then
+    (>&2 echo "warning: '$sign_by_entity' is configured to use a security key, but a "\
+"private key file for it also exists at $sign_by_entity_key_file - the security key will be "\
+"used. that file is a copy of a key meant to never leave the token, so "\
+"consider removing it.")
+  fi
+  if [ -f "$sign_by_entity_key_file" ] && [ "$sign_by_entity_use_security_key" != true ]; then
+    log_detailed "create_crt: signing with the key file $sign_by_entity_key_file"
     # if so, use it to issue signed certificate
     openssl_command="$redirect_err openssl ca \
       -name $sign_by_entity \
@@ -86,8 +96,8 @@ create_crt() {
       $selfsign "
   else
     # check if the signing entity (sign_by_entity) is configured to be stored in hw device
-    local sign_by_entity_use_security_key=$(eval echo \$${sign_by_entity}_use_security_key)
     if [ $sign_by_entity_use_security_key = true ]; then
+      log_detailed "create_crt: signing with the security key configured for '$sign_by_entity'"
       local sign_by_entity_security_key_type=$(eval echo \$${sign_by_entity}_security_key_type)
       local sign_by_entity_pkcs11_id=$(eval echo \${${sign_by_entity}_pkcs11_id})
       local security_key_opensc_reader_slot_number=$(security_key_wait_for $sign_by_entity)

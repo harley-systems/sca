@@ -37,6 +37,7 @@ create_crl() {
 
   export OPENSSL_CONF="${sca_conf_folder}${entity}.ini"
   local entity_key_file=$(eval echo \$${entity}_key_file)
+  local entity_use_security_key=$(eval echo \$${entity}_use_security_key)
   local entity_crl_file=$(eval echo \$${entity}_crl_file)
   local entity_crl_serial_file=$(eval echo \$${entity}_crl_serial_file)
   local openssl_command=""
@@ -50,7 +51,17 @@ create_crl() {
   fi
 
   # check if the entity_key_file exists in the filesystem
-  if [ -f "$entity_key_file" ]; then
+  # a configured security key wins over a key file. the file used to win
+  # whenever it existed, which silently reduced use_security_key=true to a
+  # no-op and signed with a copy of a key that is meant to be unexportable.
+  if [ "$entity_use_security_key" = true ] && [ -f "$entity_key_file" ]; then
+    (>&2 echo "warning: '$entity' is configured to use a security key, but a "\
+"private key file for it also exists at $entity_key_file - the security key will be "\
+"used. that file is a copy of a key meant to never leave the token, so "\
+"consider removing it.")
+  fi
+  if [ -f "$entity_key_file" ] && [ "$entity_use_security_key" != true ]; then
+    log_detailed "create_crl: signing with the key file $entity_key_file"
     # use filesystem key to generate CRL
     openssl_command="$redirect_err openssl ca \
       -name $entity \
@@ -59,8 +70,8 @@ create_crl() {
       -keyfile $entity_key_file"
   else
     # check if the entity is configured to use a hardware security key
-    local entity_use_security_key=$(eval echo \$${entity}_use_security_key)
     if [ $entity_use_security_key = true ]; then
+      log_detailed "create_crl: signing with the security key configured for '$entity'"
       local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
       local entity_pkcs11_id=$(eval echo \${${entity}_pkcs11_id})
       local security_key_opensc_reader_slot_number=$(security_key_wait_for $entity)
