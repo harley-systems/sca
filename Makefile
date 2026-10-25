@@ -1,7 +1,7 @@
 # SCA Makefile - Simplified with macros
 # Uses scripts/build-help.sh to generate help text
 
-.PHONY: all clean deploy check
+.PHONY: all clean deploy check docs docs-check
 
 all: sca
 
@@ -319,6 +319,22 @@ clean:
 # builds the 'sca test' subcommand.
 check: sca
 	./scripts/run-tests.sh
+
+# Generate the command reference (docs/commands.md, docs/commands/*.md) from
+# the help files. See scripts/build-docs.sh.
+docs:
+	./scripts/build-docs.sh
+
+# Fail when the committed command reference is stale, i.e. 'make docs' changes
+# or adds files under docs/. Changes already staged with 'git add' count as
+# committed.
+docs-check: docs
+	@git diff --exit-code -- docs/ || \
+		{ echo "docs are stale: run 'make docs' and commit the result" >&2; exit 1; }
+	@untracked=$$(git ls-files --others --exclude-standard -- docs/); \
+		if [ -n "$$untracked" ]; then \
+			echo "docs are stale: commit the new pages:" >&2; echo "$$untracked" >&2; exit 1; \
+		fi
 
 INSTALL_DIR ?= $(HOME)/bin
 COMPLETION_DIR ?= $(HOME)/.local/share/bash-completion/completions

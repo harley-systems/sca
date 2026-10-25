@@ -5,7 +5,7 @@ sca_usb_stick_options:
                                   created during live iso image creation.
                                   this option is useful in case you want to
                                   further customize sca iso image.
-  -t, --test-images             - optional flag create iso image for sca test.
+  -t, --test-image              - optional flag create iso image for sca test.
                                   the slight
                                   difference between the regular image is that
                                   the test image automatically starts sca test
