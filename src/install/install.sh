@@ -196,15 +196,7 @@ install_sca_online() {
   [ ! $sca_script_file_name == ~/bin/sca ] && /bin/cp -f $sca_script_file_name ~/bin/sca
   chmod 755 ~/bin/sca
   completion bash > ~/bin/sca_completion
-  if [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
-    add_to_path_content='
-    # set PATH so it includes user''s private bin if it exists
-    if [ -d "$HOME/bin" ] ; then
-        PATH="$HOME/bin:$PATH"
-    fi
-    '
-    echo "${add_to_path_content}" >> ~/.bashrc
-  fi
+  install_add_bin_to_path
   if [ $force = true ]; then
     config_create --recreate all
   else
@@ -230,17 +222,36 @@ install_sca_offline() {
   fi
   [ ! $sca_script_file_name == ~/bin/sca ] && /bin/cp -f $sca_script_file_name ~/bin/sca
   chmod 755 ~/bin/sca
-  if [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
-    add_to_path_content='
-    # set PATH so it includes user''s private bin if it exists
-    if [ -d "$HOME/bin" ] ; then
-        PATH="$HOME/bin:$PATH"
-    fi
-    '
-    echo "${add_to_path_content}" >> ~/.bashrc
-  fi
+  install_add_bin_to_path
   log_detailed "install_sca_online: finish (force=${force}, "\
 "sca_script_file_name=${sca_script_file_name})"
+}
+################################################################################
+# makes sure ~/bin, where sca is installed, is on PATH in new shells.
+#
+# the snippet is appended to ~/.bashrc only when ~/bin is not on PATH yet and
+# ~/.bashrc does not already hold it, so running sca install --force again never
+# adds a second copy. an earlier copy is recognised by its marker line.
+install_add_bin_to_path() {
+  local marker="# set PATH so it includes user's private bin if it exists"
+
+  log_detailed "install_add_bin_to_path: start"
+  if [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
+    log_detailed "install_add_bin_to_path: ~/bin is already on PATH. skipping"
+  elif grep -qsxF "${marker}" ~/.bashrc; then
+    log_detailed "install_add_bin_to_path: ~/.bashrc already adds ~/bin. skipping"
+  else
+    # shellcheck disable=SC2016 # $HOME and $PATH expand when ~/.bashrc runs
+    {
+      echo
+      echo "${marker}"
+      echo 'if [ -d "$HOME/bin" ] ; then'
+      echo '    PATH="$HOME/bin:$PATH"'
+      echo 'fi'
+    } >> ~/.bashrc
+    echo "added ~/bin to PATH in ~/.bashrc. open a new shell or run . ~/.bashrc"
+  fi
+  log_detailed "install_add_bin_to_path: finish"
 }
 ################################################################################
 # core packages include key management packages
