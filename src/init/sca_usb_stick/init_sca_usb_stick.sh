@@ -147,6 +147,11 @@ init_sca_usb_stick() {
   [ $test_image = true ] && test_suffix='-test'
   local new_iso_image_file=${original_iso_image%.iso}.sca${test_suffix}.iso
   log_detailed "init_sca_usb_stick: new_iso_image_file ${new_iso_image_file}"
+  # a test image must carry the sca being tested, so never reuse an old one
+  if [ $test_image = true ] && [ -f ${new_iso_image_file} ]; then
+    log_detailed "init_sca_usb_stick: removing the existing test image ${new_iso_image_file}"
+    sudo rm -f ${new_iso_image_file}
+  fi
   if [ -f ${new_iso_image_file} ]; then
     echo "the iso image $new_iso_image_file already exists. please use that one, or remove it to create another one."
     print_sca_disk_image_help $new_iso_image_file
@@ -684,7 +689,7 @@ echo w
     mkdir -p ~/.sca/'${test_folder_relative}'
     sudo mount /dev/sdb1 ~/.sca/'${test_folder_relative}'
     sudo chown -R ubuntu:ubuntu ~/.sca/'${test_folder_relative}'
-    sca -d test --air-gapped 2>&1 >> ~/.sca/log
+    sca -d test --air-gapped >> ~/.sca/log 2>&1
     cp ~/.sca/log ~/.sca/'${test_folder_relative}'
     sync
     sudo shutdown now

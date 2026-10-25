@@ -530,10 +530,14 @@ sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
 ```
 
 **What it does:**
-- Generates new random management key
-- Prompts for new PIN (default: 123456)
-- Prompts for new PUK (default: 12345678)
-- Stores credentials securely
+- Generates a new random management key, PIN and PUK, and sets them on the key
+  (replacing the factory defaults, or the current values with `--roll-keys`)
+- Stores them in `~/.sca/keys/<ca>/<subca>/private/` (created if missing,
+  mode 0700) as `<prefix>yubikey-{key,pin,puk}.txt`, mode 0600. With
+  `--roll-keys` the previous files are kept as `*.bak`
+- If setting a value fails, the files still match what is on the key: when
+  nothing changed they are left as they were; when only part changed, they
+  record the new values for what changed, and the error says which ones
 
 **Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
 
@@ -713,6 +717,18 @@ Install SCA and prerequisites.
 sca install [options]
 ```
 
+Automatic installs support apt-based systems (Ubuntu, Debian) only. Without
+`apt-get` and `dpkg-query`, `sca install` stops before changing anything and
+lists the packages the selected options need, so you can install them with your
+own package manager (see the platform tables in
+[SSH with a YubiKey](ssh-yubikey-options.md#packages) and
+[YubiKey Setup](yubikey.md#prerequisites)).
+
+Every package is attempted. If any fails to install, `sca install` lists each
+failed package with the command to retry and exits non-zero. With `-a`, the
+`.deb` files on the USB stick are installed together, and a failure (or a stick
+with no `.deb` files) is reported the same way.
+
 **Options:**
 
 | Option | Description |
@@ -775,11 +791,24 @@ sca test --skip-air-gapped-tests
 sca test 26.04-resolute
 ```
 
+Each check prints `PASS <check>` or `FAIL <check>`:
+
+1. `init demo` completes (in `~/.sca/test/demo/`, on a copy of your config, never using a security key)
+2. a service key, CSR and certificate issued by the demo sub-CA pass `openssl verify` against the demo chain
+3. `openssl version` is 3 or newer
+4. the pkcs11 engine and OpenSC module files named in the config exist
+5. `pcscd` is installed
+6. `ykcs11` is installed (the `ykcs11_module` file exists)
+7. `ykman` runs, if it is installed (otherwise reported as `SKIP`)
+
 The air-gapped tests:
-1. Create a test USB image with `sca init sca_usb_stick --test-image`
+1. Rebuild the test USB image with `sca init sca_usb_stick --test-image`
 2. Boot it in QEMU with no network
-3. Run test suite inside the VM
-4. Collect results via virtual disk
+3. Run the same checks inside the VM
+4. Collect `results.txt` via a virtual disk, print it, and remove the disk image
+
+Exits with 0 when every check passed, and 1 when any check failed or the VM left
+no results.
 
 ---
 

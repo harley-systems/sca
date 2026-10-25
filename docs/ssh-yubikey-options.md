@@ -27,7 +27,7 @@ first one (PIV); this page explains all three so you can pick the right one.
 | **Portable to a new machine** | Yes: the public key is read from the card | Yes, but the new machine needs your OpenPGP public key imported and `gpg --card-status` run once | Resident: yes, `ssh-keygen -K`. Non-resident: no, you must copy the key-handle file (`id_*_sk`) |
 | **PIN** | PIV PIN, asked by `ssh-add -s` or `ssh` and cached by the agent | OpenPGP user PIN, asked by `pinentry` and cached by `scdaemon` | FIDO2 PIN only with `-O verify-required` (and when creating or downloading resident keys) |
 | **Touch** | Set by the slot's touch policy when the key is generated (`never`/`always`/`cached`) | Optional: `ykman openpgp keys set-touch aut on` | Required on every use by default (`-O no-touch-required` turns it off and the server has to allow it) |
-| **OpenSSH certificates (SSH CA)** | Yes, with `CertificateFile` in `~/.ssh/config` | Not supported by gpg-agent's ssh-agent emulation, so plan on plain `authorized_keys` | Yes: `-sk` public keys can be signed with `ssh-keygen -s` |
+| **OpenSSH certificates (SSH CA)** | Yes, with `CertificateFile` in `~/.ssh/config` | Yes, with `CertificateFile` in `~/.ssh/config`. gpg-agent holds only the plain key; the certificate can't be loaded into it with `ssh-add` | Yes: `-sk` public keys can be signed with `ssh-keygen -s` |
 | **Server requirements** | None beyond OpenSSH; RSA keys need `rsa-sha2-*` (any OpenSSH from the last decade) | None beyond OpenSSH | OpenSSH **≥ 8.2** on the server (`verify-required` needs ≥ 8.4). Many appliances and older distributions reject `sk-*` key types |
 | **Client OS / agent** | Linux, macOS (Homebrew OpenSC or `ykcs11`), Windows (OpenSC); stock `ssh-agent` | Linux, macOS (GnuPG + `pinentry-mac`), Windows (Gpg4win); `gpg-agent` replaces `ssh-agent` | Linux with OpenSSH ≥ 8.2 and libfido2; macOS needs Homebrew OpenSSH (Apple's build has no security-key support); Windows OpenSSH 8.9+ |
 | **Backup / recovery** | Generated on device: none, enrol a second YubiKey. Imported key: restore the backup to a new card | Keep the master key offline (e.g. on an air-gapped machine) and `keytocard` again to a replacement; or enrol a second card | None: enrol a second YubiKey and add both public keys. Resident keys are lost if the FIDO applet is reset |
@@ -39,7 +39,7 @@ first one (PIV); this page explains all three so you can pick the right one.
 |----------|----------------|-----|
 | **One developer laptop** | **FIDO2, non-resident `ed25519-sk`** (or `ecdsa-sk` on older firmware) with a second YubiKey enrolled as backup. If you already sign Git commits with GPG, the **OpenPGP** subkey is fine too | Simplest setup: no extra daemons or PKCS#11 modules, and touch is required by default |
 | **Several machines** | **FIDO2 resident `ed25519-sk`** with `-O verify-required`, recovered with `ssh-keygen -K` on each machine. Fall back to **PIV** if a server runs OpenSSH older than 8.2 | The key comes with the YubiKey, and nothing has to be copied between machines |
-| **Organisation with an SSH CA** | **PIV** if users already have a YubiKey set up with SCA, otherwise **FIDO2**. Do **not** use OpenPGP | Both PIV and `-sk` keys work with OpenSSH certificates; gpg-agent does not. **Not yet automated:** SCA does not sign OpenSSH certificates today (see [below](#openssh-certificates-not-yet-automated)) |
+| **Organisation with an SSH CA** | **PIV** if users already have a YubiKey set up with SCA, otherwise **FIDO2**. OpenPGP also works, but is the least convenient choice here | All three work with OpenSSH certificates through `CertificateFile`. PIV reuses the YubiKey and PIN users already have for SCA, and FIDO2 needs no extra daemon; OpenPGP needs `gpg-agent` in place of `ssh-agent`, which is one more daemon to configure and has no tie-in with SCA's PIV workflow. **Not yet automated:** SCA does not sign OpenSSH certificates today (see [below](#openssh-certificates-not-yet-automated)) |
 | **Security Key series (FIDO-only) device** | **FIDO2** | It is the only applet these devices have |
 
 ## Packages
@@ -55,6 +55,11 @@ first one (PIV); this page explains all three so you can pick the right one.
 packages is **not yet automated**.
 
 ## OpenPGP (gpg-agent) SSH
+
+For the full OpenPGP setup (PINs, an offline master key, signing and
+encryption subkeys, a backup YubiKey and recovery), see
+[GPG with a YubiKey](gpg-yubikey.md). The steps below cover only the
+authentication subkey.
 
 ### 1. Put an authentication key on the card
 
@@ -223,8 +228,21 @@ ssh-keygen -s ssh_ca.pub -D /usr/lib/x86_64-linux-gnu/libykcs11.so \
 ```
 
 This writes `id_ed25519_sk-cert.pub` next to the public key. `ssh` picks it up
-automatically for file-based keys. For PIV keys in the agent, point at it with
-`CertificateFile ~/.ssh/<name>-cert.pub` in `~/.ssh/config`.
+automatically for file-based keys. For keys that live only in an agent (PIV
+via `ssh-agent`, or OpenPGP via `gpg-agent`), point at it in `~/.ssh/config`:
+
+```
+Host *.example.com
+    CertificateFile ~/.ssh/<name>-cert.pub
+```
+
+`ssh` sends the certificate and asks the agent to sign with the matching plain
+key, so the agent never needs to hold the certificate. `ssh_config(5)` says of
+`CertificateFile`: "A corresponding private key must be provided separately in
+order to use this certificate either from an IdentityFile directive or -i flag
+to ssh(1), via ssh-agent(1), or via a PKCS11Provider or SecurityKeyProvider."
+Loading a certificate into the agent with `ssh-add` works with OpenSSH's
+`ssh-agent` but not with `gpg-agent`.
 
 Signing `-sk` and PIV SSH keys with an SCA-managed SSH CA is **not yet
 automated**.
@@ -240,6 +258,7 @@ automated**.
 ## References
 
 - [OpenSSH 8.2 release notes (FIDO/U2F support)](https://www.openssh.com/txt/release-8.2)
+- [`ssh_config(5)`](https://man.openbsd.org/ssh_config#CertificateFile): `CertificateFile`
 - [`ssh-keygen(1)`](https://man.openbsd.org/ssh-keygen): `-t ed25519-sk`, `-O resident`, `-O verify-required`, `-K`, `-s`, `-D`
 - [Yubico: Securing SSH with FIDO2](https://developers.yubico.com/SSH/Securing_SSH_with_FIDO2.html)
 - [Yubico: Using PGP for SSH authentication](https://developers.yubico.com/PGP/SSH_authentication/)
@@ -253,3 +272,4 @@ automated**.
 
 - [SSH Integration](ssh-integration.md) - PIV-based SSH with SCA
 - [YubiKey Setup](yubikey.md) - PIV setup for SCA
+- [GPG with a YubiKey](gpg-yubikey.md) - OpenPGP signing, encryption, PINs, backup and recovery

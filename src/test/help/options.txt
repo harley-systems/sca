@@ -1,7 +1,9 @@
 test_options:
 
   -h, --help                    - display test command help and exit
-  -a, --air-gapped              - perform tests in offline mode
+  -a, --air-gapped              - run the checks as the air-gapped guest does,
+                                  without booting a vm (used inside the test
+                                  image)
   -s, --skip-air-gapped-tests   - perform tests only while staying online,
                                   without running simulation of a clean offline
                                   environment
