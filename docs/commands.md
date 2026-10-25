@@ -529,7 +529,7 @@ Initialize a new YubiKey for use with sca. This replaces the factory PIN, PUK, a
 sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
 ```
 
-Run `sca config set <entity> <name>` first (e.g. `sca config set subca admin`): the credentials are written to the files of the currently configured entity.
+Run `sca config set <entity> <name>` first (e.g. `sca config set subca admin`): the credentials are written to the files of the currently configured entity. Init doesn't create the entity's private folder, and if it is missing the new values are set on the YubiKey but never saved. For a new sub-CA, create it first (`mkdir -p ~/.sca/keys/<ca>/<subca>/private`) and check that the three files exist after init. Run `sca create key <entity>` only after init: with a security key configured it creates empty credential files, which init then refuses to overwrite.
 
 **What it does:**
 - Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
@@ -839,8 +839,10 @@ sca export crt_pub_ssh service
 ### Setup New Sub-CA on YubiKey
 
 ```bash
-# 1. Configure sub-CA name
+# 1. Configure sub-CA name and create its private folder (init doesn't create it;
+#    without it the new values are set on the YubiKey but never saved)
 sca config set subca newadmin
+mkdir -p ~/.sca/keys/<ca>/newadmin/private   # <ca>: your CA name (sca config get ca)
 
 # 2. Initialize YubiKey (random PIN/PUK/management key, saved to the sub-CA's private folder)
 sca security_key init subca

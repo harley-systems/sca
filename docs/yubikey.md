@@ -59,12 +59,15 @@ ykman piv info
 
 ### 1. Initialize YubiKey
 
-First select the entity the YubiKey is for. Init writes the credentials to that entity's files, so it must come after `config set`:
+First select the entity the YubiKey is for. Init writes the credentials to that entity's files, so it must come after `config set`. Init doesn't create the entity's private folder: if it is missing, init still changes the PIN, PUK and management key on the YubiKey but can't save them, and you'll have to reset the PIV applet. So create the folder first (`<ca>` is your CA name, see `sca config get ca`):
 
 ```bash
 sca config set subca admin
+mkdir -p ~/.sca/keys/<ca>/admin/private
 sca security_key init subca
 ```
+
+Check that all three files below exist before you go on. Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
 
 The `sca security_key init <entity>` command:
 - Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
