@@ -713,6 +713,17 @@ Install SCA and prerequisites.
 sca install [options]
 ```
 
+Automatic installs support apt-based systems (Ubuntu, Debian) only. Without
+`apt-get` and `dpkg-query`, `sca install` stops before changing anything and
+lists the packages the selected options need, so you can install them with your
+own package manager (see the platform tables in
+[SSH with a YubiKey](ssh-yubikey-options.md#packages) and
+[YubiKey Setup](yubikey.md#prerequisites)).
+
+Every package is attempted. If any fails to install (or, with `-a`, its `.deb`
+is missing from the USB stick), `sca install` lists each failed package with the
+command to retry and exits non-zero.
+
 **Options:**
 
 | Option | Description |
