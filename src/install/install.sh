@@ -104,9 +104,11 @@ install_check_package_manager() {
   error "sca install: no supported package manager found. nothing was installed." 1
 }
 install_help() {
-  echo '
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-'
+
+SCA_HELP
 }
 ################################################################################
 # installs sca in offline mode

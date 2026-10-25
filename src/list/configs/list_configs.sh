@@ -51,7 +51,9 @@ list_configs() {
 
 }
 list_configs_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

@@ -134,7 +134,9 @@ display_p12() {
   log_detailed "display_p12: finish (file=${p12_file})"
 }
 display_p12_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

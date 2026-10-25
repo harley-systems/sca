@@ -219,9 +219,11 @@ init_demo() {
   log_detailed "init_demo: finish (test_folder_data=${test_folder_data})"
 }
 init_demo_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
 }
 ################################################################################
 # utility function for demo initialization for switching the user/entity context

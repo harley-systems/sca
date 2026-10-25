@@ -52,7 +52,9 @@ ____EOM
 # help for initializing security related system - storage or device
 #
 init_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
   }

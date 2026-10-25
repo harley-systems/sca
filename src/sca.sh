@@ -144,9 +144,11 @@ ____EOM
   return 0
 }
 sca_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
 ################################################################################
 # error reporting and failing

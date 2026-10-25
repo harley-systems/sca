@@ -185,7 +185,9 @@ security_key_verify() {
   log_detailed "security_key_verify: finished (entity='$entity')"
 }
 security_key_verify_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

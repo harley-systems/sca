@@ -74,7 +74,9 @@ security_key_get_crt() {
   log_detailed "security_key_get_crt: finished (entity='$entity')"
 }
 security_key_get_crt_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

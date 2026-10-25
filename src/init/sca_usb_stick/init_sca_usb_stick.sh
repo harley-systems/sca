@@ -210,9 +210,11 @@ init_sca_usb_stick() {
     "include_apt_mirror=${include_apt_mirror}, ubuntu_version_id=${ubuntu_version_id})"
 }
 sca_usb_stick_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
 }
 ################################################################################
 # returns the iso file name from an ubuntu version id for particular iso kind

@@ -115,7 +115,9 @@ create_crl() {
 }
 
 create_crl_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }
