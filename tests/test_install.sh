@@ -7,10 +7,11 @@
 # shellcheck source=tests/lib.sh
 . "$(dirname "$0")/lib.sh"
 
-# nothing is installed yet; apt-get records what it was asked to install and
-# fails for any package named in APT_FAIL
+# nothing is installed yet, unless ALL_INSTALLED is set; apt-get records what
+# it was asked to install and fails for any package named in APT_FAIL
 dpkg-query() {
-  return 1
+  [ -n "${ALL_INSTALLED:-}" ] && echo "install ok installed"
+  [ -n "${ALL_INSTALLED:-}" ]
 }
 apt-get() {
   echo "$*" >> "$HOME/apt-get.log"
@@ -23,7 +24,11 @@ apt-get() {
 apt-add-repository() {
   return 0
 }
+# sudo records each call in ~/sudo.log and on stderr, so a test can see both
+# whether it ran and what was printed just before it
 sudo() {
+  echo "$*" >> "$HOME/sudo.log"
+  echo "sudo: $*" >&2
   "$@"
 }
 export -f dpkg-query apt-get apt-add-repository sudo
@@ -53,6 +58,50 @@ status=$?
   || fail "all failures are reported together: ${output}"
 grep -q 'install -y syslinux-utils' "$HOME/apt-get.log" 2>/dev/null \
   || fail "packages after the failed one are still attempted"
+
+# every package is listed, and its name is printed right before sudo runs
+reset_home
+output="$(sca install 2>&1)"
+[[ "${output}" == *"checking prerequisite packages:"* ]] \
+  || fail "the package checks are announced: ${output}"
+[[ "${output}" == *"  openssl: not installed, installing (sudo apt-get install -y openssl)"$'\n'"sudo: apt-get install -y openssl"* ]] \
+  || fail "the package is named before sudo runs: ${output}"
+
+# sca already installed and every package present: the packages are listed as
+# skipped, the message says the checks go on, and sudo is never run
+reset_home
+sca install > /dev/null 2>&1
+rm -f "$HOME/sudo.log"
+output="$(ALL_INSTALLED=1 sca install 2>&1)"
+status=$?
+assert_eq 0 "${status}" "install on a provisioned host exits 0"
+[[ "${output}" == *"skipping the sca script step"*"prerequisite checks continue."* ]] \
+  || fail "already-installed message says the checks continue: ${output}"
+[[ "${output}" == *"  openssl: already installed, skipping"* ]] \
+  || fail "skipped packages are listed: ${output}"
+[ ! -e "$HOME/sudo.log" ] || fail "sudo is not run on a provisioned host: $(cat "$HOME/sudo.log")"
+
+# --dry-run: the missing packages are listed as would-install, exit 0, and
+# nothing is run with sudo or written to ~/bin and ~/.bashrc
+reset_home
+output="$(sca install --dry-run --yubikey-support 2>&1)"
+status=$?
+assert_eq 0 "${status}" "dry run exits 0"
+[[ "${output}" == *"  ykcs11: not installed, would install (sudo apt-get install -y ykcs11)"* ]] \
+  || fail "dry run lists the missing package: ${output}"
+[[ "${output}" == *"dry run: nothing was installed or changed."* ]] \
+  || fail "dry run says nothing changed: ${output}"
+[ ! -e "$HOME/sudo.log" ] || fail "dry run runs no sudo: $(cat "$HOME/sudo.log")"
+[ ! -e "$HOME/bin" ] || fail "dry run does not touch ~/bin"
+[ ! -e "$HOME/.bashrc" ] || fail "dry run does not edit ~/.bashrc"
+
+# -n works offline too, and a missing .deb does not fail the dry run
+reset_home
+output="$(sca install -n --air-gapped 2>&1)"
+status=$?
+assert_eq 0 "${status}" "offline dry run exits 0: ${output}"
+[ ! -e "$HOME/sudo.log" ] || fail "offline dry run runs no sudo: $(cat "$HOME/sudo.log")"
+[ ! -e "$HOME/bin" ] || fail "offline dry run does not touch ~/bin"
 
 # offline: a .deb the selected options need but that is missing is an error
 if [ ! -d /opt/sca/packages ]; then

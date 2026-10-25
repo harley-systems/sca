@@ -724,6 +724,13 @@ Every package is attempted. If any fails to install (or, with `-a`, its `.deb`
 is missing from the USB stick), `sca install` lists each failed package with the
 command to retry and exits non-zero.
 
+If sca is already in `~/bin/sca`, only the step that copies the sca script is
+skipped (use `-f` to overwrite it); the prerequisite checks still run. Each
+package is listed as it is checked, as already installed and skipped, or as
+being installed, with the `sudo` command used, so a password prompt always
+follows the name of the package that needs it. Use `-n` to see this list
+without installing anything or running `sudo`.
+
 **Options:**
 
 | Option | Description |
@@ -733,6 +740,7 @@ command to retry and exits non-zero.
 | `-f, --force` | Overwrite existing sca installation |
 | `-y, --yubikey-support` | Install YubiKey/Yubico tools |
 | `-x, --exclude-pkcs11-support` | Skip PKCS#11 package installation |
+| `-n, --dry-run` | Print which packages are installed and which would be installed; change nothing and never run `sudo` |
 
 **Examples:**
 
@@ -745,6 +753,9 @@ sca install --air-gapped
 
 # Force reinstall
 sca install --force
+
+# See what would be installed, without installing anything
+sca install --dry-run --yubikey-support
 ```
 
 **Installed packages (online mode):**

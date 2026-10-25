@@ -4,7 +4,7 @@ _sca_install_complete() {
 
   while [[ ${COMP_WORDS[$option_index]} == -* ]]; do
     if [ $COMP_CWORD == $option_index ]; then
-      suggestions=($(compgen -W "-h -a -f -y -x --help --air-gapped --force --yubikey-support --exclude-pkcs11-support" -- "$current_word"))
+      suggestions=($(compgen -W "-h -a -f -y -x -n --help --air-gapped --force --yubikey-support --exclude-pkcs11-support --dry-run" -- "$current_word"))
       COMPREPLY=("${suggestions[@]}")
       return
     fi
