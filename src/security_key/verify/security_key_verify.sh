@@ -166,6 +166,8 @@ security_key_verify() {
       echo "  Reason:     No private key found in slot"
     elif echo "$sign_output" | grep -q "CKR_PIN"; then
       echo "  Reason:     PIN error (wrong PIN or PIN blocked)"
+      echo "              if the PIN is blocked, recover it with the stored PUK:"
+      echo "              sca security_key unblock_pin ${ykman_device_option}$entity"
     elif echo "$sign_output" | grep -q "CKR_USER_NOT_LOGGED_IN"; then
       # ykcs11 reports an un-confirmed touch as CKR_USER_NOT_LOGGED_IN, which
       # reads like a PIN or login fault and sends people off changing PIN

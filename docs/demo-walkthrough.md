@@ -413,10 +413,10 @@ lsusb | grep Yubico
 
 ### Wrong PIN
 
-After 3 failed attempts, PIN is locked. Use PUK to unlock:
+After 3 failed attempts, PIN is locked. Use the stored PUK to unlock it:
 
 ```bash
-yubico-piv-tool -a unblock-pin
+sca security_key unblock_pin subca
 ```
 
 ### Certificate verification fails

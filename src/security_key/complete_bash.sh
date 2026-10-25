@@ -9,7 +9,7 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "get_crt id info init upload verify wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
       get_crt )
@@ -24,6 +24,9 @@ _sca_security_key_complete() {
       init )
         _sca_security_key_init_complete $subcommand_index
       ;;
+      unblock_pin )
+        _sca_security_key_unblock_pin_complete $subcommand_index
+      ;;
       upload )
         _sca_security_key_upload_complete $subcommand_index
       ;;
@@ -34,7 +37,7 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "get_crt id info init upload verify wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
       ;;
     esac
   fi
@@ -134,6 +137,36 @@ _sca_security_key_init_complete() {
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
       suggestions=($(compgen -W "-h -r --help --roll-keys --device" -- "$current_word"))
+      return
+    fi
+    if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
+      if [ $((entity_index+1)) == $COMP_CWORD ]; then
+        _sca_security_key_device_complete
+        return
+      fi
+      entity_index=$((entity_index+1))
+    fi
+    entity_index=$((entity_index+1))
+  done
+  if [ -z "${COMP_WORDS[$entity_index]}" ]; then
+    suggestions=($(compgen -W "ca subca host service user" -- "$current_word"))
+  else
+    case  "${COMP_WORDS[$entity_index]}" in
+      ca|subca|host|service|user)
+        :
+        ;;
+      *)
+        suggestions=($(compgen -W "ca subca host service user" -- "$current_word"))
+        ;;
+    esac
+  fi
+}
+_sca_security_key_unblock_pin_complete() {
+  local unblock_pin_index=$1
+  local entity_index=$((unblock_pin_index+1))
+  while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
+    if [ $COMP_CWORD == $entity_index ]; then
+      suggestions=($(compgen -W "-h -k --help --keep-pin --device" -- "$current_word"))
       return
     fi
     if [ "${COMP_WORDS[$entity_index]}" == --device ]; then

@@ -454,6 +454,7 @@ sca security_key <subcommand> [arguments]
 | `info` | Display all PIV slots and certificates |
 | `verify <entity>` | Verify private key is present and working |
 | `init <entity>` | Initialize security key (first-time setup) |
+| `unblock_pin <entity>` | Unblock a blocked PIN with the stored PUK and update the PIN file |
 | `id` | Display security key identifier/serial |
 | `upload <entity> <document>` | Upload a certificate (`crt`) or private key (`key`) to security key |
 | `get_crt <entity>` | Retrieve certificate from security key |
@@ -464,7 +465,7 @@ sca security_key <subcommand> [arguments]
 Every `security_key` subcommand accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
 
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
-- `get_crt`, `init`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
+- `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
 - `id`: lists only the named key, and fails if it is not attached.
 
 ```bash
@@ -540,6 +541,26 @@ sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
   record the new values for what changed, and the error says which ones
 
 **Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+
+#### security_key unblock_pin
+
+Recover a PIV PIN that is blocked after three wrong attempts, using the PUK `init` stored, and keep the PIN file in step with the key.
+
+```bash
+sca security_key unblock_pin [-k|--keep-pin] [--device SERIAL] <entity>
+```
+
+- Reads the PUK from `<prefix>yubikey-puk.txt` and runs `yubico-piv-tool -a unblock-pin` on the entity's key
+- By default sets a new random PIN and, once the key has taken it, writes it to `<prefix>yubikey-pin.txt` (mode 0600)
+- `-k`, `--keep-pin`: set the PIN already in the PIN file again; the file is not changed
+- The PUK is tried once only. If the PUK file is missing, or the key refuses the PUK, it stops with the PIN file unchanged and says how many PUK retries remain. A blocked PUK leaves only a [PIV reset](yubikey.md#reset-piv-emergency), which destroys the keys on it
+
+**Example:**
+```bash
+sca security_key verify subca         # FAILED ... PIN error (wrong PIN or PIN blocked)
+sca security_key unblock_pin subca
+sca security_key verify subca         # SUCCESS
+```
 
 #### security_key id
 
