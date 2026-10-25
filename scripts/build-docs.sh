@@ -57,7 +57,11 @@ text_block() {
 }
 
 # print the one-line description of <name> from the "allowed values" list of a
-# syntax file ("  - <name>   - <description>", the leading "- " is optional)
+# syntax file ("  - <name>   - <description>", the leading "- " is optional);
+# indented lines that follow are continuations. For example, with name=crt_pub_ssh
+#   "  - crt_pub_ssh   - batch creation of certificate, public key and public"
+#   "                    key in ssh format"
+# prints "batch creation of certificate, public key and public key in ssh format"
 describe() {
     local syntax_file=$1 name=$2
     awk -v name="${name}" '
