@@ -731,14 +731,34 @@ command to retry and exits non-zero.
 | `-h, --help` | Display help |
 | `-a, --air-gapped` | Install in offline mode (from USB stick packages) |
 | `-f, --force` | Overwrite existing sca installation |
-| `-y, --yubikey-support` | Install YubiKey/Yubico tools |
+| `-y, --yubikey-support` | Install YubiKey/Yubico tools for PIV (`yubico-piv-tool`, `ykcs11`, `yubikey-manager`) |
 | `-x, --exclude-pkcs11-support` | Skip PKCS#11 package installation |
+| `-g, --openpgp` | Install the OpenPGP SSH packages (`gnupg`, `scdaemon`, `pcscd`) and `yubikey-manager` |
+| `-k, --fido2` | Install the FIDO2 SSH packages (`openssh-client`, `libfido2-1`) and `yubikey-manager`; warns if OpenSSH is older than 8.2 |
+| `--configure-scdaemon` | With `--openpgp`, add `disable-ccid` and `pcsc-shared` to `~/.gnupg/scdaemon.conf` (see below) |
+
+The options can be combined. With `-a`, the OpenPGP and FIDO2 packages (and
+`yubikey-manager` without `-y`) are installed from the USB stick's `.deb` files;
+a missing `.deb` is reported as a failed package.
+
+`scdaemon` and `pcscd` can't both own the YubiKey (see
+[OpenPGP troubleshooting](ssh-yubikey-options.md#troubleshooting)).
+`--openpgp --yubikey-support` prints the `scdaemon.conf` lines that let them
+share it, but doesn't write them. `--openpgp --configure-scdaemon` appends the
+lines that are missing and leaves existing lines alone, so it is safe to run
+again. `pcsc-shared` is only added if the installed GnuPG supports it.
 
 **Examples:**
 
 ```bash
 # Online installation with YubiKey support
 sca install --yubikey-support
+
+# PIV plus OpenPGP SSH, letting scdaemon and pcscd share the YubiKey
+sca install --yubikey-support --openpgp --configure-scdaemon
+
+# FIDO2 SSH keys
+sca install --fido2
 
 # Offline installation (from SCA USB stick)
 sca install --air-gapped
@@ -752,7 +772,10 @@ sca install --force
 - `datefudge` - For backdating CA certificates
 - `opensc`, `pcscd`, `libccid` - Smart card support
 - `libengine-pkcs11-openssl` - PKCS#11 OpenSSL engine
-- `yubico-piv-tool` - YubiKey management (with `-y`)
+- `yubico-piv-tool`, `ykcs11` - YubiKey PIV tools (with `-y`)
+- `yubikey-manager` - `ykman` (with `-y`, `-g` or `-k`)
+- `gnupg`, `scdaemon`, `pcscd` - OpenPGP SSH (with `-g`)
+- `openssh-client`, `libfido2-1` - FIDO2 SSH (with `-k`)
 - `squashfs-tools`, `genisoimage`, `qemu-kvm` - USB image creation
 
 ---

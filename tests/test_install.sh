@@ -41,6 +41,63 @@ assert_succeeds sca install --yubikey-support
 assert_file_exists "$HOME/bin/sca" "sca copied to ~/bin"
 grep -q 'install -y ykcs11' "$HOME/apt-get.log" 2>/dev/null \
   || fail "ykcs11 was not installed with --yubikey-support"
+grep -q 'install -y yubikey-manager' "$HOME/apt-get.log" 2>/dev/null \
+  || fail "yubikey-manager was not installed with --yubikey-support"
+grep -q 'install -y gnupg' "$HOME/apt-get.log" 2>/dev/null \
+  && fail "openpgp packages are only installed with --openpgp"
+
+# --openpgp and --fido2 install their package sets and yubikey-manager, once
+reset_home
+assert_succeeds sca install --openpgp --fido2
+for package in gnupg scdaemon pcscd openssh-client libfido2-1 yubikey-manager; do
+  grep -q "install -y ${package}\$" "$HOME/apt-get.log" 2>/dev/null \
+    || fail "${package} was not installed with --openpgp --fido2"
+done
+[ "$(grep -c 'install -y yubikey-manager$' "$HOME/apt-get.log")" -eq 1 ] \
+  || fail "yubikey-manager is installed once"
+grep -q 'install -y ykcs11' "$HOME/apt-get.log" \
+  && fail "PIV packages are only installed with --yubikey-support"
+[ ! -e "$HOME/.gnupg/scdaemon.conf" ] \
+  || fail "scdaemon.conf is not written without --configure-scdaemon"
+
+# --fido2 warns when OpenSSH is older than 8.2
+reset_home
+output="$(ssh() { echo 'OpenSSH_7.6p1 Ubuntu-4, OpenSSL 1.0.2n' >&2; }
+  export -f ssh; sca install --fido2 2>&1)" || fail "old OpenSSH is a warning only"
+[[ "${output}" == *"OpenSSH 7.6 is installed"*"need OpenSSH 8.2 or later"* ]] \
+  || fail "old OpenSSH is warned about: ${output}"
+output="$(ssh() { echo 'OpenSSH_9.6p1 Ubuntu-3ubuntu13' >&2; }
+  export -f ssh; sca install --fido2 --force 2>&1)"
+[[ "${output}" != *"need OpenSSH 8.2"* ]] || fail "no warning on OpenSSH 9.6: ${output}"
+
+# --openpgp with PIV support only prints the scdaemon.conf lines
+gpgconf() {
+  [ "$*" = '--list-options scdaemon' ] && echo 'pcsc-shared:16:1:...'
+  return 0
+}
+export -f gpgconf
+reset_home
+output="$(sca install --openpgp --yubikey-support 2>&1)" \
+  || fail "install --openpgp --yubikey-support: ${output}"
+[[ "${output}" == *"disable-ccid"*"pcsc-shared"*"--configure-scdaemon"* ]] \
+  || fail "scdaemon.conf lines are offered: ${output}"
+[ ! -e "$HOME/.gnupg/scdaemon.conf" ] \
+  || fail "scdaemon.conf is not written without --configure-scdaemon"
+
+# --configure-scdaemon appends what is missing, keeps the rest, and is idempotent
+reset_home
+mkdir -p "$HOME/.gnupg"
+printf 'reader-port Yubico\ndisable-ccid\n' > "$HOME/.gnupg/scdaemon.conf"
+assert_succeeds sca install --openpgp --configure-scdaemon
+assert_succeeds sca install --openpgp --configure-scdaemon --force
+assert_eq "$(printf 'reader-port Yubico\ndisable-ccid\npcsc-shared')" \
+  "$(cat "$HOME/.gnupg/scdaemon.conf")" "scdaemon.conf after two runs"
+unset -f gpgconf
+
+# --configure-scdaemon without --openpgp is refused before anything is installed
+reset_home
+assert_fails sca install --configure-scdaemon
+[ ! -e "$HOME/apt-get.log" ] || fail "nothing is installed for --configure-scdaemon alone"
 
 # one package fails: the rest are still attempted, the run fails and names it
 reset_home
@@ -62,6 +119,12 @@ if [ ! -d /opt/sca/packages ]; then
   [ "${status}" -ne 0 ] || fail "offline install exits non-zero when a .deb is missing"
   [[ "${output}" == *"datefudge - no datefudge_*.deb in /opt/sca/packages/"* ]] \
     || fail "missing .deb is named: ${output}"
+  # the openpgp and fido2 sets come from the stick's .deb files too
+  reset_home
+  output="$(sca install --air-gapped --openpgp 2>&1)"
+  [[ "${output}" == *"scdaemon - no scdaemon_*.deb in /opt/sca/packages/"* \
+    && "${output}" == *"yubikey-manager - no yubikey-manager_*.deb"* ]] \
+    || fail "missing openpgp .debs are named: ${output}"
 fi
 
 # no apt-get / dpkg-query: fail before touching ~/bin, listing the packages.
