@@ -156,6 +156,11 @@ init_sca_usb_stick() {
   [ $test_image = true ] && test_suffix='-test'
   local new_iso_image_file=${original_iso_image:0:${#original_iso_image}-4}.sca${test_suffix}.iso
   log_detailed "init_sca_usb_stick: new_iso_image_file ${new_iso_image_file}"
+  # a test image must carry the sca being tested, so never reuse an old one
+  if [ $test_image = true ] && [ -f ${new_iso_image_file} ]; then
+    log_detailed "init_sca_usb_stick: removing the existing test image ${new_iso_image_file}"
+    sudo rm -f ${new_iso_image_file}
+  fi
   if [ -f ${new_iso_image_file} ]; then
     echo "the iso image $new_iso_image_file already exists. please use that one, or remove it to create another one."
     print_sca_disk_image_help $new_iso_image_file
@@ -681,7 +686,7 @@ add_sca() {
     yubikey_parameter="--yubikey-support"
     yubikey_apt_key_import="sudo bash -c \\\"cat /opt/sca/apt-mirror/yubico.gpg | apt-key add -\\\""
   fi
-  local start_tests_command=""
+  local start_test_commands=""
   # TODO: check if need to alter the copied online config for offline scenario,
   if [ $test_mode = true ]; then
     start_test_commands='
@@ -698,7 +703,7 @@ echo w
     mkdir -p ~/.sca/'${test_folder_relative}'
     sudo mount /dev/sdb1 ~/.sca/'${test_folder_relative}'
     sudo chown -R ubuntu.ubuntu ~/.sca/'${test_folder_relative}'
-    sca -d test --air-gapped 2>&1 >> ~/.sca/log
+    sca -d test --air-gapped >> ~/.sca/log 2>&1
     cp ~/.sca/log ~/.sca/'${test_folder_relative}'
     sync
     sudo shutdown now

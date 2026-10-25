@@ -175,10 +175,29 @@ sca test [ubuntu_version_id]
 ```
 
 This:
-1. Creates a test variant of the USB image
-2. Boots it in QEMU with no network
-3. Runs the test suite
-4. Collects results via a virtual disk
+1. Runs the checks below on this machine
+2. Rebuilds the test variant of the USB image for `ubuntu_version_id`
+   (`sca init sca_usb_stick --test-image --yubikey-support`), so it carries the
+   currently deployed sca (`make deploy` first)
+3. Boots it in QEMU with no network (`-net none`; needs KVM and sudo)
+4. Runs the same checks inside the VM, which writes `results.txt` and its log
+   to a virtual test disk and powers off
+5. Prints the guest's results and removes the test disk image
+
+Each check prints `PASS <check>` or `FAIL <check>`:
+
+1. `init demo` completes (in `~/.sca/test/demo/`, on a copy of your config, never using a security key)
+2. a service key, CSR and certificate issued by the demo sub-CA pass `openssl verify` against the demo chain
+3. `openssl version` is 3 or newer
+4. the pkcs11 engine and OpenSC module files named in the config exist
+5. `pcscd` is installed
+6. `ykcs11` is installed (the `ykcs11_module` file exists)
+7. `ykman` runs, if it is installed (otherwise reported as `SKIP`)
+
+`sca test` exits with 0 when every check passed, and 1 when any check failed or
+the VM left no results (for example, it never booted). Details are in
+`~/.sca/log`. Use `sca test --skip-air-gapped-tests` to run only the checks on
+this machine.
 
 ### Manual Testing
 
