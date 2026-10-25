@@ -321,3 +321,4 @@ Touch policies:
 - [Procedures](procedures.md) - Step-by-step guides
 - [SSH Integration](ssh-integration.md) - Use YubiKey for SSH
 - [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md) - PIV vs OpenPGP vs FIDO2 for SSH
+- [GPG with a YubiKey](gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet
