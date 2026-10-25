@@ -75,8 +75,8 @@ is to [reset the applet](#reset-the-openpgp-applet).
 
 ### Retries
 
-Set the retry counters **first**: on some YubiKey models, changing them puts
-all three PINs back to their defaults. The order of the arguments is user PIN,
+Set the retry counters **first**: on firmware before 4.0, changing them puts
+all three PINs back to their defaults (ykman warns about this). The order of the arguments is user PIN,
 reset code, admin PIN:
 
 ```bash
@@ -260,7 +260,7 @@ without you noticing.
 
 ```bash
 ykman openpgp keys set-touch sig on     # asks for the admin PIN
-ykman openpgp keys set-touch enc on
+ykman openpgp keys set-touch dec on     # the encryption key is called dec
 ykman openpgp keys set-touch aut on
 ykman openpgp info                      # shows the touch policy of each key
 ```
@@ -277,7 +277,7 @@ ykman openpgp info                      # shows the touch policy of each key
 off. The price is that changing your mind means resetting the applet and
 loading the keys again.
 
-`cached` is handy for `enc` if you decrypt many files at once, and for `sig`
+`cached` is handy for `dec` (the encryption key) if you decrypt many files at once, and for `sig`
 during a `git rebase` that re-signs many commits.
 
 ## 5. Daily use
