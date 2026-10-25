@@ -92,6 +92,13 @@ assert_succeeds sca install --openpgp --configure-scdaemon
 assert_succeeds sca install --openpgp --configure-scdaemon --force
 assert_eq "$(printf 'reader-port Yubico\ndisable-ccid\npcsc-shared')" \
   "$(cat "$HOME/.gnupg/scdaemon.conf")" "scdaemon.conf after two runs"
+# a last line without a trailing newline is kept intact
+reset_home
+mkdir -p "$HOME/.gnupg"
+printf 'reader-port Yubico' > "$HOME/.gnupg/scdaemon.conf"
+assert_succeeds sca install --openpgp --configure-scdaemon
+assert_eq "$(printf 'reader-port Yubico\ndisable-ccid\npcsc-shared')" \
+  "$(cat "$HOME/.gnupg/scdaemon.conf")" "scdaemon.conf without a trailing newline"
 unset -f gpgconf
 
 # --configure-scdaemon without --openpgp is refused before anything is installed
@@ -125,6 +132,17 @@ if [ ! -d /opt/sca/packages ]; then
   [[ "${output}" == *"scdaemon - no scdaemon_*.deb in /opt/sca/packages/"* \
     && "${output}" == *"yubikey-manager - no yubikey-manager_*.deb"* ]] \
     || fail "missing openpgp .debs are named: ${output}"
+  # a package the live image already ships is not a failure
+  reset_home
+  output="$(dpkg-query() {
+      [ "${*: -1}" = openssh-client ] && echo 'install ok installed' && return 0
+      return 1
+    }
+    export -f dpkg-query; sca install --air-gapped --fido2 2>&1)"
+  [[ "${output}" == *"libfido2-1 - no libfido2-1_*.deb"* ]] \
+    || fail "missing fido2 .deb is named: ${output}"
+  [[ "${output}" != *"openssh-client - no"* ]] \
+    || fail "an installed package is not reported missing offline: ${output}"
 fi
 
 # no apt-get / dpkg-query: fail before touching ~/bin, listing the packages.

@@ -84,8 +84,9 @@ install() {
   fi
   install_ssh_methods $mode $packages_folder $yubikey_support $openpgp_support \
     $fido2_support
-  [ "$openpgp_support" = true ] && \
+  if [ "$openpgp_support" = true ]; then
     install_scdaemon_config $configure_scdaemon $yubikey_support
+  fi
   if [ ${#install_failures[@]} -gt 0 ]; then
     >&2 echo "sca install: ${#install_failures[@]} package(s) failed to install:"
     >&2 printf '  %s\n' "${install_failures[@]}"
@@ -449,7 +450,13 @@ install_ssh_methods() {
   for group in $groups; do
     for package_name in $(install_package_list $group); do
       if [ "$mode" = offline ]; then
-        install_deb_file "$package_name" "$packages_folder"
+        # the live image may already ship it; only a missing package needs a .deb
+        if dpkg-query -W --showformat='${Status}\n' "$package_name" 2> /dev/null \
+            | grep -q "install ok installed"; then
+          log_detailed "install_ssh_methods: ${package_name} already installed"
+        else
+          install_deb_file "$package_name" "$packages_folder"
+        fi
       else
         install_package_from_repos $package_name
       fi
@@ -499,6 +506,10 @@ install_scdaemon_config() {
   [ ${#missing[@]} -eq 0 ] && return
   if [ "$configure_scdaemon" = true ]; then
     mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+    # don't glue the first new line onto a last line without a newline
+    if [ -s "$scdaemon_conf" ] && [ -n "$(tail -c1 "$scdaemon_conf")" ]; then
+      echo >> "$scdaemon_conf"
+    fi
     printf '%s\n' "${missing[@]}" >> "$scdaemon_conf"
     echo "added to ${scdaemon_conf}: ${missing[*]}"
     echo "run 'gpgconf --kill scdaemon' for it to take effect."
