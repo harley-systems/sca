@@ -91,10 +91,7 @@ sca security_key id
 
 # Initialize YubiKey PIV applet (random PIN, PUK, management key saved to files)
 # Run after `sca config set subca <name>` and before `sca create key subca`.
-# Init doesn't create the private folder: without it the values are set on the
-# YubiKey but never saved.
 sca config set subca admin
-mkdir -p ~/.sca/keys/<ca>/admin/private
 sca security_key init subca
 
 # Upload a certificate and a private key to YubiKey (two separate calls)

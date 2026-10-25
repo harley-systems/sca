@@ -529,12 +529,13 @@ Initialize a new YubiKey for use with sca. This replaces the factory PIN, PUK, a
 sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
 ```
 
-Run `sca config set <entity> <name>` first (e.g. `sca config set subca admin`): the credentials are written to the files of the currently configured entity. Init doesn't create the entity's private folder, and if it is missing the new values are set on the YubiKey but never saved. For a new sub-CA, create it first (`mkdir -p ~/.sca/keys/<ca>/<subca>/private`) and check that the three files exist after init. Run `sca create key <entity>` only after init: with a security key configured it creates empty credential files, which init then refuses to overwrite.
+Run `sca config set <entity> <name>` first (e.g. `sca config set subca admin`): the credentials are written to the files of the currently configured entity. Run `sca create key <entity>` only after init: with a security key configured it creates empty credential files, which init then refuses to overwrite.
 
 **What it does:**
 - Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
 - Sets them on the YubiKey, replacing the factory defaults (`--roll-keys` replaces the current values instead; the old files are kept as `*.bak`)
-- Saves them to the entity's private folder, e.g. for a sub-CA `~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-{pin,puk,key}.txt`
+- Saves them to the entity's private folder (created if missing, mode 0700) as `<prefix>yubikey-{pin,puk,key}.txt`, mode 0600, e.g. for a sub-CA `~/.sca/keys/<ca>/<subca>/private/`
+- If setting a value fails, the files still match what is on the key: when nothing changed they are left as they were; when only part changed, they record the new values for what changed, and the error says which ones
 
 Refuses to run if those files already exist, unless `--roll-keys` is given. Run it in an air-gapped environment.
 
@@ -712,6 +713,17 @@ Install SCA and prerequisites.
 sca install [options]
 ```
 
+Automatic installs support apt-based systems (Ubuntu, Debian) only. Without
+`apt-get` and `dpkg-query`, `sca install` stops before changing anything and
+lists the packages the selected options need, so you can install them with your
+own package manager (see the platform tables in
+[SSH with a YubiKey](ssh-yubikey-options.md#packages) and
+[YubiKey Setup](yubikey.md#prerequisites)).
+
+Every package is attempted. If any fails to install (or, with `-a`, its `.deb`
+is missing from the USB stick), `sca install` lists each failed package with the
+command to retry and exits non-zero.
+
 **Options:**
 
 | Option | Description |
@@ -839,10 +851,8 @@ sca export crt_pub_ssh service
 ### Setup New Sub-CA on YubiKey
 
 ```bash
-# 1. Configure sub-CA name and create its private folder (init doesn't create it;
-#    without it the new values are set on the YubiKey but never saved)
+# 1. Configure sub-CA name
 sca config set subca newadmin
-mkdir -p ~/.sca/keys/<ca>/newadmin/private   # <ca>: your CA name (sca config get ca)
 
 # 2. Initialize YubiKey (random PIN/PUK/management key, saved to the sub-CA's private folder)
 sca security_key init subca

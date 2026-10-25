@@ -388,14 +388,10 @@ sca approve service              # Uses SubCA on YubiKey, prompts for PIN
 ```bash
 # 1. Configure the SubCA (before init: init writes this SubCA's credential files)
 sca config set subca newadmin
-# init does not create the private folder; without it the new values are set on
-# the YubiKey but never saved (<ca> = CA name, see `sca config get ca`)
-mkdir -p ~/.sca/keys/<ca>/newadmin/private
 
 # 2. Initialize YubiKey PIV: random PIN/PUK/management key, saved to
 #    ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
 sca security_key init subca
-ls ~/.sca/keys/<ca>/newadmin/private/*yubikey-*.txt   # all three must exist
 
 # 3. Create SubCA key and CSR (after init: create key makes empty credential
 #    files when they are missing, and init refuses to overwrite them)

@@ -59,20 +59,19 @@ ykman piv info
 
 ### 1. Initialize YubiKey
 
-First select the entity the YubiKey is for. Init writes the credentials to that entity's files, so it must come after `config set`. Init doesn't create the entity's private folder: if it is missing, init still changes the PIN, PUK and management key on the YubiKey but can't save them, and you'll have to reset the PIV applet. So create the folder first (`<ca>` is your CA name, see `sca config get ca`):
+First select the entity the YubiKey is for. Init writes the credentials to that entity's files, so it must come after `config set`:
 
 ```bash
 sca config set subca admin
-mkdir -p ~/.sca/keys/<ca>/admin/private
 sca security_key init subca
 ```
 
-Check that all three files below exist before you go on. Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
+Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
 
 The `sca security_key init <entity>` command:
 - Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
 - Replaces the factory defaults on the YubiKey with them
-- Saves them to the entity's private folder, e.g. for a sub-CA:
+- Saves them to the entity's private folder (created if missing), e.g. for a sub-CA:
   ```
   ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-pin.txt
   ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-puk.txt
@@ -348,3 +347,4 @@ Touch policies:
 - [Procedures](procedures.md) - Step-by-step guides
 - [SSH Integration](ssh-integration.md) - Use YubiKey for SSH
 - [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md) - PIV vs OpenPGP vs FIDO2 for SSH
+- [GPG with a YubiKey](gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet

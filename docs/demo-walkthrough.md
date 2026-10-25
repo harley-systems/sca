@@ -162,10 +162,6 @@ the credentials to that sub-CA's files:
 ```bash
 sca config set subca admin
 
-# init doesn't create the sub-CA's private folder; without it the new values
-# are set on the YubiKey but never saved
-mkdir -p ~/.sca/keys/mycompany/admin/private
-
 sca security_key init subca
 ```
 
@@ -173,8 +169,6 @@ This will:
 - Generate a random management key, PIN (6 digits) and PUK (8 digits); nothing is prompted for
 - Replace the factory PIN, PUK and management key on the YubiKey with them
 - Save them to `~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-{pin,puk,key}.txt`
-
-Check that the three files are there (`ls ~/.sca/keys/mycompany/admin/private/`) before you continue.
 
 **Important:** Back these files up offline. SCA reads the PIN from the PIN file for
 signing; you'll need the PUK if the PIN gets blocked.

@@ -62,10 +62,6 @@ cp -r ~/.sca/keys /mnt/secret/
 # Configure sub-CA (before init: init writes this sub-CA's credential files)
 sca config set subca admin1
 
-# init doesn't create the sub-CA's private folder; without it the new values are
-# set on the YubiKey but never saved. <ca> is your CA name (sca config get ca)
-mkdir -p ~/.sca/keys/<ca>/admin1/private
-
 # Initialize YubiKey: random PIN, PUK and management key, saved to
 # ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
 sca security_key init subca
@@ -397,10 +393,6 @@ Create a new sub-CA for another person.
 ```bash
 # On new admin's machine
 sca config set subca newadmin
-
-# init doesn't create the sub-CA's private folder; without it the new values are
-# set on the YubiKey but never saved. <ca> is your CA name (sca config get ca)
-mkdir -p ~/.sca/keys/<ca>/newadmin/private
 
 # Initialize YubiKey: random PIN, PUK and management key, saved to
 # ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)

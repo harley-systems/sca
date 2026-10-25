@@ -90,10 +90,6 @@ sca create crt ca
 # Select the sub-CA first: init writes its credentials to this sub-CA's files
 sca config set subca admin
 
-# init doesn't create the sub-CA's private folder; without it the new values are
-# set on the YubiKey but never saved. <ca> is your CA name (sca config get ca)
-mkdir -p ~/.sca/keys/<ca>/admin/private
-
 # Initialize YubiKey: random PIN, PUK and management key, saved to
 # ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
 sca security_key init subca
@@ -151,6 +147,7 @@ Run `sca <command> --help` for detailed usage.
 - [Procedures](docs/procedures.md) - Step-by-step guides
 - [SSH Integration](docs/ssh-integration.md) - Certificate-based SSH
 - [SSH with a YubiKey: Choosing a Method](docs/ssh-yubikey-options.md) - PIV vs OpenPGP (GPG) vs FIDO2
+- [GPG with a YubiKey](docs/gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet
 - [Air-Gapped Operations](docs/air-gapped-operations.md) - Secure offline CA environment
 - [Configuration Reference](docs/configuration.md) - Config files and customization
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
