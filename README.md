@@ -87,11 +87,14 @@ sca create crt ca
 ### 2. Setup Sub-CA on YubiKey
 
 ```bash
-# Initialize YubiKey with new PIN/PUK
-sca security_key init
+# Select the sub-CA first: init writes its credentials to this sub-CA's files
+sca config set subca admin
+
+# Initialize YubiKey: random PIN, PUK and management key, saved to
+# ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
+sca security_key init subca
 
 # Create sub-CA
-sca config set subca admin
 sca create key subca
 sca create csr subca
 sca approve subca

@@ -19,13 +19,14 @@ For maximum security, root CA private keys should never touch a networked system
 
 ### Prerequisites
 
-On your online system, install the image creation tools:
+On your online system, install SCA together with the image creation tools
+(add `--yubikey-support` if you will use YubiKeys):
 
 ```bash
-sca install prerequisites
+sca install --yubikey-support
 ```
 
-This installs:
+An online `sca install` also installs:
 - `squashfs-tools` - For unpacking/packing Ubuntu filesystem
 - `genisoimage` - For creating ISO images
 - `syslinux-utils` - For making bootable USB images

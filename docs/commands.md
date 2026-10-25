@@ -523,19 +523,22 @@ The ykcs11 module path comes from the `ykcs11_module` config setting. If that fi
 
 #### security_key init
 
-Initialize a new YubiKey for use with sca. This sets up new PIN, PUK, and management key.
+Initialize a new YubiKey for use with sca. This replaces the factory PIN, PUK, and management key with new ones.
 
 ```bash
 sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
 ```
 
-**What it does:**
-- Generates new random management key
-- Prompts for new PIN (default: 123456)
-- Prompts for new PUK (default: 12345678)
-- Stores credentials securely
+Run `sca config set <entity> <name>` first (e.g. `sca config set subca admin`): the credentials are written to the files of the currently configured entity.
 
-**Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+**What it does:**
+- Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
+- Sets them on the YubiKey, replacing the factory defaults (`--roll-keys` replaces the current values instead; the old files are kept as `*.bak`)
+- Saves them to the entity's private folder, e.g. for a sub-CA `~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-{pin,puk,key}.txt`
+
+Refuses to run if those files already exist, unless `--roll-keys` is given. Run it in an air-gapped environment.
+
+**Important:** Back up the generated files offline. You'll need the PUK if the PIN gets blocked.
 
 #### security_key id
 
@@ -658,10 +661,10 @@ Creates the `index.txt` and `serial` files required by OpenSSL for tracking issu
 
 #### yubikey
 
-Initialize a YubiKey for use with sca (alias for `sca security_key init`).
+Older form of `sca security_key init`. It takes no entity, so it has no credential files to write to; use `sca security_key init <entity>` instead.
 
 ```bash
-sca init yubikey
+sca security_key init <entity>
 ```
 
 #### sca_usb_stick
@@ -836,11 +839,11 @@ sca export crt_pub_ssh service
 ### Setup New Sub-CA on YubiKey
 
 ```bash
-# 1. Initialize YubiKey
-sca security_key init
-
-# 2. Configure sub-CA name
+# 1. Configure sub-CA name
 sca config set subca newadmin
+
+# 2. Initialize YubiKey (random PIN/PUK/management key, saved to the sub-CA's private folder)
+sca security_key init subca
 
 # 3. Create sub-CA key and CSR
 sca create key subca
