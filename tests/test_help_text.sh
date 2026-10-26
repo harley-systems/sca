@@ -23,17 +23,18 @@ EOF
 while IFS= read -r wrapper; do
   built="${HOME}/wrapper.sh"
   sed -e "/^@@@\(GENERIC \)\?HELP@@@\$/{r ${help_file}" -e 'd}' "${wrapper}" > "${built}"
-  # the function that contains the marker line
-  marker_line=$(grep -nE '^@@@(GENERIC )?HELP@@@$' "${wrapper}" | head -1 | cut -d: -f1)
-  help_function=$(head -n "${marker_line}" "${wrapper}" |
-    grep -oE '^ *[a-z0-9_]+\(\) *\{' | tail -1 | grep -oE '[a-z0-9_]+')
-  name="${wrapper#"${src_dir}/"}:${help_function}"
-  # shellcheck source=/dev/null # the wrapper is generated above
-  if ! output=$( (. "${built}" && "${help_function}") 2>&1); then
-    fail "${name} exited non-zero"
-  fi
-  assert_eq "$(printf '\n%s\n' "$(cat "${help_file}")")" "${output}" "${name} output"
-done < <(grep -rlE '^@@@HELP@@@$' "${src_dir}")
+  # call the function that contains each marker line
+  while IFS= read -r marker_line; do
+    help_function=$(head -n "${marker_line}" "${wrapper}" |
+      grep -oE '^ *[a-z0-9_]+\(\) *\{' | tail -1 | grep -oE '[a-z0-9_]+')
+    name="${wrapper#"${src_dir}/"}:${help_function}"
+    # shellcheck source=/dev/null # the wrapper is generated above
+    if ! output=$( (. "${built}" && "${help_function}") 2>&1); then
+      fail "${name} exited non-zero"
+    fi
+    assert_eq "$(printf '\n%s\n' "$(cat "${help_file}")")" "${output}" "${name} output"
+  done < <(grep -nE '^@@@(GENERIC )?HELP@@@$' "${wrapper}" | cut -d: -f1)
+done < <(grep -rlE '^@@@(GENERIC )?HELP@@@$' "${src_dir}")
 
 # the built help that contains quotes renders, end to end
 sca config create all >/dev/null 2>&1
