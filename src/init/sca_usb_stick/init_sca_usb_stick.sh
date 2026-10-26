@@ -203,6 +203,13 @@ sca_usb_stick_help() {
     "
 }
 ################################################################################
+# the filesystem label of the test results disk. sca test creates the disk with
+# this label and the test image only ever mounts a disk carrying it, so it never
+# picks a disk by kernel name (at most 16 characters - the ext4 limit)
+get_test_results_disk_label() {
+  echo "sca-test-results"
+}
+################################################################################
 # fails unless the tools used for building the sca usb stick image are present
 #
 # parameters
@@ -675,24 +682,24 @@ add_sca() {
   local start_test_commands=""
   # TODO: check if need to alter the copied online config for offline scenario,
   if [ $test_mode = true ]; then
+    # the results disk is found by its filesystem label, never by kernel name,
+    # and is never partitioned or formatted here: sca test prepares it on the
+    # host. without it, nothing is touched and the machine stays up.
+    local test_results_disk_label=$(get_test_results_disk_label)
     start_test_commands='
-    (
-echo o
-echo n
-echo p
-echo 1
-echo
-echo
-echo w
-) | sudo fdisk /dev/sdb
-    sudo mkfs.ext4 /dev/sdb1
-    mkdir -p ~/.sca/'${test_folder_relative}'
-    sudo mount /dev/sdb1 ~/.sca/'${test_folder_relative}'
+  echo \"sca test image: runs the sca air-gapped tests, writes the results to the disk labelled '${test_results_disk_label}' and shuts down.\"
+  test_results_disk=/dev/disk/by-label/'${test_results_disk_label}'
+  if ! [ -b \"\$test_results_disk\" ]; then
+    echo \"sca test image: no disk labelled '${test_results_disk_label}' found. not running the tests, no disk was touched.\" | tee -a ~/.sca/log
+  elif ! { mkdir -p ~/.sca/'${test_folder_relative}' && sudo mount \"\$test_results_disk\" ~/.sca/'${test_folder_relative}'; }; then
+    echo \"sca test image: could not mount \$test_results_disk. not running the tests.\" | tee -a ~/.sca/log
+  else
     sudo chown -R ubuntu:ubuntu ~/.sca/'${test_folder_relative}'
     sca -d test --air-gapped >> ~/.sca/log 2>&1
     cp ~/.sca/log ~/.sca/'${test_folder_relative}'
     sync
     sudo shutdown now
+  fi
   '
   fi
 

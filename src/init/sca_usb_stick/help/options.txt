@@ -9,7 +9,10 @@ sca_usb_stick_options:
                                   the slight
                                   difference between the regular image is that
                                   the test image automatically starts sca test
-                                  on end of booting.
+                                  on login, writes the results to the disk
+                                  labelled sca-test-results and shuts down.
+                                  without such a disk it runs no tests and
+                                  touches no disk.
   -i, --include-apt-mirror      - optional flag includes the ubuntu main and
                                   restricted repositories within the image by
                                   storing apt-mirror within it and configuring

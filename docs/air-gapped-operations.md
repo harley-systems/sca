@@ -212,7 +212,9 @@ This:
    currently deployed sca (`make deploy` first)
 3. Boots it in QEMU with no network (`-net none`; needs KVM and sudo)
 4. Runs the same checks inside the VM, which writes `results.txt` and its log
-   to a virtual test disk and powers off
+   to a virtual test disk and powers off. `sca test` formats that disk on the
+   host with the filesystem label `sca-test-results`; the guest only mounts a
+   disk carrying that label and never partitions or formats anything
 5. Prints the guest's results and removes the test disk image
 
 Each check prints `PASS <check>` or `FAIL <check>`:
@@ -254,6 +256,18 @@ To boot the image in UEFI mode, add the OVMF firmware (package `ovmf`):
 sudo qemu-system-x86_64 -boot d -enable-kvm -m 4096 -cpu host -net none \
   -bios /usr/share/ovmf/OVMF.fd \
   -drive format=raw,file=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso
+```
+
+On login the test image looks for a disk with the filesystem label
+`sca-test-results`. Without one (as above) it logs that to `~/.sca/log`, runs no
+tests, touches no disk and stays up. To have it run the tests, write the
+results and shut down, attach a labelled disk:
+
+```bash
+qemu-img create /tmp/sca-test-disk.img 10M
+mkfs.ext4 -F -L sca-test-results /tmp/sca-test-disk.img
+# then add to the qemu command above:
+#   -drive format=raw,file=/tmp/sca-test-disk.img,index=1
 ```
 
 ## Security Considerations
