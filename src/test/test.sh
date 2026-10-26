@@ -238,7 +238,8 @@ air_gapped_test() {
 ################################################################################
 # creates the two offline disks images - the test variant of the sca usb stick
 # iso (always rebuilt, so it carries the sca being tested) and an empty disk
-# the guest stores its results on
+# the guest stores its results on. the disk is formatted here, with the label
+# the guest looks for, so the guest never partitions or formats anything.
 create_offline_disks_images() {
   local test_disk_image_file=$1
   local ubuntu_version_id=$2
@@ -247,6 +248,8 @@ create_offline_disks_images() {
     "test_disk_image_file=${test_disk_image_file}, ubuntu_version_id=${ubuntu_version_id})"
   [ -f "$test_disk_image_file" ] && rm "$test_disk_image_file"
   qemu-img create "$test_disk_image_file" 10M
+  mkfs.ext4 -q -F -L "$(get_test_results_disk_label)" "$test_disk_image_file" \
+    || error "could not format the test disk image ${test_disk_image_file}" 1
   init_sca_usb_stick --yubikey-support --test-image "$ubuntu_version_id"
   log_detailed "create_offline_disks_images: finish ("\
     "test_disk_image_file=${test_disk_image_file})"
@@ -279,16 +282,11 @@ run_offline_tests() {
     -drive format=raw,file=${test_iso_image},index=0 \
     -drive format=raw,file=${test_disk_image},index=1
 
-  local fdisk_test_disk_image=$(fdisk -lu "${test_disk_image}")
-  local bytes_in_sector=$(echo "${fdisk_test_disk_image}" | grep Units: | sed -E 's/.* ([[:digit:]]+) bytes/\1/g')
-  local partition_offset_sectors=$(echo "${fdisk_test_disk_image}" | grep img1 | awk '{print $2}')
-  if [ -z "${bytes_in_sector}" ] || [ -z "${partition_offset_sectors}" ]; then
-    # the guest partitions the disk first thing, so it never got that far
-    log_detailed "run_offline_tests: the test disk has no partition. no results to collect."
+  mkdir -p "${test_folder}temp/"
+  if ! sudo mount -t ext4 -o loop "${test_disk_image}" "${test_folder}temp/"; then
+    log_detailed "run_offline_tests: could not mount the test disk. no results to collect."
     return
   fi
-  mkdir -p "${test_folder}temp/"
-  sudo mount -t auto -o loop,offset=$((bytes_in_sector*partition_offset_sectors)) "${test_disk_image}" "${test_folder}temp/"
   [ -f "${test_folder}temp/results.txt" ] && cp "${test_folder}temp/results.txt" "$air_gapped_results_file"
   [ -f "${test_folder}temp/log" ] && cat "${test_folder}temp/log" >> "${log_file}"
   sudo umount "${test_folder}temp/"
