@@ -76,7 +76,8 @@ After creation, write the image to a USB stick:
 
 ```bash
 # Identify your USB device (BE CAREFUL - wrong device = data loss)
-lsblk
+# a usb stick usually shows TRAN=usb, RM=1
+lsblk -do NAME,TRAN,RM,SIZE,MODEL -e 7
 
 # Unmount if mounted
 sudo umount /dev/sdX1
