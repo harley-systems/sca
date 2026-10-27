@@ -671,10 +671,18 @@ add_sca() {
   local sca_completion_folder=${live_filesystem_folder}etc/bash_completion.d/
   local sca_config_folder=${live_filesystem_folder}etc/ssl/sca/
   local profile_folder=${live_filesystem_folder}etc/profile.d/
-  sudo mkdir -p ${sca_config_folder} ${sca_bin_folder} ${sca_completion_folder} ${profile_folder}
+  local systemd_user_folder=${live_filesystem_folder}etc/systemd/user/
+  sudo mkdir -p ${sca_config_folder} ${sca_bin_folder} ${sca_completion_folder} ${profile_folder} ${systemd_user_folder}
   sudo cp ~/bin/sca $sca_bin_folder
   sudo cp ~/bin/sca_completion ${sca_completion_folder}sca
-  sudo cp ~/.sca/config/* $sca_config_folder
+  # copy only the configuration files, not the backups 'config create' leaves
+  # next to them (*.bak, *.bak-<timestamp>)
+  sudo cp ~/.sca/config/*.config ~/.sca/config/*.conventions ~/.sca/config/*.ini $sca_config_folder
+  # the live session starts the desktop installer from a systemd user unit
+  # in a lower layer. mask it from the sca layer (/etc/systemd/user takes
+  # precedence over /usr/lib/systemd/user), so the base layers stay untouched
+  # and the machine boots straight into the live session.
+  sudo ln -sfn /dev/null ${systemd_user_folder}ubuntu-desktop-installer.service
   local yubikey_parameter=""
   [ $yubikey_support = true ] && yubikey_parameter="--yubikey-support"
   local apt_update_command=""
@@ -685,11 +693,16 @@ add_sca() {
     # the results disk is found by its filesystem label, never by kernel name,
     # and is never partitioned or formatted here: sca test prepares it on the
     # host. without it, nothing is touched and the machine stays up.
+    # profile.d is sourced by more than one shell per session, so an atomic
+    # mkdir under /run (cleared on reboot) lets only the first one run the
+    # tests.
     local test_results_disk_label=$(get_test_results_disk_label)
     start_test_commands='
   echo \"sca test image: runs the sca air-gapped tests, writes the results to the disk labelled '${test_results_disk_label}' and shuts down.\"
   test_results_disk=/dev/disk/by-label/'${test_results_disk_label}'
-  if ! [ -b \"\$test_results_disk\" ]; then
+  if ! sudo mkdir /run/sca-test-image.lock 2>/dev/null; then
+    echo \"sca test image: already handled by another shell in this session. skipping.\" | tee -a ~/.sca/log
+  elif ! [ -b \"\$test_results_disk\" ]; then
     echo \"sca test image: no disk labelled '${test_results_disk_label}' found. not running the tests, no disk was touched.\" | tee -a ~/.sca/log
   elif ! { mkdir -p ~/.sca/'${test_folder_relative}' && sudo mount \"\$test_results_disk\" ~/.sca/'${test_folder_relative}'; }; then
     echo \"sca test image: could not mount \$test_results_disk. not running the tests.\" | tee -a ~/.sca/log

@@ -192,7 +192,8 @@ On the live USB, sca files are located at:
 | `/opt/sca/bin/sca` | The sca executable |
 | `/opt/sca/packages/` | Pre-downloaded .deb packages |
 | `/opt/sca/apt-mirror/` | Mirrored apt repositories (if included) |
-| `/etc/ssl/sca/` | Default sca configuration |
+| `/etc/ssl/sca/` | Default sca configuration, copied from the build machine's `~/.sca/config/` (`*.config`, `*.conventions`, `*.ini`; no backups) |
+| `/etc/systemd/user/ubuntu-desktop-installer.service` | Masked (`-> /dev/null`), so the live session does not start the Ubuntu installer |
 | `~/.sca/` | Runtime configuration and keys |
 
 ## Testing
