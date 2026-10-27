@@ -146,6 +146,7 @@ Run `sca <command> --help` for detailed usage.
 - [SSH with a YubiKey: Choosing a Method](docs/ssh-yubikey-options.md) - PIV vs OpenPGP (GPG) vs FIDO2
 - [GPG with a YubiKey](docs/gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet
 - [Air-Gapped Operations](docs/air-gapped-operations.md) - Secure offline CA environment
+- [USB Boot on ARM](docs/usb-boot-on-arm.md) - Booting a ROCK64 from USB by writing U-Boot to SPI flash
 - [Configuration Reference](docs/configuration.md) - Config files and customization
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
 
