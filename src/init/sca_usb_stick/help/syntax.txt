@@ -7,8 +7,8 @@ sca [<sca_options>] init [<init_options>] sca_usb_stick <sca_usb_stick_options> 
 @@@OPTIONS@@@
 
 The <ubuntu_version_id> parameter is optional. The default value is the latest
-Ubuntu version. The form of this parameter is "<major>.<minor>.<fix>-<release_name>" - for
-example "18.04.01-bionic". Below list contains all supported ubuntu version ids:
+Ubuntu version. The form of this parameter is '<major>.<minor>.<fix>-<release_name>' - for
+example '18.04.01-bionic'. Below list contains all supported ubuntu version ids:
   - 18.04.01-bionic
   - 16.04.04-xenial
   - 16.04.03-xenial
@@ -19,3 +19,11 @@ example "18.04.01-bionic". Below list contains all supported ubuntu version ids:
   - 14.04.03-trusty
   - 14.04.02-trusty
   - 14.04.01-trusty
+
+The sca iso image is written to ~/.sca/downloads/ next to the original ubuntu
+iso, together with a <image>.options file recording the -y, -i and -x options
+it was built with. If the image already exists, it is reused only when those
+recorded options match the ones requested. Otherwise - including an image built
+before sca recorded its options - the command fails, printing the options the
+image has and the ones requested, and leaves the image alone. Remove the image
+and its options file to build a new one. A test image (-t) is always rebuilt.

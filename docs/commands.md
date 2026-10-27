@@ -691,6 +691,19 @@ sca init sca_usb_stick [options] [ubuntu_version_id]
 
 **Ubuntu versions:** `18.04.1-bionic` (default), `16.04.x-xenial`, `14.04.x-trusty`
 
+**Reusing a built image:** the image is written to `~/.sca/downloads/` with a
+`<image>.options` file next to it recording the `-y`, `-i` and `-x` options it
+was built with. A later run reuses the image only if those match the options
+requested. Otherwise, including for an image built before sca recorded its
+options, the command fails, shows the options the image has and the ones
+requested, and leaves the image in place. Remove both files to build a new one:
+
+```bash
+rm -f ~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso{,.options}
+```
+
+A test image (`-t`) is always rebuilt.
+
 **Example:**
 
 ```bash
