@@ -46,7 +46,9 @@ ____EOM
   log_detailed "export_: finish (document_type=${document_type}, entity=${entity})"
 }
 export_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
   }

@@ -62,9 +62,11 @@ ____EOM
   log_detailed "config_set: finish (setting_name=${setting_name})"
 }
 config_set_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
 ################################################################################
 # set a ca configuration settings

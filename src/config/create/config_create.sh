@@ -158,7 +158,9 @@ ____EOM
   log_detailed "config_create: finish (entity='${entity}')"
 }
 config_create_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

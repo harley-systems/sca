@@ -208,7 +208,9 @@ create_crt() {
 }
 
 create_crt_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

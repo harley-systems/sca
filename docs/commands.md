@@ -685,11 +685,15 @@ sca init sca_usb_stick [options] [ubuntu_version_id]
 | `-x, --exclude-pkcs11-support` | Skip PKCS#11 packages |
 | `-t, --test-image` | Create test variant for automated testing |
 | `-s, --skip-cleanup` | Keep intermediate files after build |
-| `-q, --no-cache-squashfs` | Do not cache squashfs file |
-| `-p, --no-cache-iso` | Do not cache ISO file |
-| `-n, --no-cache` | Disable all caching |
+| `-o, --no-cache-iso` | Do not cache ISO file |
+| `-n, --no-cache` | Disable all caching (same as `--no-cache-iso`) |
 
-**Ubuntu versions:** `18.04.1-bionic` (default), `16.04.x-xenial`, `14.04.x-trusty`
+**Ubuntu version:** `26.04-resolute` only (the default). The image is built on an
+Ubuntu 26.04 host only; any other version id or host fails with an error. The
+stick bundles OpenSSL 3.5, pkcs11-provider 1.2, OpenSC 0.27, pcscd/libccid,
+yubico-piv-tool and ykcs11 2.7, yubikey-manager 5.8, and GnuPG with scdaemon
+2.4, all from the Ubuntu 26.04 archive. See
+[Tools on the stick](air-gapped-operations.md#tools-on-the-stick).
 
 **Example:**
 
@@ -698,7 +702,7 @@ sca init sca_usb_stick [options] [ubuntu_version_id]
 sca init sca_usb_stick --yubikey-support
 
 # Write to USB (replace sdX with your device)
-sudo dd bs=4M if=~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
+sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
 ```
 
 See [Air-Gapped Operations](air-gapped-operations.md) for complete workflow documentation.
@@ -720,9 +724,10 @@ own package manager (see the platform tables in
 [SSH with a YubiKey](ssh-yubikey-options.md#packages) and
 [YubiKey Setup](yubikey.md#prerequisites)).
 
-Every package is attempted. If any fails to install (or, with `-a`, its `.deb`
-is missing from the USB stick), `sca install` lists each failed package with the
-command to retry and exits non-zero.
+Every package is attempted. If any fails to install, `sca install` lists each
+failed package with the command to retry and exits non-zero. With `-a`, the
+`.deb` files on the USB stick are installed together, and a failure (or a stick
+with no `.deb` files) is reported the same way.
 
 **Options:**
 
@@ -751,9 +756,9 @@ sca install --force
 - `openssl`, `openssh-client` - Core crypto tools
 - `datefudge` - For backdating CA certificates
 - `opensc`, `pcscd`, `libccid` - Smart card support
-- `libengine-pkcs11-openssl` - PKCS#11 OpenSSL engine
-- `yubico-piv-tool` - YubiKey management (with `-y`)
-- `squashfs-tools`, `genisoimage`, `qemu-kvm` - USB image creation
+- `libengine-pkcs11-openssl`, `pkcs11-provider` - PKCS#11 OpenSSL engine and provider
+- `yubico-piv-tool`, `ykcs11`, `yubikey-manager`, `gnupg`, `scdaemon` - YubiKey tools (with `-y`), from the Ubuntu archive
+- `xorriso`, `squashfs-tools`, `apt-mirror`, `qemu-system-x86`, `qemu-utils` - USB image creation and testing
 
 ---
 
@@ -782,8 +787,8 @@ sca test
 # Run only online tests (faster, no QEMU)
 sca test --skip-air-gapped-tests
 
-# Run tests for specific Ubuntu version
-sca test 18.04.1-bionic
+# Run tests for the (only supported) Ubuntu version
+sca test 26.04-resolute
 ```
 
 Each check prints `PASS <check>` or `FAIL <check>`:

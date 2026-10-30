@@ -63,7 +63,9 @@ display_csr() {
   log_detailed "display_csr: finish (entity=${entity}, entity_id=${entity_id}, old_entity_id=$old_entity_id))"
 }
 display_csr_help() {
-    echo "
+    cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
