@@ -1,0 +1,3 @@
+```bash
+sca config reset
+```
