@@ -36,7 +36,9 @@ config_resolve() {
 
 }
 config_resolve_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

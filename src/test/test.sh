@@ -86,9 +86,11 @@ test() {
   fi
 }
 test_help() {
-  echo '
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-'
+
+SCA_HELP
 }
 ################################################################################
 # runs a single named check and records its outcome in the results file

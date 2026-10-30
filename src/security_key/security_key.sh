@@ -29,9 +29,11 @@ ____EOM
   log_detailed "security_key: finished (security_key_command=${security_key_command})"
 }
 security_key_help() {
-  echo '
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-'
+
+SCA_HELP
 }
 ###############################################################################
 # for given yubikey slot id, the function will return it's corresponding

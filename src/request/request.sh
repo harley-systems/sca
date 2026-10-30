@@ -82,7 +82,9 @@ request() {
   log_detailed "request:  finish (entity=${entity})"
 }
 request_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
   }

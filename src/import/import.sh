@@ -46,7 +46,9 @@ import() {
   log_detailed "import: finish"
 }
 import_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
   }

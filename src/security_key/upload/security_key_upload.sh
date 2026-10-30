@@ -136,9 +136,11 @@ security_key_upload() {
   log_detailed "security_key_upload: finished (entity:'${entity}')"
 }
 security_key_upload_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }
 
 run_yubico_piv_tool_command() {

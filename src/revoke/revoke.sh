@@ -128,7 +128,9 @@ revoke() {
   log_detailed "revoke: finish (entity=${entity}, sign_by_entity=${sign_by_entity})"
 }
 revoke_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

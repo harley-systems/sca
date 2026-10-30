@@ -48,7 +48,9 @@ ____EOM
   log_detailed "copmletion: finish (config_verb=${shell})"
 }
 completion_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
