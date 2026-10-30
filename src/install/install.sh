@@ -6,11 +6,14 @@ install() {
   local force=false
   local yubikey_support=false
   local exclude_pkcs11_support=false
+  # when true, every step prints what it would do and changes nothing. read by
+  # the install_* functions below, which install calls.
+  local dry_run=false
 
   # local sca_script_file_name="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
   local sca_script_file_name=$0
 
-  local OPTS=`getopt -o hafyx --long help,air-gapped,force,yubikey-support,exclude-pkcs11-support -n 'sca install' -- "$@"`
+  local OPTS=`getopt -o hafyxn --long help,air-gapped,force,yubikey-support,exclude-pkcs11-support,dry-run -n 'sca install' -- "$@"`
   if [ $? != 0 ] ; then \
     error "failed parsing options. use sca install -h for help." 1; fi
   eval set -- "$OPTS"
@@ -34,6 +37,10 @@ install() {
         exclude_pkcs11_support=true
         shift
         ;;
+      -n | --dry-run )
+        dry_run=true
+        shift
+        ;;
       -- )
         shift
         break
@@ -47,6 +54,7 @@ install() {
   log_detailed "install: start (mode=${mode}, force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
+"dry_run=${dry_run}, "\
 "sca_script_file_name=${sca_script_file_name})"
   # automatic installs need apt. check before touching ~/bin, so a user on
   # another platform is told what to install instead of getting half an install
@@ -61,6 +69,7 @@ install() {
     install_online $force $sca_script_file_name $yubikey_support \
       $exclude_pkcs11_support
   fi
+  [ "$dry_run" = true ] && echo "dry run: nothing was installed or changed."
   if [ ${#install_failures[@]} -gt 0 ]; then
     >&2 echo "sca install: ${#install_failures[@]} package(s) failed to install:"
     >&2 printf '  %s\n' "${install_failures[@]}"
@@ -132,6 +141,7 @@ install_offline() {
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "
   install_sca_offline $force $sca_script_file_name
+  echo "checking prerequisite packages:"
   # the sca usb stick only carries the packages requested when it was created,
   # so all of them are installed
   install_packages_offline $packages_folder
@@ -154,6 +164,7 @@ install_online() {
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
 "sca_script_file_name=${sca_script_file_name})"
   install_sca_online $force $sca_script_file_name
+  echo "checking prerequisite packages:"
   install_core_online
   [ $exclude_pkcs11_support != true ] && install_pkcs11_packages_online
   [ $yubikey_support == true ] && install_yubico_piv_tool
@@ -187,14 +198,17 @@ install_sca_online() {
 
   log_detailed "install_sca_online: start (force=${force}, "\
 "sca_script_file_name=${sca_script_file_name})"
+  if [ -f ~/bin/sca ] && [ ! $force = true ]; then
+    install_sca_already_installed
+    return
+  fi
+  if [ "$dry_run" = true ]; then
+    echo "would install sca to ~/bin/sca, write ~/bin/sca_completion, add ~/bin to PATH and create the sca config."
+    return
+  fi
   mkdir -p ~/bin/
   #[ -f ~/bin/sca ] && [ "$force" = true  ] && rm ~/bin/sca
   [ -f ~/bin/sca_completion ] && [ "$force" = true  ] && rm ~/bin/sca_completion
-  if [ -f ~/bin/sca ] && [ ! $force = true ]; then
-    echo "sca is already installed."
-    echo "if you want to force the installation over existing, use 'sca install --force'."
-    return
-  fi
   [ ! $sca_script_file_name == ~/bin/sca ] && /bin/cp -f $sca_script_file_name ~/bin/sca
   chmod 755 ~/bin/sca
   completion bash > ~/bin/sca_completion
@@ -209,19 +223,29 @@ install_sca_online() {
 "sca_script_file_name=${sca_script_file_name})"
 }
 ################################################################################
+# tells the user that only the sca script step is skipped: the prerequisite
+# package checks that follow still run, and may install packages with sudo
+install_sca_already_installed() {
+  echo "sca is already installed in ~/bin/sca, skipping the sca script step"
+  echo "(use 'sca install --force' to overwrite it). prerequisite checks continue."
+}
+################################################################################
 # in offline mode we need to copy sca form /opt/sca/bin/ to ~/bin/
 install_sca_offline() {
   local force=$1
   local sca_script_file_name=$2
   log_detailed "install_sca_offline: start (force=${force}, "\
 "sca_script_file_name=${sca_script_file_name})"
-  mkdir -p ~/bin/
-  [ -f ~/bin/sca_completion ] && [ "$force" = true  ] && rm ~/bin/sca_completion
   if [ -f ~/bin/sca ] && [ ! $force = true ]; then
-    echo "sca is already installed."
-    echo "if you want to force the installation over existing, use 'sca install --force'."
+    install_sca_already_installed
     return
   fi
+  if [ "$dry_run" = true ]; then
+    echo "would install sca to ~/bin/sca and add ~/bin to PATH."
+    return
+  fi
+  mkdir -p ~/bin/
+  [ -f ~/bin/sca_completion ] && [ "$force" = true  ] && rm ~/bin/sca_completion
   [ ! $sca_script_file_name == ~/bin/sca ] && /bin/cp -f $sca_script_file_name ~/bin/sca
   chmod 755 ~/bin/sca
   install_add_bin_to_path
@@ -334,9 +358,19 @@ install_packages_offline() {
   local deb_files=(${packages_folder}*.deb)
   if ! [ -f "${deb_files[0]}" ]; then
     log_detailed "install_packages_offline: no packages found in ${packages_folder}"
+    if [ "$dry_run" = true ]; then
+      echo "  no .deb files in ${packages_folder}, would fail"
+      return
+    fi
+    echo "  no .deb files in ${packages_folder}"
     install_failures+=("no .deb files in ${packages_folder}; was the sca usb stick created without its packages?")
     return
   fi
+  if [ "$dry_run" = true ]; then
+    echo "  ${#deb_files[@]} .deb file(s) in ${packages_folder}: would install (sudo apt-get install -y --no-install-recommends ${packages_folder}*.deb)"
+    return
+  fi
+  echo "  ${#deb_files[@]} .deb file(s) in ${packages_folder}: installing (sudo apt-get install -y --no-install-recommends ${packages_folder}*.deb)"
   if ! eval sudo apt-get install -y --no-install-recommends ${deb_files[*]} ${redirect_output}; then
     log_detailed "install_packages_offline: failed installing the packages from ${packages_folder}"
     install_failures+=("the packages in ${packages_folder} - retry with: sudo apt-get install -y --no-install-recommends ${packages_folder}*.deb")
@@ -371,8 +405,11 @@ install_package_from_repos() {
 
   local package_is_ok=$(dpkg-query -W --showformat='${Status}\n' ${package_name} 2> /dev/null|grep "install ok installed")
   log_detailed "install_package_from_repos: checking if ${package_name} is installed: $package_is_ok"
-  if [ "" == "$package_is_ok" ]; then
+  if [ "" == "$package_is_ok" ] && [ "$dry_run" = true ]; then
+    echo "  ${package_name}: not installed, would install (sudo apt-get install -y ${package_name})"
+  elif [ "" == "$package_is_ok" ]; then
     log_detailed "install_package_from_repos: not installed, installing..."
+    echo "  ${package_name}: not installed, installing (sudo apt-get install -y ${package_name})"
     if ! eval sudo apt-get install -y $package_name $redirect_output; then
       log_detailed "install_package_from_repos: failed to install ${package_name}"
       install_failures+=("${package_name} - retry with: sudo apt-get install -y ${package_name}")
@@ -380,6 +417,7 @@ install_package_from_repos() {
     # sudo apt-get --force-yes --yes install $package_name
   else
     log_detailed "install_package_from_repos: already installed. skipping"
+    echo "  ${package_name}: already installed, skipping"
   fi
   log_detailed "install_package_from_repos: finish (package_name=${package_name})"
 }
