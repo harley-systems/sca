@@ -65,7 +65,9 @@ create_pub_ssh() {
   log_detailed "create_pub_ssh: finish (entity='${entity}', force='${force}')"
 }
 create_pub_ssh_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

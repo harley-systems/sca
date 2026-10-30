@@ -64,7 +64,9 @@ create_pub() {
 }
 
 create_pub_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

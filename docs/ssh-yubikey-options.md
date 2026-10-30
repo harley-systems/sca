@@ -58,6 +58,11 @@ combined. See [`sca install`](commands.md#install).
 
 ## OpenPGP (gpg-agent) SSH
 
+For the full OpenPGP setup (PINs, an offline master key, signing and
+encryption subkeys, a backup YubiKey and recovery), see
+[GPG with a YubiKey](gpg-yubikey.md). The steps below cover only the
+authentication subkey.
+
 ### 1. Put an authentication key on the card
 
 Either generate the keys directly on the card (they can't be backed up):
@@ -275,3 +280,4 @@ automated**.
 
 - [SSH Integration](ssh-integration.md) - PIV-based SSH with SCA
 - [YubiKey Setup](yubikey.md) - PIV setup for SCA
+- [GPG with a YubiKey](gpg-yubikey.md) - OpenPGP signing, encryption, PINs, backup and recovery

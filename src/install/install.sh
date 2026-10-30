@@ -105,13 +105,13 @@ install() {
 install_package_list() {
   case "$1" in
     core ) echo openssl openssh-client datefudge ;;
-    pkcs11 ) echo libengine-pkcs11-openssl pcscd libccid opensc-pkcs11 opensc ;;
-    yubikey ) echo yubico-piv-tool ykcs11 ;;
-    # ykman, needed by every yubikey path (--yubikey-support, --openpgp, --fido2)
+    pkcs11 ) echo libengine-pkcs11-openssl pcscd libccid opensc-pkcs11 opensc pkcs11-provider ;;
+    yubikey ) echo yubico-piv-tool ykcs11 yubikey-manager gnupg scdaemon ;;
+    # ykman, for --openpgp and --fido2 without --yubikey-support
     yubikey_manager ) echo yubikey-manager ;;
     openpgp ) echo gnupg scdaemon pcscd ;;
     fido2 ) echo openssh-client libfido2-1 ;;
-    iso_image_tools ) echo squashfs-tools qemu-kvm genisoimage apt-mirror syslinux-utils ;;
+    iso_image_tools ) echo squashfs-tools xorriso qemu-system-x86 qemu-utils apt-mirror ;;
   esac
 }
 ################################################################################
@@ -130,8 +130,8 @@ install_check_package_manager() {
   [ "$yubikey_support" = true ] && packages+=" $(install_package_list yubikey)"
   [ "$openpgp_support" = true ] && packages+=" $(install_package_list openpgp)"
   [ "$fido2_support" = true ] && packages+=" $(install_package_list fido2)"
-  if [ "$yubikey_support" = true ] || [ "$openpgp_support" = true ] || \
-    [ "$fido2_support" = true ]; then
+  if [ "$yubikey_support" != true ] && \
+    { [ "$openpgp_support" = true ] || [ "$fido2_support" = true ]; }; then
     packages+=" $(install_package_list yubikey_manager)"
   fi
   [ "$mode" != offline ] && packages+=" $(install_package_list iso_image_tools)"
@@ -144,9 +144,11 @@ install_check_package_manager() {
   error "sca install: no supported package manager found. nothing was installed." 1
 }
 install_help() {
-  echo '
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-'
+
+SCA_HELP
 }
 ################################################################################
 # installs sca in offline mode
@@ -170,9 +172,9 @@ install_offline() {
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "
   install_sca_offline $force $sca_script_file_name
-  install_core_offline $packages_folder
-  [ $exclude_pkcs11_support = false ] && install_pkcs11_packages_offline $packages_folder
-  [ $yubikey_support = true ] && install_yubico_piv_tool offline
+  # the sca usb stick only carries the packages requested when it was created,
+  # so all of them are installed
+  install_packages_offline $packages_folder
   log_detailed "install_offline: finish (packages_folder=${packages_folder}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "
@@ -194,7 +196,7 @@ install_online() {
   install_sca_online $force $sca_script_file_name
   install_core_online
   [ $exclude_pkcs11_support != true ] && install_pkcs11_packages_online
-  [ $yubikey_support == true ] && install_yubico_piv_tool online
+  [ $yubikey_support == true ] && install_yubico_piv_tool
   install_iso_image_tools
   log_detailed "install_online: finish (force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
@@ -202,10 +204,10 @@ install_online() {
 "sca_script_file_name=${sca_script_file_name})"
 }
 ###############################################################################
-# we use genisoimage for mkisofs, syslinux-utils for converting the output of
-# mkisofs to usb stick suitable image (isohybrid), squashfs-tools for unpacking
-# and packing ubintu live filesystem (unsquashfs and mksquashfs) and apt-mirror
-# for mirroring apt reposotproes
+# we use xorriso for creating the hybrid bios and uefi sca iso image,
+# squashfs-tools for reading and packing ubuntu live filesystem layers
+# (unsquashfs and mksquashfs), apt-mirror for mirroring apt repositories and
+# qemu for running the sca usb stick image in sca test
 #
 install_iso_image_tools() {
   log_detailed "install_iso_image_tools: start"
@@ -236,15 +238,7 @@ install_sca_online() {
   [ ! $sca_script_file_name == ~/bin/sca ] && /bin/cp -f $sca_script_file_name ~/bin/sca
   chmod 755 ~/bin/sca
   completion bash > ~/bin/sca_completion
-  if [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
-    add_to_path_content='
-    # set PATH so it includes user''s private bin if it exists
-    if [ -d "$HOME/bin" ] ; then
-        PATH="$HOME/bin:$PATH"
-    fi
-    '
-    echo "${add_to_path_content}" >> ~/.bashrc
-  fi
+  install_add_bin_to_path
   if [ $force = true ]; then
     config_create --recreate all
   else
@@ -270,17 +264,36 @@ install_sca_offline() {
   fi
   [ ! $sca_script_file_name == ~/bin/sca ] && /bin/cp -f $sca_script_file_name ~/bin/sca
   chmod 755 ~/bin/sca
-  if [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
-    add_to_path_content='
-    # set PATH so it includes user''s private bin if it exists
-    if [ -d "$HOME/bin" ] ; then
-        PATH="$HOME/bin:$PATH"
-    fi
-    '
-    echo "${add_to_path_content}" >> ~/.bashrc
-  fi
+  install_add_bin_to_path
   log_detailed "install_sca_online: finish (force=${force}, "\
 "sca_script_file_name=${sca_script_file_name})"
+}
+################################################################################
+# makes sure ~/bin, where sca is installed, is on PATH in new shells.
+#
+# the snippet is appended to ~/.bashrc only when ~/bin is not on PATH yet and
+# ~/.bashrc does not already hold it, so running sca install --force again never
+# adds a second copy. an earlier copy is recognised by its marker line.
+install_add_bin_to_path() {
+  local marker="# set PATH so it includes user's private bin if it exists"
+
+  log_detailed "install_add_bin_to_path: start"
+  if [[ ":$PATH:" == *":$HOME/bin:"* ]]; then
+    log_detailed "install_add_bin_to_path: ~/bin is already on PATH. skipping"
+  elif grep -qsxF "${marker}" ~/.bashrc; then
+    log_detailed "install_add_bin_to_path: ~/.bashrc already adds ~/bin. skipping"
+  else
+    # shellcheck disable=SC2016 # $HOME and $PATH expand when ~/.bashrc runs
+    {
+      echo
+      echo "${marker}"
+      echo 'if [ -d "$HOME/bin" ] ; then'
+      echo '    PATH="$HOME/bin:$PATH"'
+      echo 'fi'
+    } >> ~/.bashrc
+    echo "added ~/bin to PATH in ~/.bashrc. open a new shell or run . ~/.bashrc"
+  fi
+  log_detailed "install_add_bin_to_path: finish"
 }
 ################################################################################
 # core packages include key management packages
@@ -293,30 +306,10 @@ install_core_online() {
   done
   log_detailed "install_core_online: finish"
 }
-install_core_offline() {
-  local packages_folder=$1
-
-  log_detailed "install_core_offline: start (packages_folder=${packages_folder})"
-  # check if those packages are incuded in offline. if not, prepare a download
-  # method and implement the installation here.
-  # sudo apt-get install openssl openssh-client
-  install_datefudge_packages_offline $packages_folder
-  log_detailed "install_core_offline: finish (packages_folder=${packages_folder})"
-}
 install_datefudge_packages_online() {
   log_detailed "install_coinstall_datefudge_packages_onlinere_online: start"
   install_package_from_repos datefudge
   log_detailed "install_datefudge_packages_online: finish"
-}
-################################################################################
-# installs datefudge in offline mode
-#
-install_datefudge_packages_offline() {
-  local packages_folder=$1
-
-  log_detailed "install_datefudge_packages_offline: start"
-  install_deb_file datefudge "$packages_folder"
-  log_detailed "install_datefudge_packages_offline: finish"
 }
 ################################################################################
 # builds and installs pkcs11-provider from source (required for OpenSSL 3
@@ -367,67 +360,51 @@ install_pkcs11_packages_online() {
   done
   log_detailed "install_pkcs11_packages_online: finish"
 }
-install_pkcs11_packages_offline() {
+################################################################################
+# installs all the packages bundled on the sca usb stick in offline mode
+#
+# the packages folder holds the requested packages along with the dependencies
+# the live session is missing, so they are installed together in one go.
+install_packages_offline() {
   local packages_folder=$1
 
-  log_detailed "install_pkcs11_packages_offline: start (packages_folder=${packages_folder})"
-
-  local package_name
-  for package_name in $(install_package_list pkcs11); do
-    install_deb_file "$package_name" "$packages_folder"
-  done
-
-  log_detailed "install_pkcs11_packages_offline: finish (packages_folder=${packages_folder})"
+  log_detailed "install_packages_offline: start (packages_folder=${packages_folder})"
+  local redirect_output='> /dev/null'
+  [[ $verbosity == vv* ]] && redirect_output=">> ${log_file}"
+  local deb_files=(${packages_folder}*.deb)
+  if ! [ -f "${deb_files[0]}" ]; then
+    log_detailed "install_packages_offline: no packages found in ${packages_folder}"
+    install_failures+=("no .deb files in ${packages_folder}; was the sca usb stick created without its packages?")
+    return
+  fi
+  if ! eval sudo apt-get install -y --no-install-recommends ${deb_files[*]} ${redirect_output}; then
+    log_detailed "install_packages_offline: failed installing the packages from ${packages_folder}"
+    install_failures+=("the packages in ${packages_folder} - retry with: sudo apt-get install -y --no-install-recommends ${packages_folder}*.deb")
+  fi
+  log_detailed "install_packages_offline: finish (packages_folder=${packages_folder})"
 }
 ################################################################################
-# installs yubico-piv-tool in both online and offline mode
-# NOTE: we install it the same way in both modes as we mirror yubico repository
-# on sca usb stick
+# installs the yubikey tools in online mode, from the ubuntu archive
+#
 # we use yubico piv tool for managing yubikey credentials and storing
-# certificates and keys into the device.
-#
-# example search through installed repositories
-#
-# for APT in `find /etc/apt/ -name \*.list`; do \
-# grep -Po "(?<=^deb\s).*?(?=#|$)" $APT | while read ENTRY ; do \
-# HOST=`echo $ENTRY | cut -d/ -f3`; \
-# if [ "ppa.launchpad.net" = "$HOST" ]; then \
-#   USER=`echo $ENTRY | cut -d/ -f4`; \
-#   PPA=`echo $ENTRY | cut -d/ -f5`; \
-#   echo "${APT}: sudo apt-add-repository ppa:$USER/$PPA"; \
-# else \
-#   echo ${APT}: sudo apt-add-repository \'${ENTRY}\'; \
-# fi \
-# done \
-# done
-#
+# certificates and keys into the device, ykcs11 for accessing the yubikey with
+# pkcs11, yubikey-manager (ykman) for identifying the yubikey and gnupg with
+# scdaemon for the yubikey openpgp applet.
 install_yubico_piv_tool() {
-  local mode=$1
-
-  log_detailed "install_yubico_piv_tool: start (mode=${mode})"
-  # if running online, first need to add the yubico lunchpad ppa
-  if [ "$mode" = "online" ]; then
-    # check if sources.list already contains the yubico lunchpad registered
-    local yubikey_source_installed=$(grep -r --include '*.list' '^deb ' /etc/apt/sources.list /etc/apt/sources.list.d/ | grep yubico)
-    # if not, add it
-    if [ -z "$yubikey_source_installed" ]; then
-      sudo apt-add-repository ppa:yubico/stable
-    fi
-  fi
-  # if running offline, the sources list has been updated for us
+  log_detailed "install_yubico_piv_tool: start"
   local package_name
   for package_name in $(install_package_list yubikey); do
     install_package_from_repos $package_name
   done
-  log_detailed "install_yubico_piv_tool: finish (mode=${mode})"
+  log_detailed "install_yubico_piv_tool: finish"
 }
 ################################################################################
-# installs yubikey-manager for any yubikey path, and the openpgp and fido2
-# package sets when requested.
+# installs the openpgp and fido2 package sets when requested, with
+# yubikey-manager when --yubikey-support has not installed it already.
 #
-# online, everything comes from the repositories. offline, yubikey-manager comes
-# from the stick's mirror of the yubico ppa when --yubikey-support is given (as
-# the other yubikey tools do), and everything else from the stick's .deb files.
+# online, everything comes from the repositories. offline, install_offline has
+# already installed every .deb on the sca usb stick, so a package that is still
+# missing is reported as not on the stick.
 install_ssh_methods() {
   local mode=$1
   local packages_folder=$2
@@ -441,21 +418,19 @@ install_ssh_methods() {
   local groups=''
   [ "$openpgp_support" = true ] && groups+=' openpgp'
   [ "$fido2_support" = true ] && groups+=' fido2'
-  if [ "$yubikey_support" = true ]; then
-    install_package_from_repos yubikey-manager
-  elif [ -n "$groups" ]; then
+  [ -n "$groups" ] && [ "$yubikey_support" != true ] && \
     groups+=' yubikey_manager'
-  fi
   local group package_name
   for group in $groups; do
     for package_name in $(install_package_list $group); do
       if [ "$mode" = offline ]; then
-        # the live image may already ship it; only a missing package needs a .deb
+        # the live image may already ship it, or the stick's .deb files had it
         if dpkg-query -W --showformat='${Status}\n' "$package_name" 2> /dev/null \
             | grep -q "install ok installed"; then
           log_detailed "install_ssh_methods: ${package_name} already installed"
         else
-          install_deb_file "$package_name" "$packages_folder"
+          log_detailed "install_ssh_methods: ${package_name} is not installed"
+          install_failures+=("${package_name} - not installed and not among the .deb files in ${packages_folder}")
         fi
       else
         install_package_from_repos $package_name
@@ -544,35 +519,4 @@ install_package_from_repos() {
     log_detailed "install_package_from_repos: already installed. skipping"
   fi
   log_detailed "install_package_from_repos: finish (package_name=${package_name})"
-}
-################################################################################
-# utility function that serves as a single point for package manager
-# installation execution when installing from deb file. the package's .deb is
-# looked up in the packages folder. a missing .deb or a failed install is added
-# to install_failures (declared by install) and the install carries on.
-install_deb_file() {
-  local package_name=$1
-  local packages_folder=$2
-
-  log_detailed "install_deb_file: start (package_name=${package_name}, packages_folder=${packages_folder})"
-  local redirect_output='2> /dev/null'
-  if [[ $verbosity == vv* ]]; then redirect_output=">> ${log_file}"; else redirect_output='> /dev/null'; fi
-  local deb_file="$(get_available_package_version "$package_name" "$packages_folder")"
-  if [ -z "$deb_file" ] || ! [ -f "$deb_file" ]; then
-    log_detailed "install_deb_file: no .deb file for ${package_name} in ${packages_folder}"
-    install_failures+=("${package_name} - no ${package_name}_*.deb in ${packages_folder}; was the sca usb stick created without this support?")
-    return
-  fi
-  if ! eval sudo apt-get install -y '"$deb_file"' $redirect_output; then
-    log_detailed "install_deb_file: failed to install ${deb_file}"
-    install_failures+=("${package_name} - retry with: sudo apt-get install -y ${deb_file}")
-  fi
-  log_detailed "install_deb_file: finish (package_name=${package_name}, packages_folder=${packages_folder})"
-}
-# prints the first .deb file for the package in the packages folder, or nothing
-get_available_package_version() {
-  local package_name=$1
-  local packages_folder=$2
-
-  ls -b "${packages_folder}${package_name}"_*.deb 2> /dev/null | head -n 1
 }

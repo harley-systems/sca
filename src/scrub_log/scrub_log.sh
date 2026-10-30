@@ -85,7 +85,9 @@ scrub_log() {
   log_detailed "scrub_log: finish (file=${file})"
 }
 scrub_log_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

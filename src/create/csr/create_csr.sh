@@ -122,7 +122,9 @@ create_csr() {
 }
 
 create_csr_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

@@ -46,7 +46,9 @@ create_crt_pub_ssh() {
   log_detailed "create_crt_pub_ssh: finish (entity='${entity}', sign_by_entity='${sign_by_entity}', force='${force}')"
 }
 create_crt_pub_ssh_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }
