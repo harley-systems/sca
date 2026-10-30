@@ -16,6 +16,9 @@
 #   @@@<PARENT> OPTIONS@@@ - from src/<parent>/help/options.txt (if parent specified)
 #   @@@OPTIONS@@@       - from help_dir/options.txt
 #   @@@FURTHER READ@@@  - from parent's further_read.txt or help_dir/further_read.txt
+#
+# The template is build/common/help/help.txt, or the file named by HELP_TEMPLATE
+# (scripts/build-docs.sh uses this to render just the syntax).
 
 set -e
 
@@ -39,7 +42,7 @@ else
 fi
 
 # Build the help file using sed substitutions
-cat build/common/help/help.txt | \
+cat "${HELP_TEMPLATE:-build/common/help/help.txt}" | \
     sed -e "/@@@COMMAND TITLE@@@/{r ${HELP_DIR}/command_title.txt" -e 'd}' | \
     sed -e "/@@@ABSTRACT@@@/{r ${HELP_DIR}/abstract.txt" -e 'd}' | \
     sed -e "/@@@SYNTAX@@@/{r ${HELP_DIR}/syntax.txt" -e 'd}' | \
