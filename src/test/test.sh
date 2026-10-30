@@ -260,9 +260,7 @@ create_offline_disks_images() {
 #
 # example call to quemy-system-x86_64 :
 #
-# sudo qemu-system-x86_64 -boot d -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -hdb format=raw,file=/home/aharon/.sca/downloads/sca-disk.img /home/aharon/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.another.iso
-# sudo qemu-system-x86_64 -boot d -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive format=raw,file=/home/aharon/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso,index=0 -drive format=raw,file=/home/aharon/.sca/downloads/sca-test-disk.img,index=1
-# sudo qemu-system-x86_64 -boot d -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive format=raw,file=/home/aharon/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso,index=0
+# sudo qemu-system-x86_64 -boot d -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive format=raw,file=/home/aharon/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso,index=0 -drive format=raw,file=/home/aharon/.sca/downloads/sca-test-disk.img,index=1
 run_offline_tests() {
   local test_folder=$1
   local test_iso_image=$2

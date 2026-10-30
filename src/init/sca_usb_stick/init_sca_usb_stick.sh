@@ -701,17 +701,20 @@ add_sca() {
   echo \"sca test image: runs the sca air-gapped tests, writes the results to the disk labelled '${test_results_disk_label}' and shuts down.\"
   test_results_disk=/dev/disk/by-label/'${test_results_disk_label}'
   if ! sudo mkdir /run/sca-test-image.lock 2>/dev/null; then
-    echo \"sca test image: already handled by another shell in this session. skipping.\" | tee -a ~/.sca/log
-  elif ! [ -b \"\$test_results_disk\" ]; then
-    echo \"sca test image: no disk labelled '${test_results_disk_label}' found. not running the tests, no disk was touched.\" | tee -a ~/.sca/log
-  elif ! { mkdir -p ~/.sca/'${test_folder_relative}' && sudo mount \"\$test_results_disk\" ~/.sca/'${test_folder_relative}'; }; then
-    echo \"sca test image: could not mount \$test_results_disk. not running the tests.\" | tee -a ~/.sca/log
+    echo \"sca test image: [\$\$ \$PPID \$(date +%T.%N) \$0] lock already held by another shell in this session. skipping.\" >> ~/.sca/log
   else
-    sudo chown -R ubuntu:ubuntu ~/.sca/'${test_folder_relative}'
-    sca -d test --air-gapped >> ~/.sca/log 2>&1
-    cp ~/.sca/log ~/.sca/'${test_folder_relative}'
-    sync
-    sudo shutdown now
+    echo \"sca test image: [\$\$ \$PPID \$(date +%T.%N) \$0] lock acquired.\" >> ~/.sca/log
+    if ! [ -b \"\$test_results_disk\" ]; then
+      echo \"sca test image: [\$\$ \$PPID \$(date +%T.%N) \$0] no disk labelled '${test_results_disk_label}' found. not running the tests, no disk was touched.\" >> ~/.sca/log
+    elif ! { mkdir -p ~/.sca/'${test_folder_relative}' && sudo mount \"\$test_results_disk\" ~/.sca/'${test_folder_relative}'; }; then
+      echo \"sca test image: [\$\$ \$PPID \$(date +%T.%N) \$0] could not mount \$test_results_disk. not running the tests.\" >> ~/.sca/log
+    else
+      sudo chown -R ubuntu:ubuntu ~/.sca/'${test_folder_relative}'
+      sca -d test --air-gapped >> ~/.sca/log 2>&1
+      cp ~/.sca/log ~/.sca/'${test_folder_relative}'
+      sync
+      sudo shutdown now
+    fi
   fi
   '
   fi
