@@ -159,9 +159,8 @@ disable-ccid
 pcsc-shared
 ```
 
-`pcsc-shared` is only accepted by newer GnuPG releases, so SCA leaves it out if
-`gpgconf --list-options scdaemon` doesn't list it. To edit the file by hand,
-check `man scdaemon` for the options your version supports. If the card is still busy,
+To edit the file by hand, check `man scdaemon` for the options your version
+supports. If the card is still busy,
 `gpgconf --kill scdaemon` releases it so other tools can use it.
 
 **The PIN prompt appears in another terminal, or `ssh` fails with "agent

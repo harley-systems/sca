@@ -13,9 +13,9 @@ install_options:
                                   (openssh-client, libfido2-1) and
                                   yubikey-manager. warns if OpenSSH is older
                                   than 8.2
-      --configure-scdaemon      - with --openpgp, adds disable-ccid and (if
-                                  gnupg supports it) pcsc-shared to
-                                  ~/.gnupg/scdaemon.conf so scdaemon and
+      --configure-scdaemon      - with --openpgp, adds disable-ccid and
+                                  pcsc-shared to ~/.gnupg/scdaemon.conf so
+                                  scdaemon and
                                   pcscd can share the yubikey. lines already
                                   present are left alone.
                                   without it, sca install --openpgp

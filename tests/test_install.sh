@@ -77,9 +77,10 @@ output="$(ssh() { echo 'OpenSSH_9.6p1 Ubuntu-3ubuntu13' >&2; }
   export -f ssh; sca install --fido2 --force 2>&1)"
 [[ "${output}" != *"need OpenSSH 8.2"* ]] || fail "no warning on OpenSSH 9.6: ${output}"
 
-# --openpgp with PIV support only prints the scdaemon.conf lines
+# --openpgp with PIV support only prints the scdaemon.conf lines. pcsc-shared
+# is offered even though gpgconf doesn't list it, as on gnupg 2.4.8
 gpgconf() {
-  [ "$*" = '--list-options scdaemon' ] && echo 'pcsc-shared:16:1:...'
+  [ "$*" = '--list-options scdaemon' ] && echo 'disable-ccid:16:1:...'
   return 0
 }
 export -f gpgconf
@@ -106,6 +107,16 @@ printf 'reader-port Yubico' > "$HOME/.gnupg/scdaemon.conf"
 assert_succeeds sca install --openpgp --configure-scdaemon
 assert_eq "$(printf 'reader-port Yubico\ndisable-ccid\npcsc-shared')" \
   "$(cat "$HOME/.gnupg/scdaemon.conf")" "scdaemon.conf without a trailing newline"
+# --dry-run says what it would add and leaves scdaemon.conf alone
+reset_home
+mkdir -p "$HOME/.gnupg"
+printf 'reader-port Yubico\n' > "$HOME/.gnupg/scdaemon.conf"
+output="$(sca install --openpgp --configure-scdaemon --dry-run 2>&1)" \
+  || fail "install --openpgp --configure-scdaemon --dry-run: ${output}"
+[[ "${output}" == *"would add to "*"scdaemon.conf: disable-ccid pcsc-shared"* ]] \
+  || fail "dry run names the scdaemon.conf lines: ${output}"
+assert_eq 'reader-port Yubico' "$(cat "$HOME/.gnupg/scdaemon.conf")" \
+  "scdaemon.conf after a dry run"
 unset -f gpgconf
 
 # --configure-scdaemon without --openpgp is refused before anything is installed

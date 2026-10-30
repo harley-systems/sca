@@ -499,10 +499,9 @@ install_scdaemon_config() {
   local yubikey_support=$2
 
   local scdaemon_conf=~/.gnupg/scdaemon.conf
-  local -a lines=(disable-ccid)
-  # older gnupg releases reject pcsc-shared
-  gpgconf --list-options scdaemon 2> /dev/null | grep -q '^pcsc-shared:' && \
-    lines+=(pcsc-shared)
+  # gpgconf --list-options doesn't list pcsc-shared even where scdaemon
+  # accepts it, so it can't be used to detect support; add both lines.
+  local -a lines=(disable-ccid pcsc-shared)
   local -a missing=()
   local line
   for line in "${lines[@]}"; do
@@ -512,7 +511,9 @@ install_scdaemon_config() {
   log_detailed "install_scdaemon_config: configure_scdaemon=${configure_scdaemon}, "\
 "missing=${missing[*]}"
   [ ${#missing[@]} -eq 0 ] && return
-  if [ "$configure_scdaemon" = true ]; then
+  if [ "$configure_scdaemon" = true ] && [ "$dry_run" = true ]; then
+    echo "would add to ${scdaemon_conf}: ${missing[*]}"
+  elif [ "$configure_scdaemon" = true ]; then
     mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
     # don't glue the first new line onto a last line without a newline
     if [ -s "$scdaemon_conf" ] && [ -n "$(tail -c1 "$scdaemon_conf")" ]; then
