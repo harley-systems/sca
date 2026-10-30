@@ -678,10 +678,12 @@ add_sca() {
   # copy only the configuration files, not the backups 'config create' leaves
   # next to them (*.bak, *.bak-<timestamp>)
   sudo cp ~/.sca/config/*.config ~/.sca/config/*.conventions ~/.sca/config/*.ini $sca_config_folder
-  # the live session starts the desktop installer from a systemd user unit
-  # in a lower layer. mask it from the sca layer (/etc/systemd/user takes
+  # the live session starts the desktop installer wizard from a systemd user
+  # unit in a lower layer. mask it from the sca layer (/etc/systemd/user takes
   # precedence over /usr/lib/systemd/user), so the base layers stay untouched
-  # and the machine boots straight into the live session.
+  # and the machine boots straight into the live session. this only stops the
+  # wizard: the installer backend (subiquity-server from the
+  # ubuntu-desktop-bootstrap snap) is still started by another route.
   sudo ln -sfn /dev/null ${systemd_user_folder}ubuntu-desktop-installer.service
   local yubikey_parameter=""
   [ $yubikey_support = true ] && yubikey_parameter="--yubikey-support"
@@ -694,13 +696,16 @@ add_sca() {
     # and is never partitioned or formatted here: sca test prepares it on the
     # host. without it, nothing is touched and the machine stays up.
     # profile.d is sourced by more than one shell per session, so an atomic
-    # mkdir under /run (cleared on reboot) lets only the first one run the
-    # tests.
+    # mkdir lets only the first one run the tests. the marker lives in
+    # ~/.sca, which sca owns and the install block above has just created:
+    # something in the live session removes directories under /run between
+    # logins, so a second shell got the lock there. the live home is in RAM,
+    # so the marker is still gone after a reboot.
     local test_results_disk_label=$(get_test_results_disk_label)
     start_test_commands='
   echo \"sca test image: runs the sca air-gapped tests, writes the results to the disk labelled '${test_results_disk_label}' and shuts down.\"
   test_results_disk=/dev/disk/by-label/'${test_results_disk_label}'
-  if ! sudo mkdir /run/sca-test-image.lock 2>/dev/null; then
+  if ! mkdir ~/.sca/.test-image-lock 2>/dev/null; then
     echo \"sca test image: [\$\$ \$PPID \$(date +%T.%N) \$0] lock already held by another shell in this session. skipping.\" >> ~/.sca/log
   else
     echo \"sca test image: [\$\$ \$PPID \$(date +%T.%N) \$0] lock acquired.\" >> ~/.sca/log
