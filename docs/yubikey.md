@@ -233,12 +233,18 @@ ykman piv access change-pin
 
 ### Unblock PIN (using PUK)
 
-After 3 wrong PIN attempts, the PIN is blocked:
+After 3 wrong PIN attempts, the PIN is blocked. `sca` unblocks it with the PUK
+stored by `sca security_key init`, and writes the new PIN to the PIN file:
 
 ```bash
-yubico-piv-tool -a unblock-pin
-# Enter PUK, then new PIN
+sca security_key unblock_pin subca             # sets a new random PIN
+sca security_key unblock_pin --keep-pin subca  # sets the PIN in the PIN file again
 ```
+
+The PUK is tried once. If it is refused, the command stops, leaves the PIN file
+as it was and says how many PUK retries remain (`ykman piv info` shows them
+too). After 3 wrong PUK attempts the PUK is blocked as well, and only a reset
+of the PIV application is left (below).
 
 ### Reset PIV (Emergency)
 
@@ -285,10 +291,11 @@ lsusb | grep Yubico
 
 ### Wrong PIN Entered
 
-After 3 failures, PIN is locked. Use PUK to unblock:
+After 3 failures, PIN is locked. Unblock it with the stored PUK; see
+[Unblock PIN](#unblock-pin-using-puk):
 
 ```bash
-yubico-piv-tool -a unblock-pin
+sca security_key unblock_pin subca
 ```
 
 ### PKCS#11 Module Not Found

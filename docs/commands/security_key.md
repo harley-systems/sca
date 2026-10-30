@@ -28,6 +28,7 @@ The security key command is one of the following:
   get_crt   - retrieving certificate for the given entity from a security key
   id        - retrieving ids of the currently inserted security key
   init      - first time initialization of security_key
+  unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
   wait_for  - awaits for specific security key connection
 ```
@@ -44,7 +45,7 @@ security key related commands.
 Every `security_key` subcommand accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
 
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
-- `get_crt`, `init`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
+- `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
 - `id`: lists only the named key, and fails if it is not attached.
 
 ```bash
@@ -62,6 +63,7 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 - [id](#sca-security_key-id) - retrieving ids of the currently inserted security key
 - [info](#sca-security_key-info)
 - [init](#sca-security_key-init) - first time initialization of security_key
+- [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
 - [verify](#sca-security_key-verify)
 - [wait_for](#sca-security_key-wait_for) - awaits for specific security key connection
@@ -258,6 +260,61 @@ storage device (a security key) to each of the declared default entity types
   record the new values for what changed, and the error says which ones
 
 **Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+
+---
+
+## sca security_key unblock_pin
+
+```text
+The security key unblock_pin command help
+
+The security key unblock_pin command recovers a PIV pin that is blocked after
+too many wrong attempts, using the puk sca stored when the security key was
+initialized, and keeps sca's pin file in step with the key.
+
+By default a new random pin is set on the key and, once the key has taken it,
+written to the entity's pin file (mode 0600). With --keep-pin the pin already
+in the pin file is set again instead, and the file is not changed.
+
+The puk is tried once only. If the puk file is missing, or the key refuses the
+puk, the command stops, leaves the pin file as it was, and says how many puk
+retries remain. A blocked puk leaves only a reset of the PIV application, which
+destroys its keys; see docs/yubikey.md.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] unblock_pin [<unblock_pin_options>] <entity>
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+unblock_pin_options:
+
+  -h, --help      - print this help
+  -k, --keep-pin  - set the pin already in the pin file again, rather than a
+                    new random one
+  --device SERIAL - use the security key with this serial instead of the one
+                    configured for the entity. needed to reach a second
+                    (backup) key of the same entity.
+
+entity is one of: ca, subca, user, service, host
+```
+
+**What it does:**
+- Reads the PUK from `<prefix>yubikey-puk.txt` and runs `yubico-piv-tool -a unblock-pin` on the entity's key
+- By default sets a new random PIN and, once the key has taken it, writes it to `<prefix>yubikey-pin.txt` (mode 0600)
+- `-k`, `--keep-pin`: set the PIN already in the PIN file again; the file is not changed
+- The PUK is tried once only. If the PUK file is missing, or the key refuses the PUK, it stops with the PIN file unchanged and says how many PUK retries remain. A blocked PUK leaves only a [PIV reset](../yubikey.md#reset-piv-emergency), which destroys the keys on it
+
+**Example:**
+```bash
+sca security_key verify subca         # FAILED ... PIN error (wrong PIN or PIN blocked)
+sca security_key unblock_pin subca
+sca security_key verify subca         # SUCCESS
+```
 
 ---
 

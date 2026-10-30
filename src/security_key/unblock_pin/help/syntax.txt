@@ -1,0 +1,9 @@
+sca [<sca_options>] security_key [<security_key_options>] unblock_pin [<unblock_pin_options>] <entity>
+
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@
+
+entity is one of: ca, subca, user, service, host

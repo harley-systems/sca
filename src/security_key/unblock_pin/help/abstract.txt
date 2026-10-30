@@ -1,0 +1,12 @@
+The security key unblock_pin command recovers a PIV pin that is blocked after
+too many wrong attempts, using the puk sca stored when the security key was
+initialized, and keeps sca's pin file in step with the key.
+
+By default a new random pin is set on the key and, once the key has taken it,
+written to the entity's pin file (mode 0600). With --keep-pin the pin already
+in the pin file is set again instead, and the file is not changed.
+
+The puk is tried once only. If the puk file is missing, or the key refuses the
+puk, the command stops, leaves the pin file as it was, and says how many puk
+retries remain. A blocked puk leaves only a reset of the PIV application, which
+destroys its keys; see docs/yubikey.md.
