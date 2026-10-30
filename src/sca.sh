@@ -106,7 +106,7 @@ sca() {
       error "the sca configuration file ${config_file} doesn't
 exist. if this is the first time run, make sure to run
 
-  sudo sca config create all
+  sca config create all
 
 otherwise,
 - check the sca_conf_folder environment variable.
