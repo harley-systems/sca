@@ -51,17 +51,17 @@ status=$?
   || fail "failure message names ykcs11 and the retry command: ${output}"
 [[ "${output}" == *"opensc - retry with: sudo apt-get install -y opensc"* ]] \
   || fail "all failures are reported together: ${output}"
-grep -q 'install -y syslinux-utils' "$HOME/apt-get.log" 2>/dev/null \
+grep -q 'install -y apt-mirror' "$HOME/apt-get.log" 2>/dev/null \
   || fail "packages after the failed one are still attempted"
 
-# offline: a .deb the selected options need but that is missing is an error
+# offline: a sca usb stick without its packages is an error
 if [ ! -d /opt/sca/packages ]; then
   reset_home
   output="$(sca install --air-gapped 2>&1)"
   status=$?
-  [ "${status}" -ne 0 ] || fail "offline install exits non-zero when a .deb is missing"
-  [[ "${output}" == *"datefudge - no datefudge_*.deb in /opt/sca/packages/"* ]] \
-    || fail "missing .deb is named: ${output}"
+  [ "${status}" -ne 0 ] || fail "offline install exits non-zero when the .deb files are missing"
+  [[ "${output}" == *"no .deb files in /opt/sca/packages/"* ]] \
+    || fail "missing .deb files are reported: ${output}"
 fi
 
 # no apt-get / dpkg-query: fail before touching ~/bin, listing the packages.
