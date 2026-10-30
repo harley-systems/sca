@@ -8,6 +8,8 @@ Guide for creating and using a secure offline environment for root CA operations
 
 For maximum security, root CA private keys should never touch a networked system. SCA provides tools to create a bootable USB stick that runs a complete offline environment with all prerequisites pre-installed.
 
+For the hardware it is meant to run on, a radio-less ROCK64 with the CA keys on a YubiKey, see [The Air-Gapped CA Appliance](air-gapped-appliance.md).
+
 ### Why Air-Gapped?
 
 - **Root CA protection**: The root CA key is the crown jewel of your PKI. If compromised, all certificates become untrustworthy.
@@ -424,4 +426,5 @@ ykman info
 - [YubiKey Setup](yubikey.md) - Hardware key configuration
 - [Procedures](procedures.md) - Certificate procedures
 - [Command Reference](commands.md) - All sca commands
+- [The Air-Gapped CA Appliance](air-gapped-appliance.md) - Hardware design, bill of materials and prices
 - [USB Boot on ARM](usb-boot-on-arm.md) - Booting a ROCK64 from USB via SPI flash
