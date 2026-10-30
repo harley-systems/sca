@@ -38,6 +38,9 @@ install_options:
                                   sca installation.
   -x, --exclude-pkcs11-support  - if specified excludes bundling of pkcs11
                                   support in the generated sca usb image
+  -n, --dry-run                 - print which packages are already installed
+                                  and which would be installed, then exit
+                                  without installing anything or running sudo
 ```
 
 Automatic installs support apt-based systems (Ubuntu, Debian) only. Without
