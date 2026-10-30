@@ -204,6 +204,14 @@ published SHA256SUMS. Any other ubuntu version id is rejected.
 The sca usb stick image is built on, and only on, an ubuntu host of the same
 version, 26.04-resolute. On any other host the command fails before
 downloading anything.
+
+The sca iso image is written to ~/.sca/downloads/ next to the original ubuntu
+iso, together with a <image>.options file recording the -y, -i and -x options
+it was built with. If the image already exists, it is reused only when those
+recorded options match the ones requested. Otherwise - including an image built
+before sca recorded its options - the command fails, printing the options the
+image has and the ones requested, and leaves the image alone. Remove the image
+and its options file to build a new one. A test image (-t) is always rebuilt.
 ```
 
 Creates a bootable Ubuntu live USB with sca pre-installed for air-gapped root CA operations.
@@ -214,6 +222,15 @@ stick bundles OpenSSL 3.5, pkcs11-provider 1.2, OpenSC 0.27, pcscd/libccid,
 yubico-piv-tool and ykcs11 2.7, yubikey-manager 5.8, and GnuPG with scdaemon
 2.4, all from the Ubuntu 26.04 archive. See
 [Tools on the stick](../air-gapped-operations.md#tools-on-the-stick).
+
+**Reusing a built image:** an existing image is reused only if its
+`<image>.options` file matches the `-y`, `-i` and `-x` options requested;
+otherwise the command fails (see the syntax above). To build a new one, remove
+both files:
+
+```bash
+rm -f ~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso{,.options}
+```
 
 **Example:**
 

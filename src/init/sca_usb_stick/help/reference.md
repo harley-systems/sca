@@ -7,6 +7,15 @@ yubico-piv-tool and ykcs11 2.7, yubikey-manager 5.8, and GnuPG with scdaemon
 2.4, all from the Ubuntu 26.04 archive. See
 [Tools on the stick](../air-gapped-operations.md#tools-on-the-stick).
 
+**Reusing a built image:** an existing image is reused only if its
+`<image>.options` file matches the `-y`, `-i` and `-x` options requested;
+otherwise the command fails (see the syntax above). To build a new one, remove
+both files:
+
+```bash
+rm -f ~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso{,.options}
+```
+
 **Example:**
 
 ```bash

@@ -146,13 +146,25 @@ init_sca_usb_stick() {
   local test_suffix=''
   [ $test_image = true ] && test_suffix='-test'
   local new_iso_image_file=${original_iso_image%.iso}.sca${test_suffix}.iso
+  local new_iso_options_file=$(get_sca_iso_options_file ${new_iso_image_file})
+  local requested_options=$(get_sca_iso_options ${yubikey_support} ${include_apt_mirror} ${exclude_pkcs11_support})
   log_detailed "init_sca_usb_stick: new_iso_image_file ${new_iso_image_file}"
   # a test image must carry the sca being tested, so never reuse an old one
   if [ $test_image = true ] && [ -f ${new_iso_image_file} ]; then
     log_detailed "init_sca_usb_stick: removing the existing test image ${new_iso_image_file}"
-    sudo rm -f ${new_iso_image_file}
+    sudo rm -f ${new_iso_image_file} ${new_iso_options_file}
   fi
   if [ -f ${new_iso_image_file} ]; then
+    # reuse the image only if it is known to be built with the requested options
+    if ! [ -f ${new_iso_options_file} ] || \
+      [ "$(cat ${new_iso_options_file})" != "${requested_options}" ]; then
+      local cached_options="unknown - no ${new_iso_options_file}"
+      [ -f ${new_iso_options_file} ] && cached_options=$(paste -sd " " ${new_iso_options_file})
+      >&2 echo "the iso image ${new_iso_image_file} was not built with the requested options."
+      >&2 echo "  built with: ${cached_options}"
+      >&2 echo "  requested:  ${requested_options//$'\n'/ }"
+      error "remove it to build a new one: rm -f ${new_iso_image_file} ${new_iso_options_file}" 1
+    fi
     echo "the iso image $new_iso_image_file already exists. please use that one, or remove it to create another one."
     print_sca_disk_image_help $new_iso_image_file
     log_detailed "init_sca_usb_stick: finish (skip_cleanup=${skip_cleanup}, test_image=${test_image}, "\
@@ -181,12 +193,15 @@ init_sca_usb_stick() {
     $yubikey_support \
     $exclude_pkcs11_support \
     $live_dpkg_status_file
+  # an options file left from an earlier image must not vouch for this one
+  rm -f ${new_iso_options_file}
   create_live_iso \
     $live_filesystem_folder \
     $live_layer_file_name \
     $original_iso_image \
     $iso_image_sca_folder \
     $new_iso_image_file
+  [ -f ${new_iso_image_file} ] && echo "${requested_options}" > ${new_iso_options_file}
   [ $skip_cleanup != true ] && clean_up_live_usb_intermediary_files \
     $live_filesystem_folder \
     $iso_image_sca_folder \
@@ -203,6 +218,26 @@ sca_usb_stick_help() {
 @@@HELP@@@
 
 SCA_HELP
+}
+################################################################################
+# returns the file next to the sca iso image recording the options it was built
+# with, so a cached image is reused only for a run asking for the same options
+get_sca_iso_options_file() {
+  local sca_iso_image_file=$1
+
+  echo ${sca_iso_image_file}.options
+}
+################################################################################
+# prints the build options that change the content of the sca iso image, one
+# per line, in the form kept in the options file
+get_sca_iso_options() {
+  local yubikey_support=$1
+  local include_apt_mirror=$2
+  local exclude_pkcs11_support=$3
+
+  echo "yubikey_support=${yubikey_support}"
+  echo "include_apt_mirror=${include_apt_mirror}"
+  echo "exclude_pkcs11_support=${exclude_pkcs11_support}"
 }
 ################################################################################
 # the filesystem label of the test results disk. sca test creates the disk with
