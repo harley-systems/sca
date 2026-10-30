@@ -67,7 +67,7 @@ _sca_init_sca_usb_stick_complete() {
 
   while [[ ${COMP_WORDS[$ubuntu_version_id_index]} == -* ]]; do
     if [ $COMP_CWORD == $ubuntu_version_id_index ]; then
-      suggestions=($(compgen -W "-h -s -t -i -x -y -q -o -n --help --skip-cleanup --test-image --include-apt-mirror --exclude-pkcs11-support --yubikey-support --no-cache-squashfs --no-cache-iso --no-cache" -- "$current_word"))
+      suggestions=($(compgen -W "-h -s -t -i -x -y -o -n --help --skip-cleanup --test-image --include-apt-mirror --exclude-pkcs11-support --yubikey-support --no-cache-iso --no-cache" -- "$current_word"))
       COMPREPLY=("${suggestions[@]}")
       return
     fi
@@ -75,14 +75,14 @@ _sca_init_sca_usb_stick_complete() {
   done
 
   if [ -z "${COMP_WORDS[$ubuntu_version_id_index]}" ]; then
-    suggestions=($(compgen -W "18.04.1-bionic 16.04.4-xenial 16.04.3-xenial 16.04.2-xenial 16.04.1-xenial 14.04.5-trusty 14.04.4-trusty 14.04.3-trusty 14.04.2-trusty 14.04.1-trusty" -- "$current_word"))
+    suggestions=($(compgen -W "@@@UBUNTU VERSION ID@@@" -- "$current_word"))
   else
       case "${COMP_WORDS[$ubuntu_version_id_index]}" in
-        18.04.01-bionic|16.04.04-xenial|16.04.03-xenial|16.04.02-xenial|16.04.01-xenial|14.04.05-trusty|14.04.04-trusty|14.04.03-trusty|14.04.02-trusty|14.04.01-trusty)
+        @@@UBUNTU VERSION ID@@@)
           :
           ;;
         *)
-          suggestions=($(compgen -W "18.04.1-bionic 16.04.4-xenial 16.04.3-xenial 16.04.2-xenial 16.04.1-xenial 14.04.5-trusty 14.04.4-trusty 14.04.3-trusty 14.04.2-trusty 14.04.1-trusty" -- "$current_word"))
+          suggestions=($(compgen -W "@@@UBUNTU VERSION ID@@@" -- "$current_word"))
           ;;
       esac
   fi

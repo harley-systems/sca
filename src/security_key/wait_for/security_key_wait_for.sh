@@ -135,7 +135,9 @@ security_key_wait_for() {
   log_detailed "security_key_wait_for: finished (entity=$entity)"
 }
 security_key_wait_for_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

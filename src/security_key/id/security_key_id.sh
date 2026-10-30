@@ -81,7 +81,9 @@ security_key_id() {
   log_detailed "security_key_id: finished (security_key_type:'$security_key_type')"
 }
 security_key_id_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

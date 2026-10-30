@@ -19,6 +19,9 @@
 #   @@@SCA OPTIONS@@@   - becomes the global options (src/help/options.txt)
 #   @@@COMMAND INDEX@@@ - becomes a table linking every command page
 #
+# @@@UBUNTU VERSION ID@@@ is replaced by $UBUNTU_VERSION_ID, which the Makefile
+# passes in, as it is in build/sca.sh.
+#
 # The output is deterministic: changing one command's help files changes only
 # that command's page. Unchanged pages are not rewritten, and pages of commands
 # that no longer exist are removed.
@@ -27,6 +30,7 @@ set -e
 
 cd "$(dirname "$0")/.."
 export LC_ALL=C
+: "${UBUNTU_VERSION_ID:?is not set: run 'make docs'}"
 
 DOCS_DIR=docs
 PAGES_DIR="${DOCS_DIR}/commands"
@@ -168,7 +172,9 @@ done
 
 mkdir -p "${tmp}/out/commands"
 for command in "${commands[@]}"; do
-    render_page "${command}" > "${tmp}/out/commands/${command}.md"
+    render_page "${command}" > "${tmp}/page.md"
+    sed -e "s/@@@UBUNTU VERSION ID@@@/${UBUNTU_VERSION_ID}/g" "${tmp}/page.md" \
+        > "${tmp}/out/commands/${command}.md"
 done
 
 text_block src/help/options.txt > "${tmp}/sca_options.md"

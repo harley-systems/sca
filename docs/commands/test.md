@@ -43,19 +43,10 @@ test_options:
                                   without running simulation of a clean offline
                                   environment
 
-The <ubuntu_version_id> parameter is optional. The default value is
-"18.04.1-bionic". The form of this parameter is "<major>.<minor>.<fix>-<release_name>" - for
-example "18.04.1-bionic". Below list contains all supported ubuntu version ids:
-  - 18.04.1-bionic
-  - 16.04.4-xenial
-  - 16.04.3-xenial
-  - 16.04.2-xenial
-  - 16.04.1-xenial
-  - 14.04.5-trusty
-  - 14.04.4-trusty
-  - 14.04.3-trusty
-  - 14.04.2-trusty
-  - 14.04.1-trusty
+The <ubuntu_version_id> parameter is optional. The only supported, and default,
+ubuntu version id is 26.04-resolute. Its form is <major>.<minor>-<release_name>.
+The latest point release of this version is downloaded and checked against the
+published SHA256SUMS. Any other ubuntu version id is rejected.
 ```
 
 **Examples:**
@@ -67,8 +58,8 @@ sca test
 # Run only online tests (faster, no QEMU)
 sca test --skip-air-gapped-tests
 
-# Run tests for specific Ubuntu version
-sca test 18.04.1-bionic
+# Run tests for the (only supported) Ubuntu version
+sca test 26.04-resolute
 ```
 
 Each check prints `PASS <check>` or `FAIL <check>`:

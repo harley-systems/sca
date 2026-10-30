@@ -85,7 +85,9 @@ security_key_info() {
   log_detailed "security_key_info: finished"
 }
 security_key_info_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

@@ -55,6 +55,7 @@ cat "${HELP_TEMPLATE:-build/common/help/help.txt}" | \
     fi | \
     sed -e "/@@@OPTIONS@@@/{r ${HELP_DIR}/options.txt" -e 'd}' | \
     sed -e "/@@@FURTHER READ@@@/{r ${FURTHER_READ}" -e 'd}' | \
-    # Remove any remaining unsubstituted placeholders
-    sed '/@@@[A-Z_ ]*@@@/d' \
+    # Remove any remaining unsubstituted placeholders. @@@UBUNTU VERSION ID@@@
+    # is kept, the Makefile substitutes it when assembling build/sca.sh
+    sed -e '/@@@UBUNTU VERSION ID@@@/b' -e '/@@@[A-Z_ ]*@@@/d' \
     > "$OUTPUT_FILE"

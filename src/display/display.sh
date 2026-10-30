@@ -112,12 +112,16 @@ ____EOM
 
 }
 display_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
 display_generic_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@GENERIC HELP@@@
-  "
+
+SCA_HELP
 }

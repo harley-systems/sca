@@ -116,7 +116,9 @@ init_yubikey() {
 }
 
 init_yubikey_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
 }

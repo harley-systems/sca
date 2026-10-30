@@ -163,71 +163,57 @@ sca_usb_stick_options:
                                   the slight
                                   difference between the regular image is that
                                   the test image automatically starts sca test
-                                  on end of booting.
-  -i, --include-apt-mirror      - optional flag includes all restricted Ubuntu packages within
-                                  the image by storing apt-mirror within it and
-                                  configuring offline environment package
-                                  manager to use it.
-                                  NOTE: we do include offline repository of
-                                  yubico yubikey tools regardless of this
-                                  option being set or not and depending on
-                                  another dedicated flag -y.
-  -y, --yubikey-support         - optional flag includes apt-mirror of the yubikey tools in
-                                  the image and installs the tools along with
-                                  sca installation.
+                                  on login, writes the results to the disk
+                                  labelled sca-test-results and shuts down.
+                                  without such a disk it runs no tests and
+                                  touches no disk.
+  -i, --include-apt-mirror      - optional flag includes the ubuntu main and
+                                  restricted repositories within the image by
+                                  storing apt-mirror within it and configuring
+                                  offline environment package manager to use it.
+                                  NOTE: the packages sca needs are bundled
+                                  regardless of this option, see -y and -x.
+  -y, --yubikey-support         - optional flag bundles the yubikey tools in
+                                  the image and installs them along with sca:
+                                  ykcs11, yubico-piv-tool, yubikey-manager
+                                  (ykman), gnupg and scdaemon.
   -x, --exclude-pkcs11-support  - optional flag if specified excludes bundling of pkcs11
-                                  support in the generated sca usb image
-  -q, --no-cache-squashfs       - optional flag indicating we do not want to
-                                  preserve a copy of the squashfs file containing
-                                  all the unmodified directories of live file
-                                  system.
-                                  default value is false.
-                                  default behavior is to cache the squashfs file
-                                  per ubuntu_version_id in the ~/.sca/downloads/
-                                  folder.
-                                  if set, we instead extract the whole live
-                                  file-system squashfs and re-compress it again
-                                  with mksquashfs.
-                                  enabling this flag prolongs the time it takes
-                                  to complete the operation if ran multiple times.
-                                  on the cons side, it takes up some disk space
-                                  upon operation completion.
+                                  support in the generated sca usb image:
+                                  pcscd, libccid, opensc, opensc-pkcs11,
+                                  libengine-pkcs11-openssl and pkcs11-provider.
   -o, --no-cache-iso            - optional flag indicating we do not want to
                                   preserve a copy of the downloaded iso file
                                   for the specified ubuntu_version_id.
                                   default value is false.
-                                  default behavior is to cache the squashfs file
+                                  default behavior is to cache the iso file
                                   per ubuntu_version_id in the ~/.sca/downloads/
-                                  folder.
-                                  if set, we instead extract the whole live
-                                  file-system squashfs and re-compress it again
-                                  with mksquashfs.
-                                  enabling this flag prolongs the time it takes
-                                  to complete the operation if ran multiple times.
-                                  on the cons side, it takes up some disk space
-                                  upon operation completion.
+                                  folder, and to reuse it in the next runs once
+                                  it matches the published SHA256SUMS.
   -n, --no-cache                - optional flag.
                                   default value is false.
                                   switches off all caching. suitable for one
                                   time runs, where there is no advantage in
-                                  caching large downloaded files.
+                                  caching large downloaded files. same as
+                                  --no-cache-iso.
 
-The <ubuntu_version_id> parameter is optional. The default value is the latest
-Ubuntu version. The form of this parameter is "<major>.<minor>.<fix>-<release_name>" - for
-example "18.04.01-bionic". Below list contains all supported ubuntu version ids:
-  - 18.04.01-bionic
-  - 16.04.04-xenial
-  - 16.04.03-xenial
-  - 16.04.02-xenial
-  - 16.04.01-xenial
-  - 14.04.05-trusty
-  - 14.04.04-trusty
-  - 14.04.03-trusty
-  - 14.04.02-trusty
-  - 14.04.01-trusty
+The <ubuntu_version_id> parameter is optional. The only supported, and default,
+ubuntu version id is 26.04-resolute. Its form is <major>.<minor>-<release_name>.
+The latest point release of this version is downloaded and checked against the
+published SHA256SUMS. Any other ubuntu version id is rejected.
+
+The sca usb stick image is built on, and only on, an ubuntu host of the same
+version, 26.04-resolute. On any other host the command fails before
+downloading anything.
 ```
 
 Creates a bootable Ubuntu live USB with sca pre-installed for air-gapped root CA operations.
+
+**Ubuntu version:** `26.04-resolute` only (the default). The image is built on an
+Ubuntu 26.04 host only; any other version id or host fails with an error. The
+stick bundles OpenSSL 3.5, pkcs11-provider 1.2, OpenSC 0.27, pcscd/libccid,
+yubico-piv-tool and ykcs11 2.7, yubikey-manager 5.8, and GnuPG with scdaemon
+2.4, all from the Ubuntu 26.04 archive. See
+[Tools on the stick](../air-gapped-operations.md#tools-on-the-stick).
 
 **Example:**
 
@@ -236,7 +222,7 @@ Creates a bootable Ubuntu live USB with sca pre-installed for air-gapped root CA
 sca init sca_usb_stick --yubikey-support
 
 # Write to USB (replace sdX with your device)
-sudo dd bs=4M if=~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
+sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
 ```
 
 See [Air-Gapped Operations](../air-gapped-operations.md) for complete workflow documentation.

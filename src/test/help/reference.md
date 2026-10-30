@@ -7,8 +7,8 @@ sca test
 # Run only online tests (faster, no QEMU)
 sca test --skip-air-gapped-tests
 
-# Run tests for specific Ubuntu version
-sca test 18.04.1-bionic
+# Run tests for the (only supported) Ubuntu version
+sca test 26.04-resolute
 ```
 
 Each check prints `PASS <check>` or `FAIL <check>`:

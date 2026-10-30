@@ -184,7 +184,9 @@ security_key_init() {
   log_detailed "security_key_init: finished (roll_keys=$roll_keys, entity=$entity)"
 }
 security_key_init_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }
