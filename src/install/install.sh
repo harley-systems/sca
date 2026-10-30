@@ -6,6 +6,9 @@ install() {
   local force=false
   local yubikey_support=false
   local exclude_pkcs11_support=false
+  local openpgp_support=false
+  local fido2_support=false
+  local configure_scdaemon=false
   # when true, every step prints what it would do and changes nothing. read by
   # the install_* functions below, which install calls.
   local dry_run=false
@@ -13,7 +16,7 @@ install() {
   # local sca_script_file_name="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
   local sca_script_file_name=$0
 
-  local OPTS=`getopt -o hafyxn --long help,air-gapped,force,yubikey-support,exclude-pkcs11-support,dry-run -n 'sca install' -- "$@"`
+  local OPTS=`getopt -o hafyxgkn --long help,air-gapped,force,yubikey-support,exclude-pkcs11-support,openpgp,fido2,configure-scdaemon,dry-run -n 'sca install' -- "$@"`
   if [ $? != 0 ] ; then \
     error "failed parsing options. use sca install -h for help." 1; fi
   eval set -- "$OPTS"
@@ -37,6 +40,18 @@ install() {
         exclude_pkcs11_support=true
         shift
         ;;
+      -g | --openpgp )
+        openpgp_support=true
+        shift
+        ;;
+      -k | --fido2 )
+        fido2_support=true
+        shift
+        ;;
+      --configure-scdaemon )
+        configure_scdaemon=true
+        shift
+        ;;
       -n | --dry-run )
         dry_run=true
         shift
@@ -54,11 +69,16 @@ install() {
   log_detailed "install: start (mode=${mode}, force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
-"dry_run=${dry_run}, "\
+"openpgp_support=${openpgp_support}, fido2_support=${fido2_support}, "\
+"configure_scdaemon=${configure_scdaemon}, dry_run=${dry_run}, "\
 "sca_script_file_name=${sca_script_file_name})"
+  if [ "$configure_scdaemon" = true ] && [ "$openpgp_support" != true ]; then
+    error "sca install: --configure-scdaemon needs --openpgp. nothing was installed." 1
+  fi
   # automatic installs need apt. check before touching ~/bin, so a user on
   # another platform is told what to install instead of getting half an install
-  install_check_package_manager $mode $yubikey_support $exclude_pkcs11_support
+  install_check_package_manager $mode $yubikey_support $exclude_pkcs11_support \
+    $openpgp_support $fido2_support
   # every package that fails is added here, and reported once all were tried
   local -a install_failures=()
   # if mode is not supplied, auto-detect by pinging a host?
@@ -69,6 +89,11 @@ install() {
     install_online $force $sca_script_file_name $yubikey_support \
       $exclude_pkcs11_support
   fi
+  install_ssh_methods $mode $packages_folder $yubikey_support $openpgp_support \
+    $fido2_support
+  if [ "$openpgp_support" = true ]; then
+    install_scdaemon_config $configure_scdaemon $yubikey_support
+  fi
   [ "$dry_run" = true ] && echo "dry run: nothing was installed or changed."
   if [ ${#install_failures[@]} -gt 0 ]; then
     >&2 echo "sca install: ${#install_failures[@]} package(s) failed to install:"
@@ -78,6 +103,8 @@ install() {
   log_detailed "install: finish (mode=${mode}, force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
+"openpgp_support=${openpgp_support}, fido2_support=${fido2_support}, "\
+"configure_scdaemon=${configure_scdaemon}, "\
 "sca_script_file_name=${sca_script_file_name})"
 }
 ################################################################################
@@ -88,6 +115,10 @@ install_package_list() {
     core ) echo openssl openssh-client datefudge ;;
     pkcs11 ) echo libengine-pkcs11-openssl pcscd libccid opensc-pkcs11 opensc pkcs11-provider ;;
     yubikey ) echo yubico-piv-tool ykcs11 yubikey-manager gnupg scdaemon ;;
+    # ykman, for --openpgp and --fido2 without --yubikey-support
+    yubikey_manager ) echo yubikey-manager ;;
+    openpgp ) echo gnupg scdaemon pcscd ;;
+    fido2 ) echo openssh-client libfido2-1 ;;
     iso_image_tools ) echo squashfs-tools xorriso qemu-system-x86 qemu-utils apt-mirror ;;
   esac
 }
@@ -98,11 +129,19 @@ install_check_package_manager() {
   local mode=$1
   local yubikey_support=$2
   local exclude_pkcs11_support=$3
+  local openpgp_support=$4
+  local fido2_support=$5
 
   command -v apt-get > /dev/null && command -v dpkg-query > /dev/null && return
   local packages="$(install_package_list core)"
   [ "$exclude_pkcs11_support" != true ] && packages+=" $(install_package_list pkcs11)"
   [ "$yubikey_support" = true ] && packages+=" $(install_package_list yubikey)"
+  [ "$openpgp_support" = true ] && packages+=" $(install_package_list openpgp)"
+  [ "$fido2_support" = true ] && packages+=" $(install_package_list fido2)"
+  if [ "$yubikey_support" != true ] && \
+    { [ "$openpgp_support" = true ] || [ "$fido2_support" = true ]; }; then
+    packages+=" $(install_package_list yubikey_manager)"
+  fi
   [ "$mode" != offline ] && packages+=" $(install_package_list iso_image_tools)"
   >&2 echo "sca install: apt-get and dpkg-query are required for automatic installs,"
   >&2 echo "and only apt-based systems (Ubuntu, Debian) are supported."
@@ -391,6 +430,104 @@ install_yubico_piv_tool() {
     install_package_from_repos $package_name
   done
   log_detailed "install_yubico_piv_tool: finish"
+}
+################################################################################
+# installs the openpgp and fido2 package sets when requested, with
+# yubikey-manager when --yubikey-support has not installed it already.
+#
+# online, everything comes from the repositories. offline, install_offline has
+# already installed every .deb on the sca usb stick, so a package that is still
+# missing is reported as not on the stick.
+install_ssh_methods() {
+  local mode=$1
+  local packages_folder=$2
+  local yubikey_support=$3
+  local openpgp_support=$4
+  local fido2_support=$5
+
+  log_detailed "install_ssh_methods: start (mode=${mode}, "\
+"yubikey_support=${yubikey_support}, openpgp_support=${openpgp_support}, "\
+"fido2_support=${fido2_support})"
+  local groups=''
+  [ "$openpgp_support" = true ] && groups+=' openpgp'
+  [ "$fido2_support" = true ] && groups+=' fido2'
+  [ -n "$groups" ] && [ "$yubikey_support" != true ] && \
+    groups+=' yubikey_manager'
+  local group package_name
+  for group in $groups; do
+    for package_name in $(install_package_list $group); do
+      if [ "$mode" = offline ]; then
+        # the live image may already ship it, or the stick's .deb files had it
+        if dpkg-query -W --showformat='${Status}\n' "$package_name" 2> /dev/null \
+            | grep -q "install ok installed"; then
+          log_detailed "install_ssh_methods: ${package_name} already installed"
+        else
+          log_detailed "install_ssh_methods: ${package_name} is not installed"
+          install_failures+=("${package_name} - not installed and not among the .deb files in ${packages_folder}")
+        fi
+      else
+        install_package_from_repos $package_name
+      fi
+    done
+  done
+  [ "$fido2_support" = true ] && install_check_openssh_version
+  log_detailed "install_ssh_methods: finish"
+}
+################################################################################
+# warns when the installed OpenSSH client is older than 8.2, the first release
+# with FIDO2 (sk-*) key support
+install_check_openssh_version() {
+  local version
+  version="$(ssh -V 2>&1 | sed -n 's/^OpenSSH_\([0-9]*\.[0-9]*\).*/\1/p')"
+  log_detailed "install_check_openssh_version: version='${version}'"
+  [ -z "$version" ] && return
+  local major=${version%%.*}
+  local minor=${version#*.}
+  if [ "$major" -lt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -lt 2 ]; }; then
+    >&2 echo "sca install: warning: OpenSSH ${version} is installed. FIDO2 keys"
+    >&2 echo "(ssh-keygen -t ed25519-sk) need OpenSSH 8.2 or later."
+  fi
+}
+################################################################################
+# scdaemon talks to the yubikey over its own ccid driver, while ykman, opensc
+# and ykcs11 go through pcscd, and both can't own the device at once. these
+# lines make scdaemon use pcscd too. they are only written to
+# ~/.gnupg/scdaemon.conf with --configure-scdaemon; with --yubikey-support
+# alone they are only printed. existing lines are never changed.
+install_scdaemon_config() {
+  local configure_scdaemon=$1
+  local yubikey_support=$2
+
+  local scdaemon_conf=~/.gnupg/scdaemon.conf
+  # gpgconf --list-options doesn't list pcsc-shared even where scdaemon
+  # accepts it, so it can't be used to detect support; add both lines.
+  local -a lines=(disable-ccid pcsc-shared)
+  local -a missing=()
+  local line
+  for line in "${lines[@]}"; do
+    grep -qx "[[:space:]]*${line}[[:space:]]*" "$scdaemon_conf" 2> /dev/null || \
+      missing+=("$line")
+  done
+  log_detailed "install_scdaemon_config: configure_scdaemon=${configure_scdaemon}, "\
+"missing=${missing[*]}"
+  [ ${#missing[@]} -eq 0 ] && return
+  if [ "$configure_scdaemon" = true ] && [ "$dry_run" = true ]; then
+    echo "would add to ${scdaemon_conf}: ${missing[*]}"
+  elif [ "$configure_scdaemon" = true ]; then
+    mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+    # don't glue the first new line onto a last line without a newline
+    if [ -s "$scdaemon_conf" ] && [ -n "$(tail -c1 "$scdaemon_conf")" ]; then
+      echo >> "$scdaemon_conf"
+    fi
+    printf '%s\n' "${missing[@]}" >> "$scdaemon_conf"
+    echo "added to ${scdaemon_conf}: ${missing[*]}"
+    echo "run 'gpgconf --kill scdaemon' for it to take effect."
+  elif [ "$yubikey_support" = true ]; then
+    echo "to let scdaemon (OpenPGP) and pcscd (PIV) share the yubikey, these lines"
+    echo "should be added to ${scdaemon_conf}:"
+    printf '  %s\n' "${missing[@]}"
+    echo "run 'sca install --openpgp --configure-scdaemon' to add them."
+  fi
 }
 ################################################################################
 # utility function that serves as a single point for package manager
