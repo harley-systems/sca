@@ -31,7 +31,7 @@ Step-by-step guides for common PKI operations using SCA.
 ```bash
 cd sca
 make
-./build/sca.sh install prerequisites
+./build/sca.sh install --yubikey-support
 sudo cp build/sca.sh /usr/local/bin/sca
 source <(sca completion bash)
 ```
@@ -59,11 +59,12 @@ cp -r ~/.sca/keys /mnt/secret/
 ### Create Sub-CA (on YubiKey)
 
 ```bash
-# Initialize YubiKey (sets PIN, PUK, management key)
-sca security_key init
-
-# Configure sub-CA
+# Configure sub-CA (before init: init writes this sub-CA's credential files)
 sca config set subca admin1
+
+# Initialize YubiKey: random PIN, PUK and management key, saved to
+# ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
+sca security_key init subca
 
 # Create sub-CA key and certificate
 sca create key subca
@@ -391,10 +392,13 @@ Create a new sub-CA for another person.
 
 ```bash
 # On new admin's machine
-sca security_key init
+sca config set subca newadmin
+
+# Initialize YubiKey: random PIN, PUK and management key, saved to
+# ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
+sca security_key init subca
 
 # Create sub-CA request
-sca config set subca newadmin
 sca create key subca
 sca create csr subca
 

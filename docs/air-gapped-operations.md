@@ -26,13 +26,14 @@ before downloading anything. The packages bundled on the stick are resolved
 with the host's apt sources, so the host's sources must include the `universe`
 component (the Ubuntu default).
 
-On your online Ubuntu 26.04 system, install sca and the image creation tools:
+On your online Ubuntu 26.04 system, install SCA together with the image
+creation tools (add `--yubikey-support` if you will use YubiKeys):
 
 ```bash
-sca install
+sca install --yubikey-support
 ```
 
-This installs:
+An online `sca install` also installs:
 - `xorriso` - For creating the hybrid BIOS and UEFI ISO image
 - `squashfs-tools` - For reading and packing Ubuntu filesystem layers
 - `apt-mirror` - For offline package repositories
