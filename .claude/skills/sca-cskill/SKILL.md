@@ -275,7 +275,7 @@ sca config resolve               # Show all resolved file paths
 |-----------|--------|---------|
 | `info` | `sca security_key info` | Display all PIV slots on YubiKey |
 | `id` | `sca security_key id` | Get YubiKey serial number |
-| `init` | `sca security_key init` | Initialize YubiKey PIV (set PIN/PUK) |
+| `init` | `sca security_key init <entity>` | Initialize YubiKey PIV: random PIN/PUK/management key saved to the entity's private folder. Run after `sca config set <entity> <name>` |
 | `upload` | `sca security_key upload <entity> <document>` | Upload a private key or a certificate to a YubiKey slot (document: `crt` or `key`) |
 | `get_crt` | `sca security_key get_crt <entity>` | Retrieve cert from YubiKey |
 | `verify` | `sca security_key verify <entity>` | Test signing with YubiKey key |
@@ -298,7 +298,7 @@ sca security_key upload subca key  # Upload SubCA private key to YubiKey
 | `demo` | `sca init demo [path]` | Create complete demo CA structure |
 | `openssl_ca_db` | `sca init openssl_ca_db` | Initialize OpenSSL database files |
 | `sca_usb_stick` | `sca init sca_usb_stick` | Create bootable USB for air-gapped CA |
-| `yubikey` | `sca init yubikey` | Initialize YubiKey PIV applet |
+| `yubikey` | `sca init yubikey` | Older form of `security_key init`; takes no entity, use `sca security_key init <entity>` instead |
 
 #### `sca install` - Install prerequisites
 
@@ -386,13 +386,15 @@ sca approve service              # Uses SubCA on YubiKey, prompts for PIN
 ### Workflow 2: Set Up a New Sub-CA on YubiKey
 
 ```bash
-# 1. Initialize YubiKey PIV
-sca security_key init
-
-# 2. Configure the SubCA
+# 1. Configure the SubCA (before init: init writes this SubCA's credential files)
 sca config set subca newadmin
 
-# 3. Create SubCA key and CSR
+# 2. Initialize YubiKey PIV: random PIN/PUK/management key, saved to
+#    ~/.sca/keys/<ca>/<subca>/private/ (back them up offline)
+sca security_key init subca
+
+# 3. Create SubCA key and CSR (after init: create key makes empty credential
+#    files when they are missing, and init refuses to overwrite them)
 sca create key subca
 sca create csr subca
 

@@ -48,6 +48,11 @@ subca_yubikey_pin_policy_default=once
 
 ## PIN/PUK/Key File Locations
 
+Written by `sca security_key init <entity>` (random values, nothing prompted).
+SCA reads the PIN from the PIN file, so changing or unblocking the PIN with
+`ykman`/`yubico-piv-tool` leaves it stale and `approve`/`verify` then fail and
+burn PIN retries. Back these files up offline.
+
 ```
 ~/.sca/keys/<ca>/<subca>/private/
     <ca>-<subca>-<entity>-yubikey-pin.txt
@@ -84,8 +89,10 @@ sca security_key info
 # Get YubiKey serial number
 sca security_key id
 
-# Initialize YubiKey PIV applet (sets PIN, PUK, management key)
-sca security_key init
+# Initialize YubiKey PIV applet (random PIN, PUK, management key saved to files)
+# Run after `sca config set subca <name>` and before `sca create key subca`.
+sca config set subca admin
+sca security_key init subca
 
 # Upload a certificate and a private key to YubiKey (two separate calls)
 sca security_key upload subca crt
@@ -108,7 +115,7 @@ sca security_key wait_for
 |-------|----------|
 | `ykcs11 not found` | `sudo apt install ykcs11` or `sca install` |
 | `PKCS#11 engine error` | `sudo apt install libengine-pkcs11-openssl` |
-| `PIN incorrect` | Check PIN file or re-initialize with `sca security_key init` |
+| `PIN incorrect` | The PIN file no longer matches the key (e.g. PIN changed with `ykman`): write the current PIN into the PIN file. Stop retrying first, each attempt uses a PIN retry |
 | `YubiKey not detected` | Unplug/replug, try `sca security_key wait_for` |
 | `Slot empty` | Upload first: `sca security_key upload <entity> crt`, then `sca security_key upload <entity> key` |
 | `Touch timeout` | Touch the YubiKey when it blinks during signing |

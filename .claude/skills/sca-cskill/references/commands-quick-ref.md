@@ -67,7 +67,7 @@ sca list configs                 # List config files
 # YubiKey / Security Key
 sca security_key info            # Show all PIV slots
 sca security_key id              # Get serial number
-sca security_key init            # Initialize PIV (set PIN/PUK)
+sca security_key init <entity>   # Initialize PIV (random PIN/PUK/mgmt key, saved to files)
 sca security_key upload <entity> crt # Upload certificate to YubiKey
 sca security_key upload <entity> key # Upload private key to YubiKey
 sca security_key get_crt <entity># Get cert from YubiKey
@@ -78,7 +78,7 @@ sca security_key wait_for        # Wait for key insertion
 sca init demo [path]             # Create demo CA structure
 sca init openssl_ca_db           # Initialize OpenSSL database
 sca init sca_usb_stick           # Create bootable USB
-sca init yubikey                 # Initialize YubiKey PIV
+sca init yubikey                 # Older form; use security_key init <entity>
 
 # Other
 sca install                      # Install prerequisites

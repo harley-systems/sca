@@ -115,6 +115,7 @@ Create these files in `src/export/p12/help/`:
 | `syntax.txt` | Usage syntax and options |
 | `options.txt` | Comma-separated list of options |
 | `further_read.txt` | Additional references (see guidelines below) |
+| `reference.md` | Optional: examples and notes for the command reference |
 
 **Help file guidelines:**
 
@@ -126,6 +127,10 @@ Create these files in `src/export/p12/help/`:
   - **Parent commands** (e.g., `display`, `config`, `export`): Add text pointing to subcommands
     - Example: "Run 'sca display <document_type> -h' for help on specific document types."
   - **Leaf commands** (e.g., `display crt`, `export p12`): Leave **empty** for consistency
+- `reference.md` - Optional markdown appended to the command's section of the
+  command reference (examples, notes, links to guides). Only add what the help
+  text doesn't already say. Use `###` or smaller headings, and link other docs
+  relative to `docs/commands/` (e.g. `../yubikey.md`)
 
 #### 4. Update the parent command dispatcher
 
@@ -159,7 +164,9 @@ That's it! The macros will automatically generate the help and build rules for y
 
 #### 7. Update documentation
 
-- Add the new command to `docs/commands.md`
+- Run `make docs` to regenerate the command reference (`docs/commands.md` and
+  `docs/commands/<command>.md`) from the help files, and commit the result.
+  `make docs-check` fails when the committed reference is stale
 - Update the Claude Code skill at `.claude/skills/sca-cskill/SKILL.md` and its quick reference at `.claude/skills/sca-cskill/references/commands-quick-ref.md`
 - If publishing globally, also update the [claude-skills](https://github.com/harley-systems/claude-skills) marketplace repo
 
@@ -253,7 +260,9 @@ failure. Test files should pass `shellcheck`.
 
 ## Documentation
 
-- Update `docs/commands.md` if you change functionality
+- The command reference (`docs/commands.md`, `docs/commands/`) is generated from
+  the help files: don't edit it by hand. Change `src/**/help/*`, then run
+  `make docs` and commit the result (`make docs-check` tells you if you forgot)
 - Update the Claude Code skill (`.claude/skills/sca-cskill/`) to reflect command changes
 - Add examples for new features
 - Keep the README.md current

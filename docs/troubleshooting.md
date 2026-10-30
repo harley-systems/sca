@@ -343,7 +343,7 @@ cat ~/.sca/log
 tail -f ~/.sca/log  # Watch in real-time
 ```
 
-> **Warning:** a log written by an older version of sca may contain your YubiKey PIN or management key in cleartext. Run `sca scrub_log` once to redact them. See [scrub_log](commands.md#scrub_log).
+> **Warning:** a log written by an older version of sca may contain your YubiKey PIN or management key in cleartext. Run `sca scrub_log` once to redact them. See [scrub_log](commands/scrub_log.md).
 
 ### Report Issues
 
