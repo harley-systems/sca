@@ -44,7 +44,7 @@ test_options:
                                   environment
 
 The <ubuntu_version_id> parameter is optional. The only supported, and default,
-ubuntu version id is 26.04-resolute. Its form is <major>.<minor>-<release_name>.
+ubuntu version id is 26.04-resolute. Its form is "<major>.<minor>-<release_name>".
 The latest point release of this version is downloaded and checked against the
 published SHA256SUMS. Any other ubuntu version id is rejected.
 ```
