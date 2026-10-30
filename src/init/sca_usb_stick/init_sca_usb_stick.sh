@@ -591,9 +591,20 @@ create_live_iso() {
 print_sca_disk_image_help() {
   local new_iso_image_file=$1
 
-  echo "insert the usb stick, determine which device it is /dev/sd[a|b|c|d|e|f] ( in below case it is /dev/sdc ) then type:"
-  echo "sudo umount /dev/sdb1"
-  echo "sudo dd bs=4M if=${new_iso_image_file} of=/dev/sdb conv=fdatasync"
+  # never print a concrete device: a pasted command would overwrite whatever
+  # disk happens to have that name on the user's machine
+  echo "to write the image to a usb stick, insert the stick and identify its device"
+  echo "(BE CAREFUL - wrong device = data loss). a usb stick usually shows TRAN=usb, RM=1:"
+  # -e 7 hides loop devices (snaps etc.), which would bury the real disks
+  if command -v lsblk >/dev/null 2>&1; then
+    lsblk -do NAME,TRAN,RM,SIZE,MODEL -e 7 2>/dev/null \
+      || echo "  (could not list devices; run: lsblk -do NAME,TRAN,RM,SIZE,MODEL -e 7)"
+  else
+    echo "  (lsblk not found; identify the stick with your system's disk tools)"
+  fi
+  echo "then, replacing sdX with your stick's device, type:"
+  echo "sudo umount /dev/sdX1"
+  echo "sudo dd bs=4M if=${new_iso_image_file} of=/dev/sdX conv=fdatasync"
 }
 ################################################################################
 # mirrors the ubuntu main and restricted repositories into the sca layer, when
