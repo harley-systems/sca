@@ -127,6 +127,10 @@ sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/s
 3. System boots directly into Ubuntu live session
 4. On first boot, sca automatically installs packages from USB
 
+> **ROCK64 (ARM).** A ROCK64 boots the SCA image from microSD as it is. To boot
+> it from a USB stick, U-Boot must first be written to the board's SPI flash.
+> See [USB Boot on ARM](usb-boot-on-arm.md).
+
 ### First-Time Setup
 
 The live environment automatically:
@@ -316,6 +320,7 @@ Store multiple encrypted copies in different secure locations.
 1. Check BIOS/UEFI boot order
 2. Disable Secure Boot if enabled
 3. Try different USB port (USB 2.0 ports often more compatible)
+4. On a ROCK64, USB boot needs U-Boot in SPI flash first: see [USB Boot on ARM](usb-boot-on-arm.md)
 
 ### Packages Not Installing
 
@@ -347,3 +352,4 @@ ykman info
 - [YubiKey Setup](yubikey.md) - Hardware key configuration
 - [Procedures](procedures.md) - Certificate procedures
 - [Command Reference](commands.md) - All sca commands
+- [USB Boot on ARM](usb-boot-on-arm.md) - Booting a ROCK64 from USB via SPI flash
