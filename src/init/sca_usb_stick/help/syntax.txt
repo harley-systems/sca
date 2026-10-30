@@ -6,19 +6,14 @@ sca [<sca_options>] init [<init_options>] sca_usb_stick <sca_usb_stick_options> 
 
 @@@OPTIONS@@@
 
-The <ubuntu_version_id> parameter is optional. The default value is the latest
-Ubuntu version. The form of this parameter is '<major>.<minor>.<fix>-<release_name>' - for
-example '18.04.01-bionic'. Below list contains all supported ubuntu version ids:
-  - 18.04.01-bionic
-  - 16.04.04-xenial
-  - 16.04.03-xenial
-  - 16.04.02-xenial
-  - 16.04.01-xenial
-  - 14.04.05-trusty
-  - 14.04.04-trusty
-  - 14.04.03-trusty
-  - 14.04.02-trusty
-  - 14.04.01-trusty
+The <ubuntu_version_id> parameter is optional. The only supported, and default,
+ubuntu version id is @@@UBUNTU VERSION ID@@@. Its form is <major>.<minor>-<release_name>.
+The latest point release of this version is downloaded and checked against the
+published SHA256SUMS. Any other ubuntu version id is rejected.
+
+The sca usb stick image is built on, and only on, an ubuntu host of the same
+version, @@@UBUNTU VERSION ID@@@. On any other host the command fails before
+downloading anything.
 
 The sca iso image is written to ~/.sca/downloads/ next to the original ubuntu
 iso, together with a <image>.options file recording the -y, -i and -x options

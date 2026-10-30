@@ -123,9 +123,11 @@ ____EOM
   log_detailed "approve: finish (entity=${entity})"
 }
 approve_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
 get_current_entity_id() {
   local entity="$1"

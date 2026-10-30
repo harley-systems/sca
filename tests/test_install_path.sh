@@ -19,9 +19,8 @@ run_install() {
     # shellcheck source=/dev/null
     . "${SCA}"
     install_core_online() { :; }
-    install_core_offline() { :; }
     install_pkcs11_packages_online() { :; }
-    install_pkcs11_packages_offline() { :; }
+    install_packages_offline() { :; }
     install_yubico_piv_tool() { :; }
     install_iso_image_tools() { :; }
     PATH="${path}"

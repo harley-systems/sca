@@ -96,7 +96,9 @@ display_crt() {
   log_detailed "display_crt: finish (entity=${entity}, entity_id=${entity_id}, old_entity_id=$old_entity_id)"
 }
 display_crt_help() {
-    echo "
+    cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

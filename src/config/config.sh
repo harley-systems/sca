@@ -34,7 +34,9 @@ ____EOM
   log_detailed "config: finish (config_verb=${config_verb})"
 }
 config_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

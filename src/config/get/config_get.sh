@@ -45,9 +45,11 @@ ____EOM
   log_detailed "config_get: finish (setting_name=${setting_name}, info=$@, config_file=$config_file))"
 }
 config_get_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }
 ################################################################################
 # get a ca configuration settings

@@ -42,7 +42,9 @@ end of sca_config_content."
   log_detailed "config_load: finished (sca_config_file=${sca_config_file})"
 }
 config_load_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

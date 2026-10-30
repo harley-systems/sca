@@ -48,7 +48,9 @@ ____EOM
   log_detailed "create: finish (document_type=${document_type})"
 }
 create_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

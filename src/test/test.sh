@@ -33,17 +33,10 @@ test() {
 
   log_detailed "test: start (mode=${mode})"
 
-  # array of all valid ubuntu version ids declared
-  local valid_ubuntu_version_ids=("18.04.1-bionic" "16.04.4-xenial"
-    "16.04.3-xenial" "16.04.2-xenial" "16.04.1-xenial" "14.04.5-trusty"
-    "14.04.4-trusty" "14.04.3-trusty" "14.04.2-trusty" "14.04.1-trusty")
   # use ubuntu version id specified below for the offline environment on sca usb
   # stick
-  local ubuntu_version_id=${1:-"18.04.1-bionic"}
-  # check if valid ubuntu version id was supplied
-  if [[ ! " ${valid_ubuntu_version_ids[@]} " =~ " ${ubuntu_version_id} " ]]; then
-    error "test: invalid ubuntu version id was provided. please, run sca test -h to see more info." 1
-  fi
+  local ubuntu_version_id=${1:-$sca_ubuntu_version_id}
+  check_ubuntu_version_id "$ubuntu_version_id" "test"
   # extract the version number as all text preceeding the first - character
   local ubuntu_version_number=${ubuntu_version_id%%-*}
 
@@ -63,9 +56,13 @@ test() {
       #
       local test_data_disk_image=${test_folder}sca-test-disk.img
       #
-      local test_iso_file=$(get_iso_filename_from_version_number $ubuntu_version_number test)
-      #
       local downloads_folder=~/.sca/downloads/
+      # the test image is named after the latest point release of the original
+      # iso image, for example ubuntu-26.04.1-desktop-amd64.sca-test.iso
+      download_ubuntu_sha256sums $ubuntu_version_number $downloads_folder > /dev/null || exit 1
+      local test_iso_file=$(get_latest_ubuntu_iso_filename $ubuntu_version_number \
+        $(get_ubuntu_sha256sums_file $ubuntu_version_number $downloads_folder))
+      test_iso_file=${test_iso_file%.iso}.sca-test.iso
       #
       local test_iso_fullname=${downloads_folder}${test_iso_file}
       air_gapped_test "$test_folder" "$test_iso_fullname" "$test_data_disk_image" \
@@ -89,9 +86,11 @@ test() {
   fi
 }
 test_help() {
-  echo '
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-'
+
+SCA_HELP
 }
 ################################################################################
 # runs a single named check and records its outcome in the results file
@@ -261,9 +260,15 @@ create_offline_disks_images() {
 # data. the guest writes results.txt and its log to the test disk and powers
 # off; they are then copied to the air_gapped_results_file and the log.
 #
-# example call to quemy-system-x86_64 :
+# both drives are attached as virtio-blk rather than with -drive ...,index=N:
+# on q35 that would put them on the ich9 ahci controller, where qemu 10.2.x
+# aborts on a zero-length ncq prdt issued by newer guest kernels. the guest
+# finds the results disk by its filesystem label, so the device names it sees
+# (vda, vdb) do not matter.
 #
-# sudo qemu-system-x86_64 -boot d -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive format=raw,file=/home/aharon/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso,index=0 -drive format=raw,file=/home/aharon/.sca/downloads/sca-test-disk.img,index=1
+# example call to qemu-system-x86_64 :
+#
+# sudo qemu-system-x86_64 -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive if=none,id=sca-iso,format=raw,readonly=on,file=$HOME/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca-test.iso -device virtio-blk-pci,drive=sca-iso,bootindex=0 -drive if=none,id=sca-results,format=raw,file=$HOME/.sca/test/sca-test-disk.img -device virtio-blk-pci,drive=sca-results
 run_offline_tests() {
   local test_folder=$1
   local test_iso_image=$2
@@ -272,15 +277,16 @@ run_offline_tests() {
 
   log_detailed "run_offline_tests: start (test_folder=${test_folder}, test_iso_image=${test_iso_image} test_disk_image=${test_disk_image})"
   sudo qemu-system-x86_64 \
-    -boot d \
     -enable-kvm \
     -machine q35,accel=kvm \
     -device intel-iommu \
     -m 2048 \
     -cpu host \
     -net none \
-    -drive format=raw,file=${test_iso_image},index=0 \
-    -drive format=raw,file=${test_disk_image},index=1
+    -drive "if=none,id=sca-iso,format=raw,readonly=on,file=${test_iso_image}" \
+    -device virtio-blk-pci,drive=sca-iso,bootindex=0 \
+    -drive "if=none,id=sca-results,format=raw,file=${test_disk_image}" \
+    -device virtio-blk-pci,drive=sca-results
 
   mkdir -p "${test_folder}temp/"
   if ! sudo mount -t ext4 -o loop "${test_disk_image}" "${test_folder}temp/"; then

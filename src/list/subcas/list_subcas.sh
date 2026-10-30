@@ -47,7 +47,9 @@ list_subcas() {
   log_detailed "list_subcas: finished (subca_files_folder=${subca_files_folder})"
 }
 list_subcas_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }
