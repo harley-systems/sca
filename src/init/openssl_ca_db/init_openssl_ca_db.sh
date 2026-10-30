@@ -35,7 +35,9 @@ init_openssl_ca_db() {
   log_detailed "init_openssl_ca_db: finish (entity=${entity})"
 }
 init_openssl_ca_db_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-    "
+
+SCA_HELP
 }

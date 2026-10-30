@@ -47,7 +47,9 @@ list_hosts() {
   log_detailed "list_hosts: finished (host_files_folder=${host_files_folder})"
 }
 list_hosts_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

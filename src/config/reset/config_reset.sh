@@ -54,7 +54,9 @@ config_reset() {
   log_detailed "config_reset: finished"
 }
 config_reset_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }
