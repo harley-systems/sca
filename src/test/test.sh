@@ -261,9 +261,15 @@ create_offline_disks_images() {
 # data. the guest writes results.txt and its log to the test disk and powers
 # off; they are then copied to the air_gapped_results_file and the log.
 #
-# example call to quemy-system-x86_64 :
+# both drives are attached as virtio-blk rather than with -drive ...,index=N:
+# on q35 that would put them on the ich9 ahci controller, where qemu 10.2.x
+# aborts on a zero-length ncq prdt issued by newer guest kernels. the guest
+# finds the results disk by its filesystem label, so the device names it sees
+# (vda, vdb) do not matter.
 #
-# sudo qemu-system-x86_64 -boot d -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive format=raw,file=/home/aharon/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso,index=0 -drive format=raw,file=/home/aharon/.sca/downloads/sca-test-disk.img,index=1
+# example call to qemu-system-x86_64 :
+#
+# sudo qemu-system-x86_64 -enable-kvm -machine q35,accel=kvm -device intel-iommu -m 2048 -cpu host -net none -drive if=none,id=sca-iso,format=raw,readonly=on,file=$HOME/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca-test.iso -device virtio-blk-pci,drive=sca-iso,bootindex=0 -drive if=none,id=sca-results,format=raw,file=$HOME/.sca/test/sca-test-disk.img -device virtio-blk-pci,drive=sca-results
 run_offline_tests() {
   local test_folder=$1
   local test_iso_image=$2
@@ -272,15 +278,16 @@ run_offline_tests() {
 
   log_detailed "run_offline_tests: start (test_folder=${test_folder}, test_iso_image=${test_iso_image} test_disk_image=${test_disk_image})"
   sudo qemu-system-x86_64 \
-    -boot d \
     -enable-kvm \
     -machine q35,accel=kvm \
     -device intel-iommu \
     -m 2048 \
     -cpu host \
     -net none \
-    -drive format=raw,file=${test_iso_image},index=0 \
-    -drive format=raw,file=${test_disk_image},index=1
+    -drive "if=none,id=sca-iso,format=raw,readonly=on,file=${test_iso_image}" \
+    -device virtio-blk-pci,drive=sca-iso,bootindex=0 \
+    -drive "if=none,id=sca-results,format=raw,file=${test_disk_image}" \
+    -device virtio-blk-pci,drive=sca-results
 
   mkdir -p "${test_folder}temp/"
   if ! sudo mount -t ext4 -o loop "${test_disk_image}" "${test_folder}temp/"; then
