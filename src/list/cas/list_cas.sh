@@ -46,7 +46,9 @@ list_cas() {
 
 }
 list_cas_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

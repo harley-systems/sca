@@ -13,13 +13,14 @@ security_key() {
   shift
   log_detailed "security_key: start (security_key_command=${security_key_command})"
   case "$security_key_command" in
-    get_crt|id|info|init|upload|verify|wait_for )
+    get_crt|id|info|init|unblock_pin|upload|verify|wait_for )
       eval security_key_$security_key_command "$@"
       ;;
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$security_key_command' for security_key_command (first) argument.
-        supported values are 'get_crt', 'id', 'info', 'init', 'upload', 'verify', and 'wait_for'.
+        supported values are 'get_crt', 'id', 'info', 'init', 'unblock_pin', 'upload', 'verify',
+        and 'wait_for'.
         use sca security_key -h for help.
 ____EOM
       error "$message" 1
@@ -29,9 +30,11 @@ ____EOM
   log_detailed "security_key: finished (security_key_command=${security_key_command})"
 }
 security_key_help() {
-  echo '
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-'
+
+SCA_HELP
 }
 ###############################################################################
 # for given yubikey slot id, the function will return it's corresponding

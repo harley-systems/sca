@@ -44,12 +44,17 @@ Common issues and solutions when using SCA.
 
 **Symptom:** "PIN blocked" after 3 wrong attempts.
 
-**Solution:** Use PUK to unblock:
+**Solution:** Unblock it with the PUK stored by `sca security_key init`. A new
+random PIN is set and written to the PIN file (`--keep-pin` sets the stored PIN
+again instead):
 
 ```bash
-yubico-piv-tool -a unblock-pin
-# Enter PUK, then new PIN
+sca security_key unblock_pin subca
+sca security_key verify subca
 ```
+
+If the PUK is refused, the command stops after that one attempt, leaves the PIN
+file unchanged, and says how many PUK retries remain.
 
 If PUK is also blocked (3 wrong PUK attempts), the PIV applet must be reset:
 
@@ -343,7 +348,7 @@ cat ~/.sca/log
 tail -f ~/.sca/log  # Watch in real-time
 ```
 
-> **Warning:** a log written by an older version of sca may contain your YubiKey PIN or management key in cleartext. Run `sca scrub_log` once to redact them. See [scrub_log](commands.md#scrub_log).
+> **Warning:** a log written by an older version of sca may contain your YubiKey PIN or management key in cleartext. Run `sca scrub_log` once to redact them. See [scrub_log](commands/scrub_log.md).
 
 ### Report Issues
 

@@ -51,8 +51,10 @@ first one (PIV); this page explains all three so you can pick the right one.
 | OpenPGP | `gnupg scdaemon` (+ `pcscd` if you use `disable-ccid`) | `gnupg2 pcsc-lite` | `brew install gnupg pinentry-mac` |
 | FIDO2 | `openssh-client` ≥ 8.2 and `libfido2-1` | `openssh-clients libfido2` | `brew install openssh` |
 
-`sca install` installs the PIV packages only. Installing the OpenPGP or FIDO2
-packages is **not yet automated**.
+On Ubuntu/Debian, `sca install` installs these: `--yubikey-support` for PIV,
+`--openpgp` for OpenPGP and `--fido2` for FIDO2 (it warns if OpenSSH is older
+than 8.2). Each of them also installs `yubikey-manager`, and they can be
+combined. See [`sca install`](commands.md#install).
 
 ## OpenPGP (gpg-agent) SSH
 
@@ -145,15 +147,20 @@ default, while `ykman`, OpenSC and `ykcs11` use `pcscd`. Both can't own the
 device at once. Tell `scdaemon` to go through `pcscd` instead:
 
 ```bash
-cat >> ~/.gnupg/scdaemon.conf <<'EOF'
-disable-ccid
-pcsc-shared
-EOF
+sca install --openpgp --configure-scdaemon
 gpgconf --kill scdaemon
 ```
 
-`pcsc-shared` is only accepted by newer GnuPG releases; check `man scdaemon`
-and leave it out if your version doesn't list it. If the card is still busy,
+This appends these lines to `~/.gnupg/scdaemon.conf`, skipping any that are
+already there:
+
+```
+disable-ccid
+pcsc-shared
+```
+
+To edit the file by hand, check `man scdaemon` for the options your version
+supports. If the card is still busy,
 `gpgconf --kill scdaemon` releases it so other tools can use it.
 
 **The PIN prompt appears in another terminal, or `ssh` fails with "agent

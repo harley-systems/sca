@@ -47,7 +47,9 @@ list_services() {
   log_detailed "list_services: finished (service_files_folder=${service_files_folder})"
 }
 list_services_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

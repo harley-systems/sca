@@ -104,7 +104,9 @@ export sca_conf_folder_default='$sca_conf_folder'
   log_detailed "config_save: finished (sca_config_file=${sca_config_file})"
 }
 config_save_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

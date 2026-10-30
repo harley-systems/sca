@@ -9,5 +9,6 @@ The security key command is one of the following:
   get_crt   - retrieving certificate for the given entity from a security key
   id        - retrieving ids of the currently inserted security key
   init      - first time initialization of security_key
+  unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
   wait_for  - awaits for specific security key connection

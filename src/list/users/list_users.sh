@@ -47,7 +47,9 @@ list_users() {
   log_detailed "list_users: finished (user_files_folder=${user_files_folder})"
 }
 list_users_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

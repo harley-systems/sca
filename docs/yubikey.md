@@ -37,10 +37,12 @@ sudo systemctl enable pcscd
 sudo systemctl start pcscd
 ```
 
-**Or via SCA:**
+**Or via SCA** (also installs `ykcs11`):
 ```bash
-sca install prerequisites
+sca install --yubikey-support
 ```
+
+On the air-gapped SCA USB stick, use `sca install --air-gapped --yubikey-support` instead.
 
 ### Verify YubiKey Detection
 
@@ -57,19 +59,30 @@ ykman piv info
 
 ### 1. Initialize YubiKey
 
-The `sca security_key init` command:
-- Generates new management key
-- Sets new PIN (user password)
-- Sets new PUK (PIN Unblock Key)
-- Saves credentials securely
+First select the entity the YubiKey is for. Init writes the credentials to that entity's files, so it must come after `config set`:
 
 ```bash
-sca security_key init
+sca config set subca admin
+sca security_key init subca
 ```
 
-**Store the generated credentials securely!** You'll need:
-- **PIN** - For daily signing operations (default: 123456)
-- **PUK** - To reset PIN if locked (default: 12345678)
+Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
+
+The `sca security_key init <entity>` command:
+- Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
+- Replaces the factory defaults on the YubiKey with them
+- Saves them to the entity's private folder (created if missing), e.g. for a sub-CA:
+  ```
+  ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-pin.txt
+  ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-puk.txt
+  ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-key.txt   # management key
+  ```
+
+It refuses to run if those files already exist. To replace existing credentials, use `sca security_key init --roll-keys <entity>`; the old files are kept as `*.bak`. Run init in an air-gapped environment.
+
+**Back up the generated files offline!** You'll need:
+- **PIN** - For daily signing operations; SCA reads it from the PIN file
+- **PUK** - To unblock the PIN if it gets blocked
 - **Management Key** - For administrative operations
 
 ### 2. Manual Initialization (Alternative)
@@ -89,6 +102,10 @@ yubico-piv-tool -a change-pin
 # Change PUK (from default 12345678)
 yubico-piv-tool -a change-puk
 ```
+
+SCA does not see values set this way. Save them to the entity's
+`<prefix>yubikey-{pin,puk,key}.txt` files listed above yourself, or `sca approve`
+and `sca security_key verify` will fail.
 
 ## PIV Slots
 
@@ -197,6 +214,15 @@ Run with `-d` to see which module was used.
 
 ## PIN Management
 
+> **Warning:** SCA reads the PIN from the entity's PIN file
+> (`<prefix>yubikey-pin.txt`, see [Initialize YubiKey](#1-initialize-yubikey)).
+> Changing or unblocking the PIN with `yubico-piv-tool` or `ykman` does not update
+> that file. Afterwards `sca approve` and `sca security_key verify` present the old
+> PIN, fail, and use up PIN retries until the PIN is blocked. Prefer
+> `sca security_key init --roll-keys <entity>`; if you do change the PIN by hand,
+> write the new PIN into the PIN file straight away (no trailing newline:
+> `printf '%s' <new-pin> > <pin-file>`).
+
 ### Change PIN
 
 ```bash
@@ -207,12 +233,18 @@ ykman piv access change-pin
 
 ### Unblock PIN (using PUK)
 
-After 3 wrong PIN attempts, the PIN is blocked:
+After 3 wrong PIN attempts, the PIN is blocked. `sca` unblocks it with the PUK
+stored by `sca security_key init`, and writes the new PIN to the PIN file:
 
 ```bash
-yubico-piv-tool -a unblock-pin
-# Enter PUK, then new PIN
+sca security_key unblock_pin subca             # sets a new random PIN
+sca security_key unblock_pin --keep-pin subca  # sets the PIN in the PIN file again
 ```
+
+The PUK is tried once. If it is refused, the command stops, leaves the PIN file
+as it was and says how many PUK retries remain (`ykman piv info` shows them
+too). After 3 wrong PUK attempts the PUK is blocked as well, and only a reset
+of the PIV application is left (below).
 
 ### Reset PIV (Emergency)
 
@@ -259,10 +291,11 @@ lsusb | grep Yubico
 
 ### Wrong PIN Entered
 
-After 3 failures, PIN is locked. Use PUK to unblock:
+After 3 failures, PIN is locked. Unblock it with the stored PUK; see
+[Unblock PIN](#unblock-pin-using-puk):
 
 ```bash
-yubico-piv-tool -a unblock-pin
+sca security_key unblock_pin subca
 ```
 
 ### PKCS#11 Module Not Found

@@ -152,7 +152,9 @@ export_p12() {
   log_detailed "export_p12: finish (entity=${entity}, output=${output_file})"
 }
 export_p12_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

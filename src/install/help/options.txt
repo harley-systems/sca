@@ -4,7 +4,24 @@ install_options:
   -a, --air-gapped              - perform installations in offline mode
   -f, --force                   - overwrite any existing installations of sca
   -y, --yubikey-support         - includes apt-mirror of the yubikey tools in
-                                  the image and installs the tools along with
-                                  sca installation.
+                                  the image and installs the tools (PIV:
+                                  yubico-piv-tool, ykcs11, yubikey-manager)
+                                  along with sca installation.
+  -g, --openpgp                 - installs the OpenPGP ssh packages (gnupg,
+                                  scdaemon, pcscd) and yubikey-manager
+  -k, --fido2                   - installs the FIDO2 ssh packages
+                                  (openssh-client, libfido2-1) and
+                                  yubikey-manager. warns if OpenSSH is older
+                                  than 8.2
+      --configure-scdaemon      - with --openpgp, adds disable-ccid and
+                                  pcsc-shared to ~/.gnupg/scdaemon.conf so
+                                  scdaemon and
+                                  pcscd can share the yubikey. lines already
+                                  present are left alone.
+                                  without it, sca install --openpgp
+                                  --yubikey-support only prints the lines.
   -x, --exclude-pkcs11-support  - if specified excludes bundling of pkcs11
                                   support in the generated sca usb image
+  -n, --dry-run                 - print which packages are already installed
+                                  and which would be installed, then exit
+                                  without installing anything or running sudo

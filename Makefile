@@ -1,7 +1,7 @@
 # SCA Makefile - Simplified with macros
 # Uses scripts/build-help.sh to generate help text
 
-.PHONY: all clean deploy check
+.PHONY: all clean deploy check docs docs-check
 
 all: sca
 
@@ -9,9 +9,16 @@ all: sca
 # Helper macro: Build help for a command
 # $(1) = parent (e.g., create)
 # $(2) = subcommand (e.g., key) or empty for parent command
+# Prerequisites are every file scripts/build-help.sh reads: the five help
+# sources, src/help/options.txt and, for a subcommand, the parent's
+# options.txt and further_read.txt when they exist.
 #------------------------------------------------------------------------------
+HELP_SOURCES := command_title.txt abstract.txt syntax.txt options.txt further_read.txt
+
 define build_help
-$(if $(2),build/$(1)/$(2)/help/help.txt,build/$(1)/help/help.txt): build/common/help/help.txt
+$(if $(2),build/$(1)/$(2)/help/help.txt,build/$(1)/help/help.txt): build/common/help/help.txt \
+		$(addprefix src/$(1)$(if $(2),/$(2))/help/,$(HELP_SOURCES)) src/help/options.txt \
+		$(if $(2),$(wildcard src/$(1)/help/options.txt src/$(1)/help/further_read.txt))
 	@mkdir -p $$(dir $$@)
 	./scripts/build-help.sh $$@ src/$(1)$(if $(2),/$(2))/help $(if $(2),$(1),)
 endef
@@ -136,7 +143,7 @@ request: build/request/request.sh
 #------------------------------------------------------------------------------
 # SECURITY_KEY command and subcommands
 #------------------------------------------------------------------------------
-SECURITY_KEY_SUBCMDS := get_crt id info init upload verify wait_for
+SECURITY_KEY_SUBCMDS := get_crt id info init unblock_pin upload verify wait_for
 
 $(eval $(call build_help,security_key,))
 $(foreach s,$(SECURITY_KEY_SUBCMDS),$(eval $(call build_help,security_key,$(s))))
@@ -287,15 +294,19 @@ completion: build/completion/completion.sh
 #------------------------------------------------------------------------------
 # COMMON utilities
 #------------------------------------------------------------------------------
-build/common/common.sh: src/common/sed.sh
+build/common/common.sh: src/common/sed.sh src/common/ubuntu_version.sh
 	@mkdir -p build/common
-	cat $< > $@
+	cat $^ > $@
 
 common: build/common/common.sh
 
 #------------------------------------------------------------------------------
 # Main SCA script
 #------------------------------------------------------------------------------
+# the only ubuntu version supported for the sca usb stick image and its build
+# host. substituted for @@@UBUNTU VERSION ID@@@ in the code, help and completion.
+UBUNTU_VERSION_ID := 26.04-resolute
+
 COMMANDS := create display export import init request security_key approve revoke scrub_log config list test install completion common
 
 sca: src/sca.sh src/run.sh build/help/help.txt $(COMMANDS)
@@ -305,7 +316,8 @@ sca: src/sca.sh src/run.sh build/help/help.txt $(COMMANDS)
 		build/security_key/security_key.sh build/approve/approve.sh build/revoke/revoke.sh \
 		build/scrub_log/scrub_log.sh build/config/config.sh \
 		build/list/list.sh build/test/test.sh build/install/install.sh \
-		build/completion/completion.sh build/common/common.sh src/run.sh >> build/sca.sh
+		build/completion/completion.sh build/common/common.sh src/run.sh | \
+		sed -e 's/@@@UBUNTU VERSION ID@@@/$(UBUNTU_VERSION_ID)/g' >> build/sca.sh
 	chmod 755 build/sca.sh
 
 #------------------------------------------------------------------------------
@@ -319,6 +331,22 @@ clean:
 # builds the 'sca test' subcommand.
 check: sca
 	./scripts/run-tests.sh
+
+# Generate the command reference (docs/commands.md, docs/commands/*.md) from
+# the help files. See scripts/build-docs.sh.
+docs:
+	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) ./scripts/build-docs.sh
+
+# Fail when the committed command reference is stale, i.e. 'make docs' changes
+# or adds files under docs/. Changes already staged with 'git add' count as
+# committed.
+docs-check: docs
+	@git diff --exit-code -- docs/ || \
+		{ echo "docs are stale: run 'make docs' and commit the result" >&2; exit 1; }
+	@untracked=$$(git ls-files --others --exclude-standard -- docs/); \
+		if [ -n "$$untracked" ]; then \
+			echo "docs are stale: commit the new pages:" >&2; echo "$$untracked" >&2; exit 1; \
+		fi
 
 INSTALL_DIR ?= $(HOME)/bin
 COMPLETION_DIR ?= $(HOME)/.local/share/bash-completion/completions
