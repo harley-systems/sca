@@ -156,17 +156,22 @@ Note the serial number (format: `XX-XX-XX-XX-XX-XX`).
 > **Warning:** This will change the PIN, PUK, and management key on your YubiKey.
 > Make sure this is the correct YubiKey!
 
+First select the sub-CA name (see [5.1](#51-configure-sub-ca)), because init writes
+the credentials to that sub-CA's files:
+
 ```bash
-sca security_key init
+sca config set subca admin
+
+sca security_key init subca
 ```
 
 This will:
-- Generate a new random management key
-- Prompt you to set a new PIN (default: 123456)
-- Prompt you to set a new PUK (default: 12345678)
-- Save credentials to secure files
+- Generate a random management key, PIN (6 digits) and PUK (8 digits); nothing is prompted for
+- Replace the factory PIN, PUK and management key on the YubiKey with them
+- Save them to `~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-{pin,puk,key}.txt`
 
-**Important:** Remember your PIN! You'll need it for signing operations.
+**Important:** Back these files up offline. SCA reads the PIN from the PIN file for
+signing; you'll need the PUK if the PIN gets blocked.
 
 ---
 

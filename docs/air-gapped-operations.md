@@ -19,18 +19,25 @@ For maximum security, root CA private keys should never touch a networked system
 
 ### Prerequisites
 
-On your online system, install the image creation tools:
+The image is built from **Ubuntu 26.04 LTS (`26.04-resolute`)**, and only on
+an **Ubuntu 26.04 host**. That is the only supported version, both for the
+image and for the build host. On any other host `sca init sca_usb_stick` fails
+before downloading anything. The packages bundled on the stick are resolved
+with the host's apt sources, so the host's sources must include the `universe`
+component (the Ubuntu default).
+
+On your online Ubuntu 26.04 system, install SCA together with the image
+creation tools (add `--yubikey-support` if you will use YubiKeys):
 
 ```bash
-sca install prerequisites
+sca install --yubikey-support
 ```
 
-This installs:
-- `squashfs-tools` - For unpacking/packing Ubuntu filesystem
-- `genisoimage` - For creating ISO images
-- `syslinux-utils` - For making bootable USB images
+An online `sca install` also installs:
+- `xorriso` - For creating the hybrid BIOS and UEFI ISO image
+- `squashfs-tools` - For reading and packing Ubuntu filesystem layers
 - `apt-mirror` - For offline package repositories
-- `qemu-kvm` - For testing images
+- `qemu-system-x86`, `qemu-utils` - For testing images
 
 ### Create the Bootable Image
 
@@ -47,12 +54,34 @@ sca init sca_usb_stick [options] [ubuntu_version_id]
 | `-x, --exclude-pkcs11-support` | Skip PKCS#11 packages |
 | `-t, --test-image` | Create test variant for automated testing |
 | `-s, --skip-cleanup` | Keep intermediate files after build |
-| `-n, --no-cache` | Do not cache squashfs (slower but uses less disk) |
+| `-o, --no-cache-iso` | Remove the downloaded Ubuntu ISO after the build |
+| `-n, --no-cache` | Disable all caching (same as `--no-cache-iso`) |
 
-**Supported Ubuntu versions:**
-- 18.04.1-bionic (default)
-- 16.04.x-xenial
-- 14.04.x-trusty
+**Supported Ubuntu version:** `26.04-resolute` only, which is also the default.
+Any other version id fails with an error that names the supported one. The
+latest 26.04 point release is downloaded from `releases.ubuntu.com` (falling
+back to `old-releases.ubuntu.com`) and checked against the published
+`SHA256SUMS`. A cached ISO in `~/.sca/downloads/` is reused once it passes the
+same check.
+
+### Tools on the stick
+
+| Tool | Package | Version in the 26.04 archive |
+|------|---------|------------------------------|
+| OpenSSL | `openssl` (in the live image) | 3.5.x |
+| PKCS#11 provider for OpenSSL 3 | `pkcs11-provider` | 1.2.0 |
+| PKCS#11 engine for OpenSSL | `libengine-pkcs11-openssl` | 0.4.18 |
+| OpenSC | `opensc`, `opensc-pkcs11` | 0.27.0 |
+| PC/SC daemon and CCID driver | `pcscd`, `libccid` | 2.4.1, 1.7.1 |
+| YubiKey PIV tool and PKCS#11 module | `yubico-piv-tool`, `ykcs11` | 2.7.2 |
+| YubiKey Manager (`ykman`) | `yubikey-manager` | 5.8.0 |
+| GnuPG with smart card daemon | `gnupg`, `scdaemon` | 2.4.8 |
+| datefudge | `datefudge` | 1.27 |
+
+The PKCS#11, OpenSC and PC/SC packages are left out with `-x`. The YubiKey and
+GnuPG packages are only bundled with `-y`. All of them come from the Ubuntu
+archive; the Yubico PPA is not used. Packages that have newer versions in
+`resolute-updates` are bundled at that newer version.
 
 ### Example: Full Offline Environment
 
@@ -62,13 +91,16 @@ sca init sca_usb_stick --yubikey-support --include-apt-mirror
 ```
 
 This process:
-1. Downloads Ubuntu live ISO (~2GB)
-2. Extracts the squashfs filesystem
-3. Adds sca and configuration
-4. Downloads required packages for offline installation
+1. Downloads the Ubuntu 26.04 desktop ISO (~6GB) and checks it against `SHA256SUMS`
+2. Reads the package list of the ISO's live filesystem
+3. Adds sca and configuration in a new squashfs layer
+   (`casper/minimal.standard.live.sca.squashfs`) on top of the live layer,
+   so the original filesystem is not repacked
+4. Downloads the packages, and the dependencies, the live session is missing
 5. Optionally mirrors apt repositories
-6. Creates modified ISO with auto-boot to live session
-7. Makes the ISO USB-bootable (isohybrid)
+6. Patches GRUB to boot straight into the live session with the sca layer
+7. Writes `ubuntu-26.04.x-desktop-amd64.sca.iso` with `xorriso`, replaying the
+   original BIOS and UEFI boot setup, so the image stays USB-bootable
 
 ### Write to USB
 
@@ -76,13 +108,14 @@ After creation, write the image to a USB stick:
 
 ```bash
 # Identify your USB device (BE CAREFUL - wrong device = data loss)
-lsblk
+# a usb stick usually shows TRAN=usb, RM=1
+lsblk -do NAME,TRAN,RM,SIZE,MODEL -e 7
 
 # Unmount if mounted
 sudo umount /dev/sdX1
 
 # Write image (replace sdX with your device)
-sudo dd bs=4M if=~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
+sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
 ```
 
 ## Using the Air-Gapped Environment
@@ -98,7 +131,7 @@ sudo dd bs=4M if=~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca.iso of=/dev/s
 
 The live environment automatically:
 1. Configures apt to use local package mirror (if included)
-2. Installs PKCS#11 and YubiKey packages
+2. Installs the packages bundled in `/opt/sca/packages/` (see [Tools on the stick](#tools-on-the-stick))
 3. Sets up sca in the live user environment
 
 ### Root CA Operations
@@ -161,7 +194,8 @@ On the live USB, sca files are located at:
 | `/opt/sca/bin/sca` | The sca executable |
 | `/opt/sca/packages/` | Pre-downloaded .deb packages |
 | `/opt/sca/apt-mirror/` | Mirrored apt repositories (if included) |
-| `/etc/ssl/sca/` | Default sca configuration |
+| `/etc/ssl/sca/` | Default sca configuration, copied from the build machine's `~/.sca/config/` (`*.config`, `*.conventions`, `*.ini`; no backups) |
+| `/etc/systemd/user/ubuntu-desktop-installer.service` | Masked (`-> /dev/null`), so the live session does not open the Ubuntu installer wizard (the installer's backend, `subiquity-server`, still runs in the background) |
 | `~/.sca/` | Runtime configuration and keys |
 
 ## Testing
@@ -181,7 +215,9 @@ This:
    currently deployed sca (`make deploy` first)
 3. Boots it in QEMU with no network (`-net none`; needs KVM and sudo)
 4. Runs the same checks inside the VM, which writes `results.txt` and its log
-   to a virtual test disk and powers off
+   to a virtual test disk and powers off. `sca test` formats that disk on the
+   host with the filesystem label `sca-test-results`; the guest only mounts a
+   disk carrying that label and never partitions or formats anything
 5. Prints the guest's results and removes the test disk image
 
 Each check prints `PASS <check>` or `FAIL <check>`:
@@ -214,7 +250,27 @@ sudo qemu-system-x86_64 \
   -m 2048 \
   -cpu host \
   -net none \
-  -drive format=raw,file=~/.sca/downloads/ubuntu-18.04.1-desktop-amd64.sca-test.iso
+  -drive format=raw,file=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca-test.iso
+```
+
+To boot the image in UEFI mode, add the OVMF firmware (package `ovmf`):
+
+```bash
+sudo qemu-system-x86_64 -boot d -enable-kvm -m 4096 -cpu host -net none \
+  -bios /usr/share/ovmf/OVMF.fd \
+  -drive format=raw,file=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso
+```
+
+On login the test image looks for a disk with the filesystem label
+`sca-test-results`. Without one (as above) it logs that to `~/.sca/log`, runs no
+tests, touches no disk and stays up. To have it run the tests, write the
+results and shut down, attach a labelled disk:
+
+```bash
+qemu-img create /tmp/sca-test-disk.img 10M
+mkfs.ext4 -F -L sca-test-results /tmp/sca-test-disk.img
+# then add to the qemu command above:
+#   -drive format=raw,file=/tmp/sca-test-disk.img,index=1
 ```
 
 ## Security Considerations

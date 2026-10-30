@@ -123,7 +123,9 @@ security_key_unblock_pin() {
   log_detailed "security_key_unblock_pin: finished (keep_pin=$keep_pin, entity=$entity)"
 }
 security_key_unblock_pin_help() {
-  echo "
+  cat <<'SCA_HELP'
+
 @@@HELP@@@
-"
+
+SCA_HELP
 }

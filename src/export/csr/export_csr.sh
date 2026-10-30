@@ -47,7 +47,9 @@ export_csr() {
   log_detailed "export_csr: finish (entity=${entity})"
 }
 export_csr_help() {
-    echo "
+    cat <<'SCA_HELP'
+
 @@@HELP@@@
-  "
+
+SCA_HELP
 }

@@ -39,8 +39,10 @@ sudo systemctl start pcscd
 
 **Or via SCA:**
 ```bash
-sca install prerequisites
+sca install --yubikey-support
 ```
+
+On the air-gapped SCA USB stick, use `sca install --air-gapped --yubikey-support` instead.
 
 ### Verify YubiKey Detection
 
@@ -57,19 +59,30 @@ ykman piv info
 
 ### 1. Initialize YubiKey
 
-The `sca security_key init` command:
-- Generates new management key
-- Sets new PIN (user password)
-- Sets new PUK (PIN Unblock Key)
-- Saves credentials securely
+First select the entity the YubiKey is for. Init writes the credentials to that entity's files, so it must come after `config set`:
 
 ```bash
-sca security_key init
+sca config set subca admin
+sca security_key init subca
 ```
 
-**Store the generated credentials securely!** You'll need:
-- **PIN** - For daily signing operations (default: 123456)
-- **PUK** - To reset PIN if locked (default: 12345678)
+Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
+
+The `sca security_key init <entity>` command:
+- Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
+- Replaces the factory defaults on the YubiKey with them
+- Saves them to the entity's private folder (created if missing), e.g. for a sub-CA:
+  ```
+  ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-pin.txt
+  ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-puk.txt
+  ~/.sca/keys/<ca>/<subca>/private/<prefix>yubikey-key.txt   # management key
+  ```
+
+It refuses to run if those files already exist. To replace existing credentials, use `sca security_key init --roll-keys <entity>`; the old files are kept as `*.bak`. Run init in an air-gapped environment.
+
+**Back up the generated files offline!** You'll need:
+- **PIN** - For daily signing operations; SCA reads it from the PIN file
+- **PUK** - To unblock the PIN if it gets blocked
 - **Management Key** - For administrative operations
 
 ### 2. Manual Initialization (Alternative)
@@ -89,6 +102,10 @@ yubico-piv-tool -a change-pin
 # Change PUK (from default 12345678)
 yubico-piv-tool -a change-puk
 ```
+
+SCA does not see values set this way. Save them to the entity's
+`<prefix>yubikey-{pin,puk,key}.txt` files listed above yourself, or `sca approve`
+and `sca security_key verify` will fail.
 
 ## PIV Slots
 
@@ -196,6 +213,15 @@ If your libykcs11 is somewhere else, set `ykcs11_module` to its full path.
 Run with `-d` to see which module was used.
 
 ## PIN Management
+
+> **Warning:** SCA reads the PIN from the entity's PIN file
+> (`<prefix>yubikey-pin.txt`, see [Initialize YubiKey](#1-initialize-yubikey)).
+> Changing or unblocking the PIN with `yubico-piv-tool` or `ykman` does not update
+> that file. Afterwards `sca approve` and `sca security_key verify` present the old
+> PIN, fail, and use up PIN retries until the PIN is blocked. Prefer
+> `sca security_key init --roll-keys <entity>`; if you do change the PIN by hand,
+> write the new PIN into the PIN file straight away (no trailing newline:
+> `printf '%s' <new-pin> > <pin-file>`).
 
 ### Change PIN
 
@@ -328,3 +354,4 @@ Touch policies:
 - [Procedures](procedures.md) - Step-by-step guides
 - [SSH Integration](ssh-integration.md) - Use YubiKey for SSH
 - [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md) - PIV vs OpenPGP vs FIDO2 for SSH
+- [GPG with a YubiKey](gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet
