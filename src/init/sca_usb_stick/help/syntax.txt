@@ -9,7 +9,10 @@ sca [<sca_options>] init [<init_options>] sca_usb_stick <sca_usb_stick_options> 
 The <ubuntu_version_id> parameter is optional. The only supported, and default,
 ubuntu version id is @@@UBUNTU VERSION ID@@@. Its form is "<major>.<minor>-<release_name>".
 The latest point release of this version is downloaded and checked against the
-published SHA256SUMS. Any other ubuntu version id is rejected.
+published SHA256SUMS, whose signature is first checked with gpgv against the
+ubuntu cd image signing key bundled in sca. An image already in ~/.sca/downloads/
+is checked the same way. Any failed check stops the command before anything is
+mounted. Any other ubuntu version id is rejected.
 
 The sca usb stick image is built on, and only on, an ubuntu host of the same
 version, @@@UBUNTU VERSION ID@@@. On any other host the command fails before

@@ -119,7 +119,18 @@ INIT_SUBCMDS := demo openssl_ca_db sca_usb_stick yubikey
 
 $(eval $(call build_help,init,))
 $(foreach s,$(INIT_SUBCMDS),$(eval $(call build_help,init,$(s))))
-$(foreach s,$(INIT_SUBCMDS),$(eval $(call build_subcmd,init,$(s))))
+$(foreach s,$(filter-out sca_usb_stick,$(INIT_SUBCMDS)),$(eval $(call build_subcmd,init,$(s))))
+
+# Custom build rule for init_sca_usb_stick: substitutes @@@HELP@@@ plus the
+# bundled ubuntu cd image signing key, which checks the ubuntu iso SHA256SUMS
+# signature at runtime, so build/sca.sh stays a single file.
+build/init/sca_usb_stick/init_sca_usb_stick.sh: src/init/sca_usb_stick/init_sca_usb_stick.sh \
+		build/init/sca_usb_stick/help/help.txt \
+		src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc
+	@mkdir -p $(dir $@)
+	sed -e '/@@@HELP@@@/{r build/init/sca_usb_stick/help/help.txt' -e 'd}' $< | \
+		sed -e '/@@@UBUNTU CDIMAGE KEYRING@@@/{r src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc' -e 'd}' \
+		> $@
 
 build/init/init.sh: src/init/init.sh build/init/help/help.txt \
 		$(foreach s,$(INIT_SUBCMDS),build/init/$(s)/init_$(s).sh)

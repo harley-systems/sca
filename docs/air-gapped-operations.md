@@ -61,8 +61,79 @@ sca init sca_usb_stick [options] [ubuntu_version_id]
 Any other version id fails with an error that names the supported one. The
 latest 26.04 point release is downloaded from `releases.ubuntu.com` (falling
 back to `old-releases.ubuntu.com`) and checked against the published
-`SHA256SUMS`. A cached ISO in `~/.sca/downloads/` is reused once it passes the
-same check.
+`SHA256SUMS`, whose signature is checked first. A cached ISO in
+`~/.sca/downloads/` is reused once it passes the same check. See
+[Verifying the Ubuntu ISO](#verifying-the-ubuntu-iso).
+
+### Verifying the Ubuntu ISO
+
+Every key generated on the stick is only as safe as the ISO it was built from,
+so `sca init sca_usb_stick` checks the ISO before using it:
+
+1. It downloads `SHA256SUMS` and `SHA256SUMS.gpg` over HTTPS into
+   `~/.sca/downloads/` (as `ubuntu-26.04-SHA256SUMS` and
+   `ubuntu-26.04-SHA256SUMS.gpg`).
+2. It checks the signature with `gpgv` against the **Ubuntu CD Image Automatic
+   Signing Key**, which is bundled in sca and pinned by its fingerprint,
+   `843938DF228D22F7B3742BC0D94AA3F0EFE21092`. The key is never fetched from a
+   keyserver.
+3. It checks the ISO against its line in the signed `SHA256SUMS`.
+
+When it is offline, it uses the previously downloaded `SHA256SUMS` and
+`SHA256SUMS.gpg`, but only after checking the signature again.
+
+Each failure stops the build before anything is mounted or written, with its
+own error:
+
+| Failure | What happens |
+|---------|--------------|
+| `SHA256SUMS` was modified | "... does not match its signature: it was modified". `SHA256SUMS` and its signature are removed |
+| `SHA256SUMS.gpg` can't be downloaded | "could not download ...SHA256SUMS.gpg". Nothing is kept |
+| The signature is corrupt or made by an unknown key | "the signature ... could not be checked". Both files are removed |
+| The signature is good but made by another key | "... is signed by `<fingerprint>`, not by the ubuntu cd image signing key". Both files are removed |
+| A cached `SHA256SUMS` has no signature (from an older sca) | "... has no signature file". It is removed; run again online |
+| The downloaded ISO doesn't match | "the downloaded ... does not match the signed SHA256SUMS". The ISO is removed |
+| An ISO already in `~/.sca/downloads/` doesn't match | "the local image ... does not match the signed SHA256SUMS". The ISO is left for you to inspect or remove |
+
+An ISO you download yourself can be used by putting it in `~/.sca/downloads/`
+under its published name. It is checked like any other.
+
+To check an ISO by hand, with the keyring from the sca source tree
+(`src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc`):
+
+```bash
+cd ~/.sca/downloads
+gpg --dearmor < ubuntu-cdimage-keyring.asc > ubuntu-cdimage-keyring.gpg
+gpgv --keyring ./ubuntu-cdimage-keyring.gpg ubuntu-26.04-SHA256SUMS.gpg ubuntu-26.04-SHA256SUMS
+# expect: Good signature from "Ubuntu CD Image Automatic Signing Key (2012) <cdimage@ubuntu.com>"
+#         using RSA key 843938DF228D22F7B3742BC0D94AA3F0EFE21092
+sha256sum -c --ignore-missing ubuntu-26.04-SHA256SUMS
+# expect: ubuntu-26.04.x-desktop-amd64.iso: OK
+```
+
+#### Updating the bundled key
+
+The key lives in `src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc`, and the
+build embeds it in `sca`. Its fingerprint is pinned in
+`get_ubuntu_cdimage_signing_key_fingerprint` in
+`src/init/sca_usb_stick/init_sca_usb_stick.sh`. If Ubuntu renews or replaces
+the key:
+
+1. Check the new fingerprint against Ubuntu's own announcement, for example
+   <https://ubuntu.com/tutorials/how-to-verify-ubuntu>.
+2. Export only the key and its self-signatures:
+
+   ```bash
+   export GNUPGHOME=$(mktemp -d)
+   gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys <fingerprint>
+   gpg --armor --export --export-options export-minimal <fingerprint> \
+     > src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc
+   gpg --show-keys src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc
+   ```
+
+3. Update the pinned fingerprint and the fingerprint in this page, run
+   `make check`, and check a freshly downloaded `SHA256SUMS` with the manual
+   check above.
 
 ### Tools on the stick
 
@@ -91,7 +162,8 @@ sca init sca_usb_stick --yubikey-support --include-apt-mirror
 ```
 
 This process:
-1. Downloads the Ubuntu 26.04 desktop ISO (~6GB) and checks it against `SHA256SUMS`
+1. Downloads the Ubuntu 26.04 desktop ISO (~6GB) and checks it against the
+   signed `SHA256SUMS`
 2. Reads the package list of the ISO's live filesystem
 3. Adds sca and configuration in a new squashfs layer
    (`casper/minimal.standard.live.sca.squashfs`) on top of the live layer,
