@@ -39,7 +39,7 @@ done < <(grep -rlE '^@@@(GENERIC )?HELP@@@$' "${src_dir}")
 # the built help that contains quotes renders, end to end
 sca config create all >/dev/null 2>&1
 assert_succeeds sca init sca_usb_stick --help
-sca init sca_usb_stick --help | grep -qF '"<major>.<minor>.<fix>-<release_name>"' ||
+sca init sca_usb_stick --help | grep -qF '"<major>.<minor>-<release_name>"' ||
   fail "sca init sca_usb_stick --help lost its quoted example"
 assert_succeeds sca test --help
 

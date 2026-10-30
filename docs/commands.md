@@ -523,23 +523,23 @@ The ykcs11 module path comes from the `ykcs11_module` config setting. If that fi
 
 #### security_key init
 
-Initialize a new YubiKey for use with sca. This sets up new PIN, PUK, and management key.
+Initialize a new YubiKey for use with sca. This replaces the factory PIN, PUK, and management key with new ones.
 
 ```bash
 sca security_key init [-r|--roll-keys] [--device SERIAL] <entity>
 ```
 
-**What it does:**
-- Generates a new random management key, PIN and PUK, and sets them on the key
-  (replacing the factory defaults, or the current values with `--roll-keys`)
-- Stores them in `~/.sca/keys/<ca>/<subca>/private/` (created if missing,
-  mode 0700) as `<prefix>yubikey-{key,pin,puk}.txt`, mode 0600. With
-  `--roll-keys` the previous files are kept as `*.bak`
-- If setting a value fails, the files still match what is on the key: when
-  nothing changed they are left as they were; when only part changed, they
-  record the new values for what changed, and the error says which ones
+Run `sca config set <entity> <name>` first (e.g. `sca config set subca admin`): the credentials are written to the files of the currently configured entity. Run `sca create key <entity>` only after init: with a security key configured it creates empty credential files, which init then refuses to overwrite.
 
-**Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+**What it does:**
+- Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
+- Sets them on the YubiKey, replacing the factory defaults (`--roll-keys` replaces the current values instead; the old files are kept as `*.bak`)
+- Saves them to the entity's private folder (created if missing, mode 0700) as `<prefix>yubikey-{pin,puk,key}.txt`, mode 0600, e.g. for a sub-CA `~/.sca/keys/<ca>/<subca>/private/`
+- If setting a value fails, the files still match what is on the key: when nothing changed they are left as they were; when only part changed, they record the new values for what changed, and the error says which ones
+
+Refuses to run if those files already exist, unless `--roll-keys` is given. Run it in an air-gapped environment.
+
+**Important:** Back up the generated files offline. You'll need the PUK if the PIN gets blocked.
 
 #### security_key id
 
@@ -662,10 +662,10 @@ Creates the `index.txt` and `serial` files required by OpenSSL for tracking issu
 
 #### yubikey
 
-Initialize a YubiKey for use with sca (alias for `sca security_key init`).
+Older form of `sca security_key init`. It takes no entity, so it has no credential files to write to; use `sca security_key init <entity>` instead.
 
 ```bash
-sca init yubikey
+sca security_key init <entity>
 ```
 
 #### sca_usb_stick
@@ -867,11 +867,11 @@ sca export crt_pub_ssh service
 ### Setup New Sub-CA on YubiKey
 
 ```bash
-# 1. Initialize YubiKey
-sca security_key init
-
-# 2. Configure sub-CA name
+# 1. Configure sub-CA name
 sca config set subca newadmin
+
+# 2. Initialize YubiKey (random PIN/PUK/management key, saved to the sub-CA's private folder)
+sca security_key init subca
 
 # 3. Create sub-CA key and CSR
 sca create key subca
