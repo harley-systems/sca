@@ -11,11 +11,17 @@ board if the write goes wrong.
 > microSD card, put the card in the board and power on. Read on only if you want
 > the board to boot from a USB stick instead.
 
-> **Testing status.** This is a draft. The facts about the boot ROM, the SPI
-> chip (`/proc/mtd` on a v2.0 board) and the serial console come from the
-> hardware. The flashing and recovery commands have **not yet been run on a
-> ROCK64** for this page. Steps marked **(unverified)** must be checked on a real
-> board before you rely on them. See [Tested on](#tested-on) at the bottom.
+> **Testing status.** This is a draft. The read-only checks have been run on a
+> real ROCK64: the SPI chip is visible to Linux, the `mtd-utils` tools are
+> present, and the Armbian U-Boot package ships **no SPI image** (see
+> [section 4](#4-get-and-verify-the-u-boot-image)). The flashing and recovery
+> routes have **not been run** on any board: nothing has been written to SPI for
+> this page. Steps marked **(unverified)** must be checked on a real board before
+> you rely on them. See [Tested on](#tested-on) at the bottom.
+
+> **You need root.** Every step that writes or erases SPI needs `sudo`.
+> Reading the chip back through `/dev/mtdblock0` works without `sudo` if your
+> user is in group `disk`; `/dev/mtd0` is readable by root only.
 
 **Contents**
 
@@ -114,50 +120,54 @@ You need a U-Boot image **built for SPI on the ROCK64**. An image built for
 microSD or eMMC has a different layout and will not boot from SPI. Never write
 an image you cannot trace back to its source.
 
-### Option 1: from the Armbian U-Boot package (recommended)
+### The Armbian package has no SPI image
 
 The Armbian image that SCA uses ships U-Boot as a Debian package,
-`linux-u-boot-rock64-<branch>`. On Rockchip boards whose Armbian build supports
-SPI boot, the package includes an SPI image named `rkspi_loader.img`
-**(unverified for the ROCK64 package)**:
+`linux-u-boot-rock64-<branch>`. For the ROCK64 that package (checked at
+`26.11.0-trunk.108`) contains exactly one U-Boot image,
+`/usr/lib/linux-u-boot-<branch>-rock64/u-boot-rockchip.bin`. It has **no SPI
+image**: nothing in it is built for SPI. Installing or
+updating the package does not change that.
 
-```bash
-dpkg -l 'linux-u-boot-*'
-find /usr/lib/linux-u-boot-* -name 'rkspi_loader.img'
-```
+The reason is in the package's build metadata. Its U-Boot defconfig sets
+`CONFIG_ROCKCHIP_SPI_IMAGE=y`, so the U-Boot build does produce an SPI image,
+but Armbian's packaging (`UBOOT_TARGET_BINS`) collects only
+`u-boot-rockchip.bin`. The SPI image is built and then left out of the package.
 
-Verify it the Debian way. The package came from a signed apt repository, and
-`dpkg` can check its files against the package's checksums:
+A packaged, ready-to-flash ROCK64 SPI image is tracked in
+[#108](https://github.com/harley-systems/sca/issues/108). Until then, you have
+to build one yourself.
 
-```bash
-dpkg --verify "$(dpkg -S rkspi_loader.img | cut -d: -f1)"
-```
+> **Do not write `u-boot-rockchip.bin` to SPI.** It is the only U-Boot image on
+> the board, so it is the obvious thing to reach for, but it is the SD/eMMC
+> layout. The SPI layout puts U-Boot proper at
+> `CONFIG_SYS_SPI_U_BOOT_OFFS=0x60000` (384 KB), so the SD/eMMC image will not
+> boot from SPI. If you have already written it, see
+> [section 7](#7-recovering-from-a-bad-spi-write).
 
-No output means every file matches. Record the image's checksum for your own
-notes:
+### Build U-Boot with the SPI image
 
-```bash
-sha256sum /usr/lib/linux-u-boot-*/rkspi_loader.img
-```
-
-### Option 2: build mainline U-Boot
-
-Mainline U-Boot has a `rock64-rk3328_defconfig`. Builds for Rockchip boards
-with SPI boot support produce `u-boot-rockchip-spi.bin`
-**(unverified for rock64)**. The build also needs ARM Trusted Firmware (TF-A)
-for the RK3328 (`bl31.elf`). Follow the Rockchip page of the U-Boot
-documentation (`doc/board/rockchip/rockchip.rst` in the source tree) for the
-exact steps.
+This is real work, not an `apt install`. Mainline U-Boot has a
+`rock64-rk3328_defconfig`. With `CONFIG_ROCKCHIP_SPI_IMAGE=y` set, the build
+writes `u-boot-rockchip-spi.bin` to the build tree next to
+`u-boot-rockchip.bin` **(unverified for rock64)**. The build also needs ARM
+Trusted Firmware (TF-A) for the RK3328 (`bl31.elf`). Follow the Rockchip page of
+the U-Boot documentation (`doc/board/rockchip/rockchip.rst` in the source tree)
+for the exact steps.
 
 Build from a **signed release tag** (`git tag -v v20XX.YY`) so that you can
-say what you built, and record the `sha256sum` of the result.
+say what you built, and record the `sha256sum` of the result:
+
+```bash
+sha256sum u-boot-rockchip-spi.bin
+```
 
 ### Check the size
 
 The image must fit in the SPI chip:
 
 ```bash
-stat -c %s rkspi_loader.img     # must be ≤ 16777216 (16 MB)
+stat -c %s u-boot-rockchip-spi.bin     # must be ≤ 16777216 (16 MB)
 ```
 
 ## 5. Route A: write SPI from Armbian on microSD
@@ -170,12 +180,13 @@ You boot the board normally from microSD, then write SPI from Linux.
 | **Pros** | No extra host or tools. The commands are the usual Linux ones. You can read SPI back to check the write. |
 | **Cons** | Cannot help a board that no longer boots. If the write is interrupted, see [section 7](#7-recovering-from-a-bad-spi-write). |
 
-Armbian's own installer can do this for you. Run `sudo armbian-install` and pick
-**"Install/Update the bootloader on SPI Flash"**, if your image offers it
-**(unverified for the ROCK64)**. The manual steps below do the same thing, and
-let you back up and check each step.
+Armbian's own installer, `sudo armbian-install`, has an **"Install/Update the
+bootloader on SPI Flash"** entry on some boards. It installs from the same
+U-Boot package, which has no SPI image for the ROCK64 (see
+[section 4](#4-get-and-verify-the-u-boot-image)), so it is not expected to
+offer that option here **(unverified)**. Use the manual steps below.
 
-All steps are **(unverified)**.
+All write steps are **(unverified)**.
 
 1. **Install the tools.** `flashcp` is in `mtd-utils`:
 
@@ -184,36 +195,34 @@ All steps are **(unverified)**.
    ```
 
 2. **Back up the current SPI contents.** A blank chip reads as all `0xff`;
-   keep the backup anyway:
+   keep the backup anyway. Reading through `/dev/mtdblock0` works without
+   `sudo` for a user in group `disk`; with `sudo` it works for anyone:
 
    ```bash
-   sudo dd if=/dev/mtd0 of=spi-backup.img bs=4096
+   dd if=/dev/mtdblock0 of=spi-backup.img bs=4096
    sha256sum spi-backup.img
    ```
 
    Copy `spi-backup.img` off the board.
 
+   If you are counting on [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode)
+   to recover the board, run its SPI read-back test (steps 1 to 5) before you
+   go on.
+
 3. **Write the image.** `flashcp` erases the blocks it needs, writes and
-   verifies:
+   verifies **(unverified)**:
 
    ```bash
-   sudo flashcp -v rkspi_loader.img /dev/mtd0
+   sudo flashcp -v u-boot-rockchip-spi.bin /dev/mtd0
    ```
 
-   The alternative is to write through the block device:
-
-   ```bash
-   sudo dd if=rkspi_loader.img of=/dev/mtdblock0 bs=4096 conv=fsync
-   ```
-
-   Prefer `flashcp`. `mtdblock` emulates a block device on top of flash and
-   does not verify. Do not power the board off during the write.
+   Do not power the board off during the write.
 
 4. **Read it back and compare.** `cmp` with no output means the SPI contents
-   match the image:
+   match the image. As in step 2, a user in group `disk` does not need `sudo`:
 
    ```bash
-   sudo cmp -n "$(stat -c %s rkspi_loader.img)" rkspi_loader.img /dev/mtd0
+   cmp -n "$(stat -c %s u-boot-rockchip-spi.bin)" u-boot-rockchip-spi.bin /dev/mtdblock0
    ```
 
 5. **Test.** Power off, remove the microSD card, insert the USB stick with the
@@ -233,11 +242,22 @@ That is the one the boot ROM listens on in maskrom mode.
 | **Pros** | Works on a board that does not boot at all. It is the route that recovers corrupted SPI or eMMC. |
 | **Cons** | More tools and moving parts. The loader blob is a Rockchip binary. Getting the board into maskrom can take a few tries. |
 
-All steps are **(unverified)**.
+All steps are **(unverified)**. Steps 1 to 5 only read from the board, so you
+can use them to prove this route works before you need it.
 
-1. **Install `rkdeveloptool`** on the host. Debian and Ubuntu package it as
-   `rkdeveloptool`; otherwise build it from
-   <https://github.com/rockchip-linux/rkdeveloptool>.
+1. **Install `rkdeveloptool`** on the host. Selecting SPI NOR as the target
+   (`cs`), and so writing (`wl`) or erasing (`ef`) SPI NOR, is reported to be
+   missing from upstream <https://github.com/rockchip-linux/rkdeveloptool> and
+   from the Debian/Ubuntu `rkdeveloptool` package built from it. The support is
+   reported to be in the <https://github.com/amouiche/rkdeveloptool> fork
+   (`v1.32+change_storage`) **(unverified)**. Before you go on, check that the
+   help of your build lists a `cs` (change storage) command:
+
+   ```bash
+   rkdeveloptool -h
+   ```
+
+   If it does not, this route cannot reach SPI NOR.
 
 2. **Get the RK3328 loader**, `rk3328_loader_v*.bin`, from
    <https://github.com/rockchip-linux/rkbin> (under `bin/rk33/`, or build it
@@ -268,20 +288,31 @@ All steps are **(unverified)**.
    # DevNo=1 Vid=0x2207,Pid=0x320c,LocationID=...  Maskrom
    ```
 
-5. **Load the loader into RAM, select SPI, write and reset:**
+5. **Load the loader into RAM, select SPI and read SPI back.** Do this before
+   you write anything. It proves that the host can reach SPI NOR, which is also
+   what the [recovery path](#7-recovering-from-a-bad-spi-write) depends on:
 
    ```bash
-   sudo rkdeveloptool db rk3328_loader_v*.bin   # download the loader to RAM
-   sudo rkdeveloptool cs 9                      # select SPI NOR as the target
-   sudo rkdeveloptool wl 0 rkspi_loader.img     # write from sector 0
-   sudo rkdeveloptool rd                        # reset the board
+   sudo rkdeveloptool db rk3328_loader_v*.bin          # download the loader to RAM
+   sudo rkdeveloptool cs 9                             # select SPI NOR as the target
+   sudo rkdeveloptool rl 0 32768 spi-readback.img      # read 16 MB (32768 × 512-byte sectors)
+   sha256sum spi-readback.img
    ```
 
-   `cs` (change storage) needs a recent `rkdeveloptool` and a loader that
-   supports SPI. Without it, `wl` writes to the loader's default storage,
-   which is usually the eMMC. Check that `cs 9` succeeds before you run `wl`.
+   `cs` (change storage) needs an `rkdeveloptool` that supports it (see
+   step 1) and a loader that supports SPI. Without it, `rl` and `wl` use the
+   loader's default storage, which is usually the eMMC. A blank chip reads back
+   as all `0xff`. Stop here if `cs 9` fails or the read-back does not look like
+   your SPI contents.
 
-6. **Test** as in step 5 of Route A.
+6. **Write and reset** **(unverified)**:
+
+   ```bash
+   sudo rkdeveloptool wl 0 u-boot-rockchip-spi.bin     # write from sector 0
+   sudo rkdeveloptool rd                               # reset the board
+   ```
+
+7. **Test** as in step 5 of Route A.
 
 ## 7. Recovering from a bad SPI write
 
@@ -311,7 +342,9 @@ rewrite it. All steps are **(unverified)**.
    - **With no microSD card and the eMMC disabled** (2-pin header closed or
      module removed), the boot ROM drops into maskrom. Use
      [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode) to write a good
-     image, or erase SPI after `db` and `cs 9` with:
+     image, or erase SPI with the command below. Run it only after `db`,
+     `cs 9` and the read-back in Route B step 5 have succeeded; otherwise it
+     may erase the eMMC instead:
 
      ```bash
      sudo rkdeveloptool ef
@@ -326,8 +359,19 @@ from eMMC or microSD as before.
 
 ## Tested on
 
-Not yet run on hardware for this page. Before you rely on the procedure, a
-person with a ROCK64 must record here:
+**Read-only checks, run on hardware:**
+
+- Board: PINE64 ROCK64, revision not recorded.
+- OS: Armbian_community 26.11.0-trunk.108, kernel 6.18.57-current-rockchip64,
+  booted from microSD.
+- `/proc/mtd` shows `mtd0`, 16 MB, `"spi0.0"`.
+- `flashcp`, `flash_erase` and `mtdinfo` are present (`/usr/sbin`).
+- All 16 MB of SPI read back as `0xff`: the chip was blank.
+- The `linux-u-boot-rock64-current` package ships only `u-boot-rockchip.bin`,
+  no SPI image.
+
+**Not yet run on hardware:** the flashing routes (A and B) and the recovery
+path. Before you rely on them, a person with a ROCK64 must record here:
 
 - board revision;
 - U-Boot image: source, version and `sha256sum`;
