@@ -9,9 +9,16 @@ all: sca
 # Helper macro: Build help for a command
 # $(1) = parent (e.g., create)
 # $(2) = subcommand (e.g., key) or empty for parent command
+# Prerequisites are every file scripts/build-help.sh reads: the five help
+# sources, src/help/options.txt and, for a subcommand, the parent's
+# options.txt and further_read.txt when they exist.
 #------------------------------------------------------------------------------
+HELP_SOURCES := command_title.txt abstract.txt syntax.txt options.txt further_read.txt
+
 define build_help
-$(if $(2),build/$(1)/$(2)/help/help.txt,build/$(1)/help/help.txt): build/common/help/help.txt
+$(if $(2),build/$(1)/$(2)/help/help.txt,build/$(1)/help/help.txt): build/common/help/help.txt \
+		$(addprefix src/$(1)$(if $(2),/$(2))/help/,$(HELP_SOURCES)) src/help/options.txt \
+		$(if $(2),$(wildcard src/$(1)/help/options.txt src/$(1)/help/further_read.txt))
 	@mkdir -p $$(dir $$@)
 	./scripts/build-help.sh $$@ src/$(1)$(if $(2),/$(2))/help $(if $(2),$(1),)
 endef

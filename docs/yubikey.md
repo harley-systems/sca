@@ -37,7 +37,7 @@ sudo systemctl enable pcscd
 sudo systemctl start pcscd
 ```
 
-**Or via SCA:**
+**Or via SCA** (also installs `ykcs11`):
 ```bash
 sca install --yubikey-support
 ```
