@@ -34,7 +34,7 @@ sca_usb_stick_options:
                                   default behavior is to cache the iso file
                                   per ubuntu_version_id in the ~/.sca/downloads/
                                   folder, and to reuse it in the next runs once
-                                  it matches the published SHA256SUMS.
+                                  it matches the signed SHA256SUMS.
   -n, --no-cache                - optional flag.
                                   default value is false.
                                   switches off all caching. suitable for one

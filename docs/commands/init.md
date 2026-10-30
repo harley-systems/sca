@@ -188,7 +188,7 @@ sca_usb_stick_options:
                                   default behavior is to cache the iso file
                                   per ubuntu_version_id in the ~/.sca/downloads/
                                   folder, and to reuse it in the next runs once
-                                  it matches the published SHA256SUMS.
+                                  it matches the signed SHA256SUMS.
   -n, --no-cache                - optional flag.
                                   default value is false.
                                   switches off all caching. suitable for one
@@ -199,7 +199,10 @@ sca_usb_stick_options:
 The <ubuntu_version_id> parameter is optional. The only supported, and default,
 ubuntu version id is 26.04-resolute. Its form is "<major>.<minor>-<release_name>".
 The latest point release of this version is downloaded and checked against the
-published SHA256SUMS. Any other ubuntu version id is rejected.
+published SHA256SUMS, whose signature is first checked with gpgv against the
+ubuntu cd image signing key bundled in sca. An image already in ~/.sca/downloads/
+is checked the same way. Any failed check stops the command before anything is
+mounted. Any other ubuntu version id is rejected.
 
 The sca usb stick image is built on, and only on, an ubuntu host of the same
 version, 26.04-resolute. On any other host the command fails before

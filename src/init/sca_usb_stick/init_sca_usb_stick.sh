@@ -254,7 +254,7 @@ get_test_results_disk_label() {
 check_iso_image_tools() {
   local include_apt_mirror=$1
 
-  local tools=(wget sha256sum md5sum xorriso mksquashfs unsquashfs apt-get)
+  local tools=(wget gpgv base64 sha256sum md5sum xorriso mksquashfs unsquashfs apt-get)
   [ "$include_apt_mirror" = true ] && tools+=(apt-mirror)
   local missing_tools=()
   for tool in "${tools[@]}"; do
@@ -265,16 +265,21 @@ check_iso_image_tools() {
   fi
 }
 ################################################################################
-# downloads the SHA256SUMS file of an ubuntu version into the downloads folder
-# and echoes the url of the folder it was downloaded from.
+# downloads the SHA256SUMS file of an ubuntu version and its signature,
+# SHA256SUMS.gpg, into the downloads folder, checks the signature and echoes the
+# url of the folder they were downloaded from.
 #
 # the current releases are at https://releases.ubuntu.com/<major>.<minor>/,
 # older ones are moved to https://old-releases.ubuntu.com/releases/<major>.<minor>/
-# if neither can be reached, a previously downloaded SHA256SUMS file is used.
+# if neither can be reached, the previously downloaded files are used, after
+# checking their signature again.
+#
+# a SHA256SUMS file without a good signature of the ubuntu cd image signing key
+# always stops the build, and is removed together with its signature.
 #
 # parameters
 #     version           - the ubuntu version, of form <major>.<minor>
-#     downloads_folder  - the folder into which to download the file
+#     downloads_folder  - the folder into which to download the files
 #
 # example call:
 # download_ubuntu_sha256sums '26.04' ~/.sca/downloads/
@@ -284,22 +289,35 @@ download_ubuntu_sha256sums() {
 
   log_detailed "download_ubuntu_sha256sums: start (version=${version}, downloads_folder=${downloads_folder})"
   local sums_file=$(get_ubuntu_sha256sums_file ${version} ${downloads_folder})
+  local signature_file=$(get_ubuntu_sha256sums_signature_file ${version} ${downloads_folder})
   mkdir -p $downloads_folder
   local base_url
   for base_url in "https://releases.ubuntu.com/${version}/" \
       "https://old-releases.ubuntu.com/releases/${version}/"; do
-    if wget --quiet -O "${sums_file}.new" "${base_url}SHA256SUMS" && \
-        [ -n "$(get_latest_ubuntu_iso_filename ${version} "${sums_file}.new")" ]; then
-      mv "${sums_file}.new" "${sums_file}"
-      log_detailed "download_ubuntu_sha256sums: finish (base_url=${base_url})"
-      echo "$base_url"
-      return
+    if wget --quiet -O "${sums_file}.new" "${base_url}SHA256SUMS"; then
+      if ! wget --quiet -O "${signature_file}.new" "${base_url}SHA256SUMS.gpg"; then
+        rm -f "${sums_file}.new" "${signature_file}.new"
+        error "could not download ${base_url}SHA256SUMS.gpg, the signature of SHA256SUMS. an unsigned SHA256SUMS is never used." 1
+      fi
+      check_ubuntu_sha256sums_signature "${sums_file}.new" "${signature_file}.new" || exit 1
+      if [ -n "$(get_latest_ubuntu_iso_filename ${version} "${sums_file}.new")" ]; then
+        mv "${sums_file}.new" "${sums_file}"
+        mv "${signature_file}.new" "${signature_file}"
+        log_detailed "download_ubuntu_sha256sums: finish (base_url=${base_url})"
+        echo "$base_url"
+        return
+      fi
     fi
     log_detailed "download_ubuntu_sha256sums: no ubuntu ${version} desktop image listed at ${base_url}"
   done
-  rm -f "${sums_file}.new"
+  rm -f "${sums_file}.new" "${signature_file}.new"
   if [ -f "${sums_file}" ]; then
     >&2 echo "could not download the ubuntu ${version} SHA256SUMS file. using the previously downloaded ${sums_file}."
+    if [ ! -f "${signature_file}" ]; then
+      rm -f "${sums_file}"
+      error "the previously downloaded ${sums_file} has no signature file ${signature_file}. it was removed. connect to the internet to download it again." 1
+    fi
+    check_ubuntu_sha256sums_signature "${sums_file}" "${signature_file}" || exit 1
     echo "https://releases.ubuntu.com/${version}/"
     return
   fi
@@ -310,6 +328,72 @@ get_ubuntu_sha256sums_file() {
   local downloads_folder=$2
 
   echo "${downloads_folder}ubuntu-${version}-SHA256SUMS"
+}
+get_ubuntu_sha256sums_signature_file() {
+  local version=$1
+  local downloads_folder=$2
+
+  echo "$(get_ubuntu_sha256sums_file ${version} ${downloads_folder}).gpg"
+}
+################################################################################
+# the fingerprint of the Ubuntu CD Image Automatic Signing Key, which signs the
+# SHA256SUMS files of the ubuntu releases. a SHA256SUMS file is trusted only
+# when signed by this key.
+get_ubuntu_cdimage_signing_key_fingerprint() {
+  echo "843938DF228D22F7B3742BC0D94AA3F0EFE21092"
+}
+################################################################################
+# prints the bundled, ascii armored, public key of the ubuntu cd image signing
+# key. the build embeds src/init/sca_usb_stick/ubuntu-cdimage-keyring.asc here,
+# so the key is never fetched from a keyserver. docs/air-gapped-operations.md
+# tells how to update it.
+get_ubuntu_cdimage_keyring() {
+  cat <<'UBUNTU_CDIMAGE_KEYRING'
+@@@UBUNTU CDIMAGE KEYRING@@@
+UBUNTU_CDIMAGE_KEYRING
+}
+################################################################################
+# checks with gpgv that a SHA256SUMS file carries a good signature of the ubuntu
+# cd image signing key, pinned by its fingerprint. otherwise removes the
+# SHA256SUMS file and its signature and stops with an error telling why:
+#
+# - the SHA256SUMS file does not match the signature (it was modified)
+# - the signature is made by a key other than the pinned one
+# - the signature could not be checked (corrupt, or by an unknown key)
+#
+# parameters
+#     sums_file       - the SHA256SUMS file
+#     signature_file  - its detached signature, SHA256SUMS.gpg
+check_ubuntu_sha256sums_signature() {
+  local sums_file=$1
+  local signature_file=$2
+
+  log_detailed "check_ubuntu_sha256sums_signature: start (sums_file=${sums_file}, signature_file=${signature_file})"
+  local fingerprint=$(get_ubuntu_cdimage_signing_key_fingerprint)
+  local keyring_file
+  keyring_file=$(mktemp "${TMPDIR:-/tmp}/sca-ubuntu-cdimage-keyring.XXXXXX") || \
+    error "could not create a temporary file for the ubuntu cd image keyring." 1
+  # strip the armor: the header up to the empty line, the checksum and the footer
+  get_ubuntu_cdimage_keyring | \
+    sed -e '1,/^$/d' -e '/^=/d' -e '/^-----END/d' | base64 -d > "${keyring_file}"
+  local status
+  status=$(gpgv --status-fd 1 --keyring "${keyring_file}" "${signature_file}" "${sums_file}" 2> /dev/null)
+  rm -f "${keyring_file}"
+  log_detailed "check_ubuntu_sha256sums_signature: gpgv status: ${status}"
+  # VALIDSIG <key fingerprint> ... <primary key fingerprint>
+  local signers=$(echo "${status}" | awk '$2 == "VALIDSIG" { print $NF }')
+  if echo "${status}" | grep -q '^\[GNUPG:\] BADSIG '; then
+    rm -f "${sums_file}" "${signature_file}"
+    error "${sums_file} does not match its signature: it was modified. it was removed with its signature." 1
+  elif echo "${signers}" | grep -qx "${fingerprint}"; then
+    log_detailed "check_ubuntu_sha256sums_signature: finish (signed by ${fingerprint})"
+    return
+  elif [ -n "${signers}" ]; then
+    rm -f "${sums_file}" "${signature_file}"
+    error "${sums_file} is signed by ${signers//$'\n'/ }, not by the ubuntu cd image signing key ${fingerprint}. it was removed with its signature." 1
+  fi
+  rm -f "${sums_file}" "${signature_file}"
+  error "the signature ${signature_file} could not be checked with the ubuntu cd image signing key ${fingerprint}. ${sums_file} was removed with its signature." 1
 }
 ################################################################################
 # echoes the file name of the latest point release desktop iso image listed in
@@ -340,7 +424,12 @@ get_latest_ubuntu_iso_filename() {
 }
 ################################################################################
 # downloads the latest point release of the ubuntu desktop iso image, checks it
-# against the published SHA256SUMS and echoes the downloaded image file name
+# against the signed SHA256SUMS and echoes the downloaded image file name.
+#
+# an image already in the downloads folder, downloaded by an earlier run or put
+# there by the user, is used only when it matches too. otherwise the build stops
+# and the image is left for the user to remove: sca moves a download into place
+# only after checking it, so a mismatch means the file changed afterwards.
 #
 # parameters
 #     version           - the version of ubuntu to download iso file for. needs
@@ -367,8 +456,7 @@ download_ubuntu_image() {
       log_detailed "download_ubuntu_image: finish (version=${version}, downloads_folder=${downloads_folder})"
       return
     fi
-    >&2 echo "the local image $downloaded_file does not match the published SHA256SUMS. downloading it again."
-    rm -f $downloaded_file
+    error "the local image $downloaded_file does not match the signed SHA256SUMS. it is not used. remove it to download it again: rm -f $downloaded_file" 1
   fi
   >&2 echo "downloading ${base_url}${file}. this may take a while..."
   if ! wget --append-output ${log_file} -O ${downloaded_file}.part ${base_url}${file}; then
@@ -377,7 +465,7 @@ download_ubuntu_image() {
   fi
   if [ "$(sha256sum ${downloaded_file}.part | cut -d ' ' -f 1)" != "$expected_sum" ]; then
     rm -f ${downloaded_file}.part
-    error "the downloaded ${file} does not match the published SHA256SUMS. the image was removed." 1
+    error "the downloaded ${file} does not match the signed SHA256SUMS. the image was removed." 1
   fi
   mv ${downloaded_file}.part ${downloaded_file}
   echo $downloaded_file
