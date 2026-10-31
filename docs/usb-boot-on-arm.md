@@ -13,11 +13,13 @@ board if the write goes wrong.
 
 > **Testing status.** This is a draft. The read-only checks have been run on a
 > real ROCK64: the SPI chip is visible to Linux, the `mtd-utils` tools are
-> present, and the Armbian U-Boot package ships **no SPI image** (see
-> [section 4](#4-get-and-verify-the-u-boot-image)). The flashing and recovery
-> routes have **not been run** on any board: nothing has been written to SPI for
-> this page. Steps marked **(unverified)** must be checked on a real board before
-> you rely on them. See [Tested on](#tested-on) at the bottom.
+> present, and the Armbian U-Boot package ships **no SPI image**. Building an SPI
+> image from upstream U-Boot has also been run on a ROCK64, and the image's
+> layout checked (see [section 4](#4-get-and-verify-the-u-boot-image)). Writing
+> that image to SPI, booting from it, and the recovery routes have **not been
+> run** on any board: nothing has been written to SPI for this page. Steps
+> marked **(unverified)** must be checked on a real board before you rely on
+> them. See [Tested on](#tested-on) at the bottom.
 
 > **You need root.** Every step that writes or erases SPI needs `sudo`.
 > Reading the chip back through `/dev/mtdblock0` works without `sudo` if your
@@ -129,10 +131,21 @@ The Armbian image that SCA uses ships U-Boot as a Debian package,
 image**: nothing in it is built for SPI. Installing or
 updating the package does not change that.
 
-The reason is in the package's build metadata. Its U-Boot defconfig sets
-`CONFIG_ROCKCHIP_SPI_IMAGE=y`, so the U-Boot build does produce an SPI image,
-but Armbian's packaging (`UBOOT_TARGET_BINS`) collects only
-`u-boot-rockchip.bin`. The SPI image is built and then left out of the package.
+The SPI image is a feature of **upstream** U-Boot, not something Armbian adds.
+The stock `configs/rock64-rk3328_defconfig` in upstream U-Boot v2026.04 already
+sets:
+
+```
+CONFIG_ROCKCHIP_SPI_IMAGE=y
+CONFIG_SYS_SPI_U_BOOT_OFFS=0x60000
+```
+
+so every build produces an SPI image. Armbian's packaging
+(`UBOOT_TARGET_BINS`) collects only `u-boot-rockchip.bin`, so the SPI image is
+built and then left out of the package. Armbian's defconfig differs from the
+stock one in three cosmetic lines only (`CONFIG_LOCALVERSION`,
+`# CONFIG_LOCALVERSION_AUTO is not set` and `CONFIG_BOOTDELAY=0`). A stock
+upstream build is therefore equivalent to the image Armbian would package.
 
 A packaged, ready-to-flash ROCK64 SPI image is tracked in
 [#108](https://github.com/harley-systems/sca/issues/108). Until then, you have
@@ -147,28 +160,152 @@ to build one yourself.
 
 ### Build U-Boot with the SPI image
 
-This is real work, not an `apt install`. Mainline U-Boot has a
-`rock64-rk3328_defconfig`. With `CONFIG_ROCKCHIP_SPI_IMAGE=y` set, the build
-writes `u-boot-rockchip-spi.bin` to the build tree next to
-`u-boot-rockchip.bin` **(unverified for rock64)**. The build also needs ARM
-Trusted Firmware (TF-A) for the RK3328 (`bl31.elf`). Follow the Rockchip page of
-the U-Boot documentation (`doc/board/rockchip/rockchip.rst` in the source tree)
-for the exact steps.
+The steps below were run natively on a ROCK64 (aarch64, no cross-compiler)
+with U-Boot tag `v2026.04`. Other tags may need other steps.
 
-Build from a **signed release tag** (`git tag -v v20XX.YY`) so that you can
-say what you built, and record the `sha256sum` of the result:
+#### What you need
+
+Upstream U-Boot, plus ARM Trusted Firmware (TF-A) `bl31.elf` for the RK3328
+from the distribution. **Building the image needs no Rockchip blob:**
+
+- **BL31** comes from the Ubuntu package `arm-trusted-firmware` (universe,
+  tested with `2.12.1+dfsg-1`). `+dfsg` means it is built from source, not
+  taken from Rockchip's `rkbin` repository.
+- **TPL**, the first stage that sets up the RAM, is built by U-Boot itself. The
+  RK3328 DDR init is open source, so there is no DDR blob to fetch.
+- **OP-TEE** is optional. The build prints this message, which is expected and
+  harmless:
+
+  ```
+  Image 'simple-bin-spi' is missing optional external blobs but is still functional: tee-os
+  ```
+
+Install the build tools:
+
+```bash
+sudo apt install -y build-essential bison flex libssl-dev swig python3-dev \
+    python3-setuptools python3-pyelftools git
+```
+
+#### Get BL31
+
+Download the package and extract it without installing it:
+
+```bash
+mkdir -p ~/uboot-build && cd ~/uboot-build
+apt-get download arm-trusted-firmware
+dpkg-deb -f arm-trusted-firmware_*.deb Version     # record the version
+dpkg-deb -x arm-trusted-firmware_*.deb atf
+cp atf/usr/lib/arm-trusted-firmware/rk3328/bl31.elf bl31.elf
+sha256sum bl31.elf                                 # record the checksum
+```
+
+#### Get the source
+
+```bash
+cd ~/uboot-build
+git clone --depth 1 --branch v2026.04 https://github.com/u-boot/u-boot.git
+cd u-boot
+git tag -v v2026.04
+```
+
+Clone from the GitHub mirror. A clone from `source.denx.de` redirects to
+`git.u-boot-project.org`, and the shallow clone then fails with
+`fatal: your current branch appears to be broken`. Because the mirror is not
+the canonical source, check the tag signature with `git tag -v` so that you can
+say what you built. A shallow clone may not fetch the signed tag object, and
+`git tag -v` needs the U-Boot maintainers' key in your keyring **(unverified)**.
+
+#### Build
+
+```bash
+make rock64-rk3328_defconfig
+make -j"$(nproc)" BL31="$HOME/uboot-build/bl31.elf"
+```
+
+The build writes `u-boot-rockchip-spi.bin` to the top of the source tree, next
+to `u-boot-rockchip.bin` (the SD/eMMC image) and `idbloader-spi.img`.
+
+On an x86 host, a cross build should work the same way with
+`CROSS_COMPILE=aarch64-linux-gnu-` added to both `make` commands
+**(unverified)**.
+
+#### Two build errors that don't name their cause
+
+- **`ModuleNotFoundError: No module named 'setuptools'`** from
+  `scripts/dtc/pylibfdt/setup.py`. The host's Python has no `setuptools`.
+  Install `python3-setuptools`. On a host without root, putting the
+  `setuptools` and `pyelftools` wheels on a build-only `PYTHONPATH` also works.
+- **`fatal error: gnutls/gnutls.h`** while building `tools/mkeficapsule`. That
+  is an EFI capsule host tool the ROCK64 does not need. Disable it after
+  `make rock64-rk3328_defconfig` and before the build:
+
+  ```bash
+  ./scripts/config --disable TOOLS_MKEFICAPSULE && make olddefconfig
+  ```
+
+  This changes no binary that goes on the board. Installing `libgnutls28-dev`
+  is the alternative.
+
+#### Record the result
 
 ```bash
 sha256sum u-boot-rockchip-spi.bin
 ```
 
-### Check the size
+Keep this checksum with a note of the U-Boot tag and the BL31 package version.
+U-Boot embeds the build date, so your checksum will **not** match the one in
+[Tested on](#tested-on). A different value is expected and is not a sign of
+tampering.
+
+### Check the size and layout
 
 The image must fit in the SPI chip:
 
 ```bash
 stat -c %s u-boot-rockchip-spi.bin     # must be ≤ 16777216 (16 MB)
 ```
+
+The reference build is 1346048 bytes: `0x60000` plus U-Boot proper. The image
+is laid out like this:
+
+| Offset | Contents |
+|--------|----------|
+| `0x00000`–`0x07fff` | `0xff` padding |
+| `0x08000` | `idbloader-spi.img` (TPL and SPL), copied verbatim |
+| `0x60000` | `u-boot.itb` (U-Boot proper, a FIT image) |
+
+Run these checks from the source tree:
+
+```bash
+# The first 32 KB are 0xff: prints nothing
+cmp -n 32768 u-boot-rockchip-spi.bin <(head -c 32768 /dev/zero | tr '\0' '\377')
+
+# idbloader-spi.img starts at 0x8000 (32768): prints nothing
+cmp -i 32768:0 -n "$(stat -c %s idbloader-spi.img)" u-boot-rockchip-spi.bin idbloader-spi.img
+
+# U-Boot proper starts at 0x60000 (393216) with the FIT magic d0 0d fe ed
+od -A x -t x1 -j 393216 -N 4 u-boot-rockchip-spi.bin
+```
+
+```
+060000 d0 0d fe ed
+060004
+```
+
+Finally, check that you have the SPI image and not the SD/eMMC one. The two
+files must differ:
+
+```bash
+cmp u-boot-rockchip-spi.bin u-boot-rockchip.bin     # must report a difference
+```
+
+> **A correct layout does not mean the image boots.** No image built this way
+> has been written to SPI or boot-tested yet. A valid but broken SPI image
+> stops the board from booting from microSD, and the way out
+> ([Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode)) is itself
+> unverified. Run Route B's read-back test (steps 1 to 5) before you write
+> anything to SPI.
 
 ## 5. Route A: write SPI from Armbian on microSD
 
@@ -369,6 +506,24 @@ from eMMC or microSD as before.
 - All 16 MB of SPI read back as `0xff`: the chip was blank.
 - The `linux-u-boot-rock64-current` package ships only `u-boot-rockchip.bin`,
   no SPI image.
+
+**Built, not flashed:**
+
+- U-Boot: upstream tag `v2026.04`, cloned from the GitHub mirror, stock
+  `rock64-rk3328_defconfig` with `TOOLS_MKEFICAPSULE` disabled.
+- BL31: `arm-trusted-firmware` `2.12.1+dfsg-1` (Ubuntu universe),
+  `rk3328/bl31.elf`. No OP-TEE.
+- Built natively on the ROCK64 (aarch64). `setuptools` and `pyelftools` came
+  from wheels on a build-only `PYTHONPATH`, not from the `python3-setuptools`
+  and `python3-pyelftools` packages in section 4.
+- `u-boot-rockchip-spi.bin`: 1346048 bytes, sha256
+  `19fac1ee433a65bbd16e154e5a06226c76bb8c145e9e89003ef0d8e40d7698fa`.
+- Layout checks passed: `0xff` padding up to `0x7fff`, `idbloader-spi.img`
+  verbatim at `0x8000`, FIT magic `d00dfeed` at `0x60000`.
+- The idbloader's first bytes match those of Armbian's own
+  `u-boot-rockchip.bin`.
+- `u-boot-rockchip-spi.bin` and `u-boot-rockchip.bin` differ.
+- The image has **not** been written to SPI or boot-tested.
 
 **Not yet run on hardware:** the flashing routes (A and B) and the recovery
 path. Before you rely on them, a person with a ROCK64 must record here:
