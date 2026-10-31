@@ -508,7 +508,12 @@ extract_iso_image_files() {
   else
     log_detailed "extract_iso_image_files: mounting iso image at ${iso_image_mount_folder}."
     mkdir -p $iso_image_mount_folder
-    sudo mount -r -t iso9660 $iso_image_file $iso_image_mount_folder
+    # a failed mount leaves the folder empty, which the layout check below
+    # would misreport as a malformed iso image
+    if ! sudo mount -r -t iso9660 $iso_image_file $iso_image_mount_folder; then
+      rmdir $iso_image_mount_folder 2> /dev/null
+      error "could not mount $iso_image_file at $iso_image_mount_folder (sudo mount -r -t iso9660 failed, see above)." 1
+    fi
   fi
   local casper_folder=${iso_image_mount_folder}casper/
   local live_layers=(${casper_folder}*.live.squashfs)
