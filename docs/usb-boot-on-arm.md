@@ -13,7 +13,8 @@ board if the write goes wrong.
 
 > **Testing status.** This is a draft. The read-only checks have been run on a
 > real ROCK64: the SPI chip is visible to Linux, the `mtd-utils` tools are
-> present, and the Armbian U-Boot package ships **no SPI image**. Building an SPI
+> present, the Armbian U-Boot package ships **no SPI image**, and the device
+> tree puts the SPI flash's clock on GPIO3_A0. Building an SPI
 > image from upstream U-Boot has also been run on a ROCK64, and the image's
 > layout checked (see [section 4](#4-get-and-verify-the-u-boot-image)). Writing
 > that image to SPI, booting from it, and the recovery routes have **not been
@@ -302,10 +303,14 @@ cmp u-boot-rockchip-spi.bin u-boot-rockchip.bin     # must report a difference
 
 > **A correct layout does not mean the image boots.** No image built this way
 > has been written to SPI or boot-tested yet. A valid but broken SPI image
-> stops the board from booting from microSD, and the way out
-> ([Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode)) is itself
-> unverified. Run Route B's read-back test (steps 1 to 5) before you write
-> anything to SPI.
+> stops the board from booting from microSD. The first way out is
+> [section 7](#7-recovering-from-a-bad-spi-write) step 1: jumper header pin 23
+> to pin 25 at power-on, boot from microSD and run `flash_erase`. No recovery
+> route has been run on a board yet. Before your first write, do the optional
+> continuity check in section 7 step 1 to confirm that pin 23 is the flash's
+> clock line. [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode) is the
+> fallback for when a microSD boot is not possible; if you are counting on it,
+> run its read-back test (steps 1 to 5) first.
 
 ## 5. Route A: write SPI from Armbian on microSD
 
@@ -342,9 +347,11 @@ All write steps are **(unverified)**.
 
    Copy `spi-backup.img` off the board.
 
-   If you are counting on [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode)
-   to recover the board, run its SPI read-back test (steps 1 to 5) before you
-   go on.
+   If the write goes wrong, the first way out is
+   [section 7](#7-recovering-from-a-bad-spi-write) step 1. Do its optional
+   continuity check before you go on. Only if you plan to rely on
+   [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode) instead, run its
+   SPI read-back test (steps 1 to 5) first.
 
 3. **Write the image.** `flashcp` erases the blocks it needs, writes and
    verifies **(unverified)**:
@@ -459,12 +466,33 @@ The boot ROM reads SPI first, so it never gets to microSD. The serial console
 shows how far the boot gets.
 
 The fix is to **keep the boot ROM from reading SPI** for one boot, then erase or
-rewrite it. All steps are **(unverified)**.
+rewrite it. None of the steps below has been run on a board, so all of them
+are **(unverified)**. Only the device-tree facts in step 1 were read from a
+real board. Step 1 is the route to try first: it needs only a jumper wire and
+a microSD card.
 
 1. **Disable SPI for one boot.** Short SPI clock to ground on the Pi-2
    header, **pin 23 (SPI CLK) to pin 25 (GND)**, with a jumper wire, while you
    power on. The boot ROM cannot read SPI and moves on to eMMC and microSD.
-   Remove the short once the serial console shows the boot has moved past SPI.
+   Remove the short once the serial console shows the boot has moved past SPI
+   **(unverified)**.
+
+   Why this works, read from the device tree of a running ROCK64: the board
+   has one SPI controller, `spi@ff190000`, and the boot flash is its child
+   node, `flash@0`. The controller's `pinctrl-0` group, `spi0m2`, puts the
+   clock on GPIO3_A0 (TX on GPIO3_A1, RX on GPIO3_A2, CS0 on GPIO3_B0). Holding
+   the flash's clock line at ground is what should stop the boot ROM reading
+   SPI.
+
+   That header pin 23 is GPIO3_A0 comes from Pine64 forum posts, not from
+   official documentation **(unverified)**. If it holds, the header SPI pins
+   are the boot flash's own bus.
+
+   **Optional pre-flight, before your first write.** With the board powered
+   off, check continuity with a multimeter from header pin 23 to pin 6 (CLK)
+   of the SOIC-8 SPI flash chip. Pin 1 is next to the dot or notch on the
+   chip. Continuity confirms the pin mapping. If there is none, do not rely on
+   this step.
 
 2. **Then choose:**
    - **With a bootable microSD card inserted**, the board boots Armbian. Erase
@@ -506,6 +534,10 @@ from eMMC or microSD as before.
 - All 16 MB of SPI read back as `0xff`: the chip was blank.
 - The `linux-u-boot-rock64-current` package ships only `u-boot-rockchip.bin`,
   no SPI image.
+- Device tree: one SPI controller, `spi@ff190000` (`status = okay`), with the
+  boot flash `flash@0` as its child. Its `pinctrl-0` group `spi0m2` resolves
+  to CLK GPIO3_A0, TX GPIO3_A1, RX GPIO3_A2, CS0 GPIO3_B0. The mapping of
+  GPIO3_A0 to header pin 23 was not checked.
 
 **Built, not flashed:**
 
