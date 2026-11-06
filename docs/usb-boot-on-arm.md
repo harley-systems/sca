@@ -526,7 +526,7 @@ from eMMC or microSD as before.
 
 **Read-only checks, run on hardware:**
 
-- Board: PINE64 ROCK64, revision not recorded.
+- Board: PINE64 ROCK64 v2.0 (silkscreen `ROCK64_V2.0 2017-0713`).
 - OS: Armbian_community 26.11.0-trunk.108, kernel 6.18.57-current-rockchip64,
   booted from microSD.
 - `/proc/mtd` shows `mtd0`, 16 MB, `"spi0.0"`.
@@ -560,7 +560,6 @@ from eMMC or microSD as before.
 **Not yet run on hardware:** the flashing routes (A and B) and the recovery
 path. Before you rely on them, a person with a ROCK64 must record here:
 
-- board revision;
 - U-Boot image: source, version and `sha256sum`;
 - route used (A or B), with `rkdeveloptool` and loader versions for Route B;
 - result of booting from a USB stick, and of the recovery path in section 7.

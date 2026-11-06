@@ -123,11 +123,16 @@ documented for **Rev3 only**, so the Pine64 CR2032 holder does not fit a v2.0.
 **Alternative: Armbian's `fake-hwclock`.** It restores the time of the last
 shutdown at boot, so dates come back plausible but stale. For a CA, which
 stamps validity periods into every certificate, a plausible but wrong clock is
-arguably more dangerous than an obviously wrong one: nobody notices it.
+arguably more dangerous than an obviously wrong one: nobody notices it. Worse,
+its `load` can also move the clock **backwards**, over a correct RTC. Armbian
+installs and enables it by default, so once the RTC is in, it must be masked;
+see [The DS3231 RTC](#41-the-ds3231-rtc).
 
-The DS3231 keeps time to about 2 ppm, roughly a minute a year. See
-[Wiring the DS3231](#41-wiring-the-ds3231). On a Rev3 board, the on-board RTC
-with the Pine64 CR2032 holder is the alternative.
+The DS3231 datasheet gives an accuracy of about 2 ppm, roughly a minute a year.
+That figure has **not been measured** on this appliance: what has been verified
+is that it keeps correct time across a power cut. See
+[The DS3231 RTC](#41-the-ds3231-rtc). On a Rev3 board, the on-board RTC with
+the Pine64 CR2032 holder is the alternative.
 
 Whatever the clock, check the date before you sign anything:
 
@@ -162,7 +167,7 @@ Prices as found in **2026-10**. Verify prices and stock before ordering.
 | ROCK64 v2.0, 4 GB, RK3328 | — | — | The reference board; 85 x 56 x 18.8 mm |
 | eMMC module, 16 GB | pine64.com | $15.95 | 8 GB $11.95, 32 GB $24.95. Buy **Pine64's own**: Odroid and Radxa modules look alike and are not pin-compatible |
 | ROCK64 Premium Aluminum Casing | pine64.com | $12.99 | Finned lid with a thermal pad onto the SoC, microSD cutout in the end panel; approx. 92 x 61 x 27 mm |
-| DS3231 RTC module (ZS-042) | AliExpress | approx. ILS 6.25 | 39 x 23 x 14 mm, 2 ppm (about 1 min/year) |
+| DS3231 RTC module (ZS-042) | AliExpress | approx. ILS 6.25 | 39 x 23 x 14 mm; datasheet 2 ppm (about 1 min/year), not measured |
 | CR2032 cell | Local | A few ILS | **Buy it separately.** Listings saying "with battery CR2032" usually mean the holder |
 | microSD card, 4 GB or more | **A local shop that takes returns** | — | Counterfeit and worn cards are common; test with `f3write`/`f3read` before trusting one |
 | F-F Dupont jumper wires | AliExpress | approx. ILS 5-10 | Buy the 40-way ribbon |
@@ -175,9 +180,15 @@ A YubiKey is needed too; see [YubiKey Setup](yubikey.md).
 
 ## 4. Assembly and details
 
-### 4.1 Wiring the DS3231
+### 4.1 The DS3231 RTC
 
-Connect the module to the ROCK64's Pi-2 header:
+The steps below are in the order you do them. Four of them are traps that
+leave no useful error message; each is headed by what you see when you hit it.
+
+#### Wiring
+
+Connect the module to the ROCK64's Pi-2 header. Pin 1 is the one nearest the
+RK3328, and all four wires go on the **odd row**:
 
 | DS3231 pin | ROCK64 header pin |
 |------------|-------------------|
@@ -187,15 +198,199 @@ Connect the module to the ROCK64's Pi-2 header:
 | GND | 9 |
 | 32K, SQW | Not connected |
 
-**Use 3.3 V, not 5 V.** The ZS-042 module has a diode-and-resistor charging
-circuit for its cell. At 3.3 V it puts roughly 2.6-2.8 V on the cell, below a
-CR2032's 3.0 V, so the circuit is inert and an ordinary CR2032 is safe. **At
-5 V it is not**: that path charges the cell, and then the module needs a
-rechargeable LIR2032 instead.
+**Use 3.3 V, not 5 V.** Pins 2 and 4 are 5 V, and they are on the other row.
+The module's own 4.7 kΩ pull-ups tie SDA and SCL to whatever VCC is, so VCC on
+pin 2 or 4 would drive 5 V into the RK3328's 3.3 V I2C pins. With all four
+wires on the odd row, VCC cannot reach 5 V. On the reference build the module's
+spare VCC/GND holes measured **3.32 V**.
 
 **The module does not fit on the header inside the case.** The header is
 8.5 mm tall and the module 14 mm, against roughly 20 mm of clearance under the
 lid. Mount the module flat and connect it with soldered wires instead.
+
+#### The cell
+
+The ZS-042 carries a trickle charger (a diode and a `201` resistor) meant for a
+rechargeable LIR2032. Charging a non-rechargeable CR2032 is the usual warning
+about this module, so it was measured: with the holder empty and the board
+powered, the charge node read **3.00 V** against a 3.32 V rail. A fresh CR2032
+sits at about 3.2 V, above that node, so the charge path is reverse-biased and
+no current flows. **On 3.3 V an ordinary CR2032 is safe, and no rework is
+needed.**
+
+**On 5 V it is not**: the same module then charges the cell, which is why the
+warning exists. A LIR2032 is the wrong choice here for the same reason the
+CR2032 is safe: a 3.00 V node can never charge a 3.6 V cell.
+
+#### Module invisible, no error: enable I2C0
+
+Header pins 3 and 5 are **I2C0** (`i2c@ff150000`, GPIO2_D0/GPIO2_D1), not I2C1,
+and I2C0 is **disabled by default**. A correctly wired module is simply
+invisible:
+
+```
+i2c@ff150000  status=disabled   i2c0, GPIO2_D0/GPIO2_D1  <- header pins 5/3
+i2c@ff160000  status=okay       i2c1, GPIO2_A4/GPIO2_A5  <- header pins 28/27
+```
+
+Enable it in `/boot/armbianEnv.txt`, then reboot:
+
+```
+overlays=rk3328-i2c0
+```
+
+Armbian's own `README.rockchip-overlays` confirms `I2C0 pins (SCL, SDA):
+GPIO2_D0, GPIO2_D1`. Then check the bus (`i2cdetect` is in the `i2c-tools`
+package):
+
+```bash
+sudo i2cdetect -y 0
+```
+
+It should show `68`, the DS3231, and `57`, the module's AT24C32 EEPROM. The
+`rtc_ds1307` driver is **built into** this kernel, so there is nothing to
+install.
+
+> **Do not move the module to pins 27/28.** When it does not show up on 3/5,
+> the enabled bus, `i2c-1`, looks like the easy fix. It would work, but `i2c-1`
+> is the **PMIC bus**: it carries the `rk805` PMIC at `0x18`. That puts a
+> third-party module on the power-management bus of a device meant to sit
+> unattended in a safe. Enable I2C0 instead.
+
+#### RTC registered but ignored: the overlay
+
+Without a device-tree alias, everything looks right and the DS3231 is still
+not used. The PMIC probes first and takes `rtc0`, so the DS3231 lands on
+`rtc1`, and the kernel sets the system time at boot from `rtc0`, the
+batteryless PMIC clock. Check with:
+
+```bash
+for r in /sys/class/rtc/rtc*; do echo "$(basename "$r") -> $(cat "$r/name")  hctosys=$(cat "$r/hctosys")"; done
+```
+
+```
+rtc0 -> rk808-rtc           hctosys=1   <- no battery
+rtc1 -> rtc-ds1307 0-0068   hctosys=0   <- the one with the battery
+```
+
+This overlay declares the DS3231 and fixes the ordering. Save it as
+`rock64-ds3231.dts`:
+
+```dts
+/dts-v1/;
+/plugin/;
+
+/ {
+	fragment@0 {
+		target = <&i2c0>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			rtc@68 {
+				compatible = "maxim,ds3231";
+				reg = <0x68>;
+				status = "okay";
+			};
+		};
+	};
+
+	fragment@1 {
+		target-path = "/aliases";
+		__overlay__ {
+			rtc0 = "/i2c@ff150000/rtc@68";
+			rtc1 = "/i2c@ff160000/pmic@18";
+		};
+	};
+};
+```
+
+Install it with `armbian-add-overlay`, which is already on the image, then
+reboot:
+
+```bash
+sudo armbian-add-overlay rock64-ds3231.dts
+sudo reboot
+```
+
+**The aliases are literal paths, not `&label` references, on purpose.** Path
+fixups are not applied to `/aliases` entries in an overlay, so a reference
+there silently resolves wrong. The paths are those of the RK3328 v2.0 device
+tree on the kernel below.
+
+`trickle-resistor-ohms` is **deliberately omitted**, so the DS3231's internal
+charger also stays off.
+
+After the reboot, the same check shows:
+
+```
+rtc0 -> rtc-ds1307 0-0068  hctosys=1
+```
+
+#### Clock walks backwards at boot: remove `fake-hwclock`
+
+With the RTC working, the kernel reads it correctly and then
+`fake-hwclock-load.service` overwrites it with a stale saved value:
+
+```
+[14.331]  kernel: rtc-ds1307 0-0068: setting system clock to 2026-11-06T12:23:29 UTC
+[14.396]  Starting fake-hwclock-load.service - Restore the current clock...
+[15.078]  systemd-timesyncd: System clock time advanced to recorded timestamp: 14:15:10 IST
+```
+
+The RTC's 12:23 UTC is 14:23 IST. `fake-hwclock` stepped the clock back from
+there; `systemd-timesyncd` then moved it forward to its own recorded timestamp,
+14:15 IST, which was still behind. timesyncd's restore only moves the clock
+forward and is not the problem; leave it alone.
+
+The cause is in `/usr/sbin/fake-hwclock` line 59, package
+`fake-hwclock 0.14build1`:
+
+```sh
+if [ "$FORCE"x = "false"x ] || [ $NOW_SEC -le $SAVED_SEC ] ; then
+    date -u -s "$SAVED"
+```
+
+`FORCE=false` by default, so the first clause is always true and `load` sets
+the clock unconditionally, backwards included. The refusal branch is only
+reachable when `force` *is* passed: the exact inverse of its own message and
+of the man page ("Otherwise it will only move it forwards"). This is
+[Debian #1093227](https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1093227),
+filed 2025-01 and still present.
+
+For a CA this is not cosmetic: a clock walked backwards at every boot puts
+**wrong `notBefore` dates on everything the CA issues**. `fake-hwclock` exists
+for boards with no RTC; once there is one, it must go:
+
+```bash
+sudo systemctl disable --now fake-hwclock-save.timer fake-hwclock-save.service fake-hwclock-load.service
+sudo systemctl mask fake-hwclock-load.service fake-hwclock-save.service fake-hwclock-save.timer
+```
+
+#### Acceptance test
+
+1. Power the board off and leave it off for a while.
+2. **Disconnect the network**, so nothing can set the clock but the RTC.
+3. Boot, and before reconnecting anything, run:
+
+   ```bash
+   date -u
+   ```
+
+**Result, 2026-11-06:** the time was correct after the power cut. That is all
+that was verified: the RTC survived a power cut with no network. Its drift
+over weeks or months has not been measured.
+
+#### Tested on
+
+- Board: PINE64 ROCK64 v2.0 (silkscreen `ROCK64_V2.0 2017-0713`).
+- OS: Armbian `26.11.0-trunk.108`, kernel `6.18.57-current-rockchip64`.
+- Module: ZS-042 (`DS3231SN` + `AT24C32`, silkscreen `V858`), with a CR2032.
+- Date: 2026-11-06.
+
+This procedure is verified on **v2.0 only**. Rev3 has its own RTC battery
+connector ([1](#1-board-revisions)), and nothing here was tried on it.
 
 ### 4.2 Serial console
 
