@@ -172,27 +172,27 @@ security_key: build/security_key/security_key.sh
 # APPLIANCE command and subcommands
 #------------------------------------------------------------------------------
 APPLIANCE_SUBCMDS := info verify
-# one data file per board. the board names are substituted for
-# @@@APPLIANCE BOARDS@@@ in the code, help, completion and docs, so adding a
-# board is adding a file.
-APPLIANCE_BOARD_FILES := $(sort $(wildcard src/appliance/boards/*.conf))
-APPLIANCE_BOARDS := $(basename $(notdir $(APPLIANCE_BOARD_FILES)))
+# one data file per platform. the platform names are substituted for
+# @@@APPLIANCE PLATFORMS@@@ in the code, help, completion and docs, so adding a
+# platform is adding a file.
+APPLIANCE_PLATFORM_FILES := $(sort $(wildcard src/appliance/platforms/*.conf))
+APPLIANCE_PLATFORMS := $(basename $(notdir $(APPLIANCE_PLATFORM_FILES)))
 
 $(eval $(call build_help,appliance,))
 $(foreach s,$(APPLIANCE_SUBCMDS),$(eval $(call build_help,appliance,$(s))))
 $(foreach s,$(APPLIANCE_SUBCMDS),$(eval $(call build_subcmd,appliance,$(s))))
 
-# the profiles, each under a [<board>] header, for @@@APPLIANCE BOARD PROFILES@@@
-build/appliance/boards.txt: $(APPLIANCE_BOARD_FILES)
+# the profiles, each under a [<platform>] header, for @@@APPLIANCE PLATFORM PROFILES@@@
+build/appliance/platforms.txt: $(APPLIANCE_PLATFORM_FILES)
 	@mkdir -p build/appliance
 	for f in $^; do b=$${f##*/}; echo "[$${b%.conf}]"; cat "$$f"; done > $@
 
 build/appliance/appliance.sh: src/appliance/appliance.sh build/appliance/help/help.txt \
-		build/appliance/boards.txt \
+		build/appliance/platforms.txt \
 		$(foreach s,$(APPLIANCE_SUBCMDS),build/appliance/$(s)/appliance_$(s).sh)
 	@mkdir -p build/appliance
 	sed -e '/@@@HELP@@@/{r build/appliance/help/help.txt' -e 'd}' \
-		-e '/@@@APPLIANCE BOARD PROFILES@@@/{r build/appliance/boards.txt' -e 'd}' $< > $@
+		-e '/@@@APPLIANCE PLATFORM PROFILES@@@/{r build/appliance/platforms.txt' -e 'd}' $< > $@
 	cat $(foreach s,$(APPLIANCE_SUBCMDS),build/appliance/$(s)/appliance_$(s).sh) >> $@
 
 appliance: build/appliance/appliance.sh
@@ -359,7 +359,7 @@ sca: src/sca.sh src/run.sh build/help/help.txt $(COMMANDS)
 		build/list/list.sh build/test/test.sh build/install/install.sh \
 		build/completion/completion.sh build/common/common.sh src/run.sh | \
 		sed -e 's/@@@UBUNTU VERSION ID@@@/$(UBUNTU_VERSION_ID)/g' \
-			-e 's/@@@APPLIANCE BOARDS@@@/$(APPLIANCE_BOARDS)/g' >> build/sca.sh
+			-e 's/@@@APPLIANCE PLATFORMS@@@/$(APPLIANCE_PLATFORMS)/g' >> build/sca.sh
 	chmod 755 build/sca.sh
 
 #------------------------------------------------------------------------------
@@ -377,7 +377,7 @@ check: sca
 # Generate the command reference (docs/commands.md, docs/commands/*.md) from
 # the help files. See scripts/build-docs.sh.
 docs:
-	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) APPLIANCE_BOARDS='$(APPLIANCE_BOARDS)' \
+	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) APPLIANCE_PLATFORMS='$(APPLIANCE_PLATFORMS)' \
 		./scripts/build-docs.sh
 
 # Fail when the committed command reference is stale, i.e. 'make docs' changes

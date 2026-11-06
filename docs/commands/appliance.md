@@ -9,12 +9,14 @@
 ```text
 The sca appliance command help
 
-The appliance command checks and describes the board the air-gapped sca
-appliance runs on: where the root file system comes from, which clock sets the
-time at boot, and whether anything can quietly move that clock.
+The appliance command checks and describes the platform the air-gapped sca
+appliance runs on, an ARM board or an x86 mini PC: where the root file system
+comes from, which clock sets the time at boot, and whether anything can
+quietly move that clock.
 
-What differs between boards is kept in a board profile, so the same commands
-work on every supported board. The known boards are: raspberrypi rock64.
+What differs between platforms is kept in a platform profile, so the same
+commands work on every supported platform. The known platforms are:
+raspberrypi rock64 x86.
 Neither command needs an sca configuration, and neither changes anything.
 ```
 
@@ -29,7 +31,7 @@ appliance_options:
 
 The appliance command is one of the following:
 
-  info      - show the board, its profile, clocks, root device and units
+  info      - show the platform, its profile, clocks, root device and units
   verify    - check that the appliance is set up as intended
 ```
 
@@ -40,13 +42,13 @@ type sca appliance <subcommand> --help for further information on each of the
 appliance related commands. see docs/air-gapped-appliance.md for the hardware.
 ```
 
-### Board profiles
+### Platform profiles
 
-A board profile is a data file, `src/appliance/boards/<board>.conf`, embedded in `sca` at build time. Adding a board means adding one file; the command surface does not change. The `rock64` profile is verified on hardware (with the exception of booting the root from a USB stick); the `raspberrypi` profile is a proposal that nobody has run on a Pi. See [Checking the appliance](../air-gapped-appliance.md#5-checking-the-appliance-sca-appliance-verify) for what each check catches and what is verified.
+A platform profile is a data file, `src/appliance/platforms/<platform>.conf`, embedded in `sca` at build time. Adding a platform means adding one file; the command surface does not change. The `rock64` profile is verified on hardware (with the exception of booting the root from a USB stick); the `raspberrypi` and `x86` profiles are proposals that nobody has run on that hardware. See [Checking the appliance](../air-gapped-appliance.md#5-checking-the-appliance-sca-appliance-verify) for what each check catches and what is verified.
 
 **Subcommands**
 
-- [info](#sca-appliance-info) - show the board, its profile, clocks, root device and units
+- [info](#sca-appliance-info) - show the platform, its profile, clocks, root device and units
 - [verify](#sca-appliance-verify) - check that the appliance is set up as intended
 
 ---
@@ -57,14 +59,15 @@ A board profile is a data file, `src/appliance/boards/<board>.conf`, embedded in
 The appliance info command help
 
 The appliance info command shows what appliance verify looks at, without
-judging it: the board model and its profile (including whether the profile is
-verified on hardware and whether its boot setup is irreversible), every RTC
-with its name and hctosys flag, the root device and its transport, the NTP
-state, the state of each unit the profile wants masked, and the raw value of
-the board probe.
+judging it: the model and its platform profile (including whether the profile
+is verified on hardware, its arch, its boot preparation and whether that is
+irreversible, and its kind of RTC), every RTC with its name and hctosys flag,
+the root device and its transport, the NTP state, the state of each unit the
+profile wants masked, and the raw value of the platform's boot probe.
 
 It always exits 0, which makes it the command to run when verify fails. When
-no profile matches the board, the board-independent facts are still shown.
+no profile matches the platform, the platform-independent facts are still
+shown.
 ```
 
 **Syntax**
@@ -79,8 +82,8 @@ appliance_options:
 info_options:
 
   -h, --help                - print this help
-  --board BOARD             - use the profile of this board rather than
-                              detecting it. one of: raspberrypi rock64
+  --platform PLATFORM       - use the profile of this platform rather than
+                              detecting it. one of: raspberrypi rock64 x86
 ```
 
 ---
@@ -90,10 +93,11 @@ info_options:
 ```text
 The appliance verify command help
 
-The appliance verify command checks that the board is set up as an air-gapped
-CA appliance, and prints one row per check, ok or FAIL:
+The appliance verify command checks that the platform is set up as an
+air-gapped CA appliance, and prints one row per check, ok, FAIL or n/a:
 
-  <probe>   - the board profile's own check, e.g. U-Boot booting from SPI
+  boot      - the platform profile's own check, e.g. U-Boot booting from SPI;
+              n/a on a platform that boots USB natively (boot_prep=none)
   root      - the root file system is on a USB disk
   rtc       - rtc0 is the battery-backed clock, and the kernel sets the time
               from it at boot (hctosys=1)
@@ -107,9 +111,9 @@ Every check runs, even after one fails. The exit status is non-zero if any
 check fails, so verify can be used from a script. The power cut check reads the
 kernel log: run verify with sudo, or as a member of the systemd-journal group.
 
-The board is detected from the device tree; --board names it instead. A
-profile that is a proposal, not verified on hardware, is reported as such
-first.
+The platform is detected from the device tree or, on a platform without one
+(x86), from the machine's architecture; --platform names it instead. A profile
+that is a proposal, not verified on hardware, is reported as such first.
 ```
 
 **Syntax**
@@ -124,8 +128,8 @@ appliance_options:
 verify_options:
 
   -h, --help                - print this help
-  --board BOARD             - use the profile of this board rather than
-                              detecting it. one of: raspberrypi rock64
+  --platform PLATFORM       - use the profile of this platform rather than
+                              detecting it. one of: raspberrypi rock64 x86
 ```
 
 ```bash

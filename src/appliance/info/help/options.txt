@@ -1,5 +1,5 @@
 info_options:
 
   -h, --help                - print this help
-  --board BOARD             - use the profile of this board rather than
-                              detecting it. one of: @@@APPLIANCE BOARDS@@@
+  --platform PLATFORM       - use the profile of this platform rather than
+                              detecting it. one of: @@@APPLIANCE PLATFORMS@@@

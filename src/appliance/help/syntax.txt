@@ -6,5 +6,5 @@ sca [<sca_options>] appliance [<appliance_options>] <appliance_command>
 
 The appliance command is one of the following:
 
-  info      - show the board, its profile, clocks, root device and units
+  info      - show the platform, its profile, clocks, root device and units
   verify    - check that the appliance is set up as intended

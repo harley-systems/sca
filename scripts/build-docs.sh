@@ -20,7 +20,7 @@
 #   @@@COMMAND INDEX@@@ - becomes a table linking every command page
 #
 # @@@UBUNTU VERSION ID@@@ is replaced by $UBUNTU_VERSION_ID, and
-# @@@APPLIANCE BOARDS@@@ by $APPLIANCE_BOARDS, which the Makefile passes in, as
+# @@@APPLIANCE PLATFORMS@@@ by $APPLIANCE_PLATFORMS, which the Makefile passes in, as
 # they are in build/sca.sh.
 #
 # The output is deterministic: changing one command's help files changes only
@@ -32,7 +32,7 @@ set -e
 cd "$(dirname "$0")/.."
 export LC_ALL=C
 : "${UBUNTU_VERSION_ID:?is not set: run 'make docs'}"
-: "${APPLIANCE_BOARDS:?is not set: run 'make docs'}"
+: "${APPLIANCE_PLATFORMS:?is not set: run 'make docs'}"
 
 DOCS_DIR=docs
 PAGES_DIR="${DOCS_DIR}/commands"
@@ -176,7 +176,7 @@ mkdir -p "${tmp}/out/commands"
 for command in "${commands[@]}"; do
     render_page "${command}" > "${tmp}/page.md"
     sed -e "s/@@@UBUNTU VERSION ID@@@/${UBUNTU_VERSION_ID}/g" \
-        -e "s/@@@APPLIANCE BOARDS@@@/${APPLIANCE_BOARDS}/g" "${tmp}/page.md" \
+        -e "s/@@@APPLIANCE PLATFORMS@@@/${APPLIANCE_PLATFORMS}/g" "${tmp}/page.md" \
         > "${tmp}/out/commands/${command}.md"
 done
 

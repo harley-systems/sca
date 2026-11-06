@@ -1,7 +1,8 @@
-The appliance verify command checks that the board is set up as an air-gapped
-CA appliance, and prints one row per check, ok or FAIL:
+The appliance verify command checks that the platform is set up as an
+air-gapped CA appliance, and prints one row per check, ok, FAIL or n/a:
 
-  <probe>   - the board profile's own check, e.g. U-Boot booting from SPI
+  boot      - the platform profile's own check, e.g. U-Boot booting from SPI;
+              n/a on a platform that boots USB natively (boot_prep=none)
   root      - the root file system is on a USB disk
   rtc       - rtc0 is the battery-backed clock, and the kernel sets the time
               from it at boot (hctosys=1)
@@ -15,6 +16,6 @@ Every check runs, even after one fails. The exit status is non-zero if any
 check fails, so verify can be used from a script. The power cut check reads the
 kernel log: run verify with sudo, or as a member of the systemd-journal group.
 
-The board is detected from the device tree; --board names it instead. A
-profile that is a proposal, not verified on hardware, is reported as such
-first.
+The platform is detected from the device tree or, on a platform without one
+(x86), from the machine's architecture; --platform names it instead. A profile
+that is a proposal, not verified on hardware, is reported as such first.

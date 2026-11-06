@@ -1,5 +1,5 @@
 #!/bin/bash
-# appliance verify and info: every check passes on a board set up as intended,
+# appliance verify and info: every check passes on a platform set up as intended,
 # each silent misconfiguration from the ROCK64 bring-up fails its own row while
 # the other rows still print, and verify exits non-zero on any failure.
 #
@@ -60,12 +60,15 @@ journalctl() {
     * ) return 1 ;;
   esac
 }
+uname() {
+  cat "$stub_state/machine"
+}
 vcgencmd() {
   echo "[all]"
   echo "BOOT_UART=0"
   echo "BOOT_ORDER=$(cat "$stub_state/boot_order")"
 }
-export -f findmnt lsblk timedatectl systemctl journalctl vcgencmd
+export -f findmnt lsblk timedatectl systemctl journalctl uname vcgencmd
 
 # a ROCK64 set up as intended: U-Boot from SPI, root on a USB stick, the
 # DS3231 as rtc0, no NTP, fake-hwclock masked, the clock kept through a
@@ -84,6 +87,19 @@ setup_rock64() {
   echo no > "$stub_state/ntp_synced"
   echo 1793017409 > "$stub_state/boot_epoch"
   echo 1793010000 > "$stub_state/previous_epoch"
+  echo aarch64 > "$stub_state/machine"
+}
+# an x86 mini PC set up as intended: no device tree, the CMOS clock as rtc0,
+# root on a USB stick, fake-hwclock not installed
+setup_x86() {
+  setup_rock64
+  rm -rf "${SCA_APPLIANCE_ROOT}/proc" "${SCA_APPLIANCE_ROOT}/sys/class/rtc/rtc1"
+  set_rtc rtc0 'rtc_cmos 00:01' 1
+  echo x86_64 > "$stub_state/machine"
+  for unit in fake-hwclock-load.service fake-hwclock-save.service fake-hwclock-save.timer; do
+    echo "Failed to get unit file state for ${unit}: No such file or directory" \
+      > "$stub_state/unit.${unit}"
+  done
 }
 set_rtc() {
   echo "$2" > "${SCA_APPLIANCE_ROOT}/sys/class/rtc/$1/name"
@@ -110,10 +126,10 @@ expect_fail() {
     || fail "$label: no failure summary"
 }
 
-# no ~/.sca/config is needed: verify must work on a board with no CA
+# no ~/.sca/config is needed: verify must work on a platform with no CA
 setup_rock64
 if ! sca appliance verify > "${HOME}/out" 2>&1; then
-  fail "verify failed on a board set up as intended"
+  fail "verify failed on a platform set up as intended"
   cat "${HOME}/out" >&2
 fi
 for label in boot root rtc clock hwclock "power cut"; do
@@ -193,18 +209,54 @@ echo yes > "$stub_state/ntp_synced"
 sca appliance verify > "${HOME}/out" 2>&1 && fail "verify exited 0 with two failures"
 grep -q "appliance verify: 2 check(s) failed" "${HOME}/out" || fail "two failures not counted"
 
-# an unknown board: exit 1 with the known boards
+# an unknown platform: exit 1 with the known platforms
 setup_rock64
 printf 'acme,widget\0' > "${SCA_APPLIANCE_ROOT}/proc/device-tree/compatible"
 sca appliance verify > "${HOME}/out" 2>&1
-assert_eq 1 "$?" "undetected board exit status"
-grep -q "known boards: raspberrypi rock64" "${HOME}/out" || fail "undetected board: boards not listed"
-# --board overrides detection
-assert_succeeds sca appliance verify --board rock64
-assert_fails sca appliance verify --board acme
-# no device tree at all, as on a workstation
+assert_eq 1 "$?" "undetected platform exit status"
+grep -q "known platforms: raspberrypi rock64 x86" "${HOME}/out" || fail "undetected platform: platforms not listed"
+# --platform overrides detection
+assert_succeeds sca appliance verify --platform rock64
+assert_fails sca appliance verify --platform acme
+# no device tree at all, on an arm64 machine no profile matches by arch
 rm -rf "${SCA_APPLIANCE_ROOT}/proc"
 assert_fails sca appliance verify
+# nor on a machine sca knows no arch for
+echo riscv64 > "$stub_state/machine"
+assert_fails sca appliance verify
+
+# an x86 mini PC: detected by arch with no device tree, the boot row is n/a
+# and not a failure, and rtc_cmos passes as rtc0
+setup_x86
+if ! sca appliance verify > "${HOME}/out" 2>&1; then
+  fail "verify failed on an x86 mini PC set up as intended"
+  cat "${HOME}/out" >&2
+fi
+assert_eq "profile x86 is a proposal (unverified)" "$(head -n 1 "${HOME}/out")" "x86 unverified banner"
+assert_eq n/a "$(row boot)" "x86: boot row"
+grep -qF 'platform boots USB natively' "${HOME}/out" || fail "x86: boot row does not say why it is n/a"
+for label in root rtc clock hwclock "power cut"; do
+  assert_eq ok "$(row "$label")" "x86: $label row"
+done
+grep -qF 'rtc_cmos is rtc0, hctosys=1' "${HOME}/out" || fail "x86: rtc_cmos not reported as rtc0"
+# n/a does not hide a real failure elsewhere
+echo yes > "$stub_state/ntp_synced"
+sca appliance verify > "${HOME}/out" 2>&1 && fail "x86: verify exited 0 with NTP synced"
+grep -q "appliance verify: 1 check(s) failed" "${HOME}/out" || fail "x86: n/a counted as a failure"
+# the device tree still wins over the arch fallback
+setup_rock64
+echo x86_64 > "$stub_state/machine"
+sca appliance verify > "${HOME}/out" 2>&1
+assert_eq ok "$(row boot)" "rock64 detected by device tree despite the arch"
+
+# two profiles that both qualify for the arch fallback: an error, not a guess
+setup_x86
+sed '/^APPLIANCE_PLATFORM_PROFILES$/i [x86b]\narch=amd64' "${SCA}" > "${HOME}/sca-two-x86.sh"
+SCA="${HOME}/sca-two-x86.sh" sca appliance verify > "${HOME}/out" 2>&1
+assert_eq 1 "$?" "two x86 profiles exit status"
+grep -q 'profiles x86 x86b all match arch amd64' "${HOME}/out" \
+  || fail "two x86 profiles: no error naming both"
+SCA="${HOME}/sca-two-x86.sh" assert_succeeds sca appliance verify --platform x86
 
 # the raspberrypi profile is detected, says it is unverified first, and runs
 # its probe command
@@ -230,7 +282,19 @@ for expected in 'model     Pine64 Rock64' 'profile   rock64' 'irreversible: no' 
     'NTP=no NTPSynchronized=no' 'fake-hwclock-load.service enabled' 'boot      2026.04'; do
   grep -qF -- "$expected" "${HOME}/out" || fail "info lacks '$expected'"
 done
+# the profile keys of the platform model are shown
+for expected in 'arch: arm64' 'boot_prep: uboot-spi' 'rtc: i2c-ds3231'; do
+  grep -qF -- "$expected" "${HOME}/out" || fail "info lacks '$expected'"
+done
+# on x86 the boot probe is n/a
+setup_x86
+sca appliance info > "${HOME}/out" 2>&1 || fail "x86: info exited non-zero"
+for expected in 'profile   x86' 'arch: amd64' 'boot_prep: none' 'rtc: builtin' \
+    'boot      n/a - platform boots USB natively'; do
+  grep -qF -- "$expected" "${HOME}/out" || fail "x86: info lacks '$expected'"
+done
 # and without a matching profile
+setup_rock64
 printf 'acme,widget\0' > "${SCA_APPLIANCE_ROOT}/proc/device-tree/compatible"
 assert_succeeds sca appliance info
 sca appliance info 2>&1 | grep -q 'none matches' || fail "info does not say no profile matched"

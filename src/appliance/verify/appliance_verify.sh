@@ -3,14 +3,15 @@
 # non-zero if any check fails.
 #
 # five checks read only /proc, /sys, systemd and the journal, and so work on
-# any board. the sixth is the board profile's probe. every check runs, even
-# after one has failed, so one run shows everything that is wrong.
+# any platform. the sixth is the platform profile's probe, or n/a on a platform
+# that needs no boot preparation. every check runs, even after one has failed,
+# so one run shows everything that is wrong.
 #
 # options
-#   --board BOARD - use this board profile instead of detecting the board
+#   --platform PLATFORM - use this platform profile instead of detecting it
 appliance_verify() {
-  local board=''
-  local OPTS=`getopt -o h --long help,board: -n "sca appliance verify" -- "$@"`
+  local platform=''
+  local OPTS=`getopt -o h --long help,platform: -n "sca appliance verify" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca appliance verify -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -19,8 +20,8 @@ appliance_verify() {
         appliance_verify_help
         return
       ;;
-      --board )
-        board=$2
+      --platform )
+        platform=$2
         shift;shift
       ;;
       -- )
@@ -32,31 +33,35 @@ appliance_verify() {
       ;;
     esac
   done
-  log_detailed "appliance_verify: started (board:'$board')"
-  local appliance_board
-  appliance_resolve_board "$board"
-  board=$appliance_board
+  log_detailed "appliance_verify: started (platform:'$platform')"
+  local appliance_platform
+  appliance_resolve_platform "$platform"
+  platform=$appliance_platform
 
-  if [ "$(appliance_profile_get "$board" verified)" = no ]; then
-    echo "profile ${board} is a proposal (unverified)"
+  if [ "$(appliance_profile_get "$platform" verified)" = no ]; then
+    echo "profile ${platform} is a proposal (unverified)"
   fi
 
   local failed=0 detail
-  local probe_label=$(appliance_profile_get "$board" probe_label)
-  appliance_verify_probe "$board"
-  appliance_verify_row "${probe_label:-probe}" "$detail" $?
-  appliance_verify_root "$board"
+  local probe_label=$(appliance_profile_get "$platform" probe_label)
+  if [ "$(appliance_profile_get "$platform" boot_prep)" = none ]; then
+    appliance_verify_row "${probe_label:-boot}" "platform boots USB natively" n/a
+  else
+    appliance_verify_probe "$platform"
+    appliance_verify_row "${probe_label:-boot}" "$detail" $?
+  fi
+  appliance_verify_root "$platform"
   appliance_verify_row root "$detail" $?
-  appliance_verify_rtc "$board"
+  appliance_verify_rtc "$platform"
   appliance_verify_row rtc "$detail" $?
   appliance_verify_clock
   appliance_verify_row clock "$detail" $?
-  appliance_verify_units "$board"
+  appliance_verify_units "$platform"
   appliance_verify_row hwclock "$detail" $?
   appliance_verify_power_cut
   appliance_verify_row "power cut" "$detail" $?
 
-  log_detailed "appliance_verify: finished (board:'$board', failed:'$failed')"
+  log_detailed "appliance_verify: finished (platform:'$platform', failed:'$failed')"
   if [ $failed -gt 0 ]; then
     error "appliance verify: ${failed} check(s) failed" 1
   fi
@@ -67,23 +72,28 @@ appliance_verify() {
 # parameters
 #   label  - what is checked
 #   detail - what was found
-#   status - the check's return code, 0 for ok
+#   status - the check's return code, 0 for ok, or 'n/a' for a check that does
+#            not apply to the platform (not a failure)
 appliance_verify_row() {
   local status=ok
-  [ "$3" -ne 0 ] && { status=FAIL; failed=$((failed + 1)); }
+  if [ "$3" = n/a ]; then
+    status=n/a
+  elif [ "$3" -ne 0 ]; then
+    status=FAIL; failed=$((failed + 1))
+  fi
   printf '  %-9s %-40s %s\n' "$1" "$2" "$status"
 }
 # each appliance_verify_<check> sets detail and returns 0 for ok, 1 for FAIL
 
-# the board-specific probe matches probe_expect and not probe_reject
+# the platform-specific probe matches probe_expect and not probe_reject
 appliance_verify_probe() {
-  local board=$1
-  if ! appliance_gather_probe "$board"; then
+  local platform=$1
+  if ! appliance_gather_probe "$platform"; then
     detail=$appliance_probe_error
     return 1
   fi
-  local expect=$(appliance_profile_get "$board" probe_expect)
-  local reject=$(appliance_profile_get "$board" probe_reject)
+  local expect=$(appliance_profile_get "$platform" probe_expect)
+  local reject=$(appliance_profile_get "$platform" probe_reject)
   local matched=$(printf '%s\n' "$appliance_probe_value" | grep -E -m 1 -- "$expect")
   detail=${matched:-$(printf '%s\n' "$appliance_probe_value" | head -n 1)}
   [ -z "$detail" ] && detail='(empty)'
@@ -99,12 +109,12 @@ appliance_verify_probe() {
 }
 # the root file system is on a disk with one of the profile's transports
 appliance_verify_root() {
-  local board=$1
+  local platform=$1
   if ! appliance_gather_root; then
     detail=$appliance_root_error
     return 1
   fi
-  local transports=$(appliance_profile_get "$board" root_transports)
+  local transports=$(appliance_profile_get "$platform" root_transports)
   detail="${appliance_root_source} (${appliance_root_tran:-no transport})"
   if [ -z "$appliance_root_tran" ] || [[ " ${transports} " != *" ${appliance_root_tran} "* ]]; then
     detail="${detail}, not ${transports}"
@@ -116,8 +126,8 @@ appliance_verify_root() {
 # from it. when it is not, every rtc is listed: a PMIC clock holding rtc0 is
 # the usual reason.
 appliance_verify_rtc() {
-  local board=$1
-  local rtc_name=$(appliance_profile_get "$board" rtc_name)
+  local platform=$1
+  local rtc_name=$(appliance_profile_get "$platform" rtc_name)
   local rtc0=$(appliance_path /sys/class/rtc/rtc0)
   local name=$(cat "$rtc0/name" 2>/dev/null)
   local hctosys=$(cat "$rtc0/hctosys" 2>/dev/null)
@@ -149,8 +159,8 @@ appliance_verify_clock() {
 # the units that would overwrite the rtc's time (fake-hwclock) are masked, or
 # not installed
 appliance_verify_units() {
-  local board=$1
-  local units=$(appliance_profile_get "$board" masked_units)
+  local platform=$1
+  local units=$(appliance_profile_get "$platform" masked_units)
   local unit state bad='' count=0
   for unit in $units; do
     count=$((count + 1))

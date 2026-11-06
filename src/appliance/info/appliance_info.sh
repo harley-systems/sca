@@ -1,15 +1,15 @@
 ################################################################################
-# describe the board and what verify would look at, without judging it.
+# describe the platform and what verify would look at, without judging it.
 # always exits 0, so it is the command to run when verify fails.
 #
-# with no profile matching the board and no --board, the board-independent
-# facts are still shown.
+# with no profile matching the platform and no --platform, the
+# platform-independent facts are still shown.
 #
 # options
-#   --board BOARD - use this board profile instead of detecting the board
+#   --platform PLATFORM - use this platform profile instead of detecting it
 appliance_info() {
-  local board=''
-  local OPTS=`getopt -o h --long help,board: -n "sca appliance info" -- "$@"`
+  local platform=''
+  local OPTS=`getopt -o h --long help,platform: -n "sca appliance info" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca appliance info -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -18,8 +18,8 @@ appliance_info() {
         appliance_info_help
         return
       ;;
-      --board )
-        board=$2
+      --platform )
+        platform=$2
         shift;shift
       ;;
       -- )
@@ -31,27 +31,27 @@ appliance_info() {
       ;;
     esac
   done
-  log_detailed "appliance_info: started (board:'$board')"
-  local appliance_board=''
-  if [ -n "$board" ]; then
-    appliance_resolve_board "$board"
+  log_detailed "appliance_info: started (platform:'$platform')"
+  local appliance_platform=''
+  if [ -n "$platform" ]; then
+    appliance_resolve_platform "$platform"
   else
     # detection failing is information here, not an error
-    appliance_board=$(appliance_resolve_board '' 2>/dev/null && echo "$appliance_board")
+    appliance_platform=$(appliance_resolve_platform '' 2>/dev/null && echo "$appliance_platform")
   fi
-  board=$appliance_board
+  platform=$appliance_platform
 
   local model=$(tr -d '\0' 2>/dev/null < "$(appliance_path /proc/device-tree/model)")
   appliance_info_row model "${model:-unknown}"
-  if [ -n "$board" ]; then
-    appliance_info_row profile "$board ($(appliance_profile_get "$board" name))"
+  if [ -n "$platform" ]; then
+    appliance_info_row profile "$platform ($(appliance_profile_get "$platform" name))"
     local key
-    for key in verified irreversible base_image base_image_check \
-        boot_enable_method rtc_method i2c_bus root_transports; do
-      appliance_info_row "" "${key}: $(appliance_profile_get "$board" "$key")"
+    for key in verified arch irreversible base_image base_image_check \
+        boot_prep rtc rtc_method i2c_bus root_transports; do
+      appliance_info_row "" "${key}: $(appliance_profile_get "$platform" "$key")"
     done
   else
-    appliance_info_row profile "none matches; known boards: $(appliance_boards | paste -sd ' ' -)"
+    appliance_info_row profile "none matches; known platforms: $(appliance_platforms | paste -sd ' ' -)"
   fi
 
   local rtcs=$(appliance_gather_rtcs)
@@ -69,21 +69,23 @@ appliance_info() {
     appliance_info_row ntp "$appliance_ntp_error"
   fi
 
-  if [ -n "$board" ]; then
+  if [ -n "$platform" ]; then
     local unit units=''
-    for unit in $(appliance_profile_get "$board" masked_units); do
+    for unit in $(appliance_profile_get "$platform" masked_units); do
       units="${units}${unit} $(appliance_gather_unit_state "$unit")"$'\n'
     done
     appliance_info_rows units "${units:-none listed}"
 
-    local probe_label=$(appliance_profile_get "$board" probe_label)
-    if appliance_gather_probe "$board"; then
-      appliance_info_rows "${probe_label:-probe}" "${appliance_probe_value:-(empty)}"
+    local probe_label=$(appliance_profile_get "$platform" probe_label)
+    if [ "$(appliance_profile_get "$platform" boot_prep)" = none ]; then
+      appliance_info_row "${probe_label:-boot}" "n/a - platform boots USB natively"
+    elif appliance_gather_probe "$platform"; then
+      appliance_info_rows "${probe_label:-boot}" "${appliance_probe_value:-(empty)}"
     else
-      appliance_info_row "${probe_label:-probe}" "$appliance_probe_error"
+      appliance_info_row "${probe_label:-boot}" "$appliance_probe_error"
     fi
   fi
-  log_detailed "appliance_info: finished (board:'$board')"
+  log_detailed "appliance_info: finished (platform:'$platform')"
   return 0
 }
 # print one row of info

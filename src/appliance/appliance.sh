@@ -1,5 +1,5 @@
 ################################################################################
-# check and describe the board the sca appliance runs on
+# check and describe the platform the sca appliance runs on
 appliance() {
   # Check for help flag - don't use getopt since sub-commands have their own options
   case "$1" in
@@ -36,29 +36,29 @@ appliance_help() {
 SCA_HELP
 }
 ################################################################################
-# the board profiles, src/appliance/boards/<board>.conf, each under a [<board>]
-# header. the build embeds them here, so build/sca.sh stays a single file.
-# a profile is data: it is read with appliance_profile_get, never sourced.
-appliance_board_profiles() {
-  cat <<'APPLIANCE_BOARD_PROFILES'
-@@@APPLIANCE BOARD PROFILES@@@
-APPLIANCE_BOARD_PROFILES
+# the platform profiles, src/appliance/platforms/<platform>.conf, each under a
+# [<platform>] header. the build embeds them here, so build/sca.sh stays a
+# single file. a profile is data: it is read with appliance_profile_get, never sourced.
+appliance_platform_profiles() {
+  cat <<'APPLIANCE_PLATFORM_PROFILES'
+@@@APPLIANCE PLATFORM PROFILES@@@
+APPLIANCE_PLATFORM_PROFILES
 }
-# the known board names, one per line
-appliance_boards() {
-  appliance_board_profiles | sed -n -E 's/^\[([a-z0-9_-]+)\]$/\1/p'
+# the known platform names, one per line
+appliance_platforms() {
+  appliance_platform_profiles | sed -n -E 's/^\[([a-z0-9_-]+)\]$/\1/p'
 }
 ################################################################################
-# print the value of a key in a board profile, empty if it is not set
+# print the value of a key in a platform profile, empty if it is not set
 #
 # parameters
-#   board - the board name
+#   platform - the platform name
 #   key   - the profile key
 appliance_profile_get() {
-  local board=$1 key=$2
-  appliance_board_profiles | awk -v board="$board" -v key="$key" '
-    /^\[[a-z0-9_-]+\]$/ { in_board = ($0 == "[" board "]"); next }
-    !in_board || /^[[:space:]]*#/ { next }
+  local platform=$1 key=$2
+  appliance_platform_profiles | awk -v platform="$platform" -v key="$key" '
+    /^\[[a-z0-9_-]+\]$/ { in_platform = ($0 == "[" platform "]"); next }
+    !in_platform || /^[[:space:]]*#/ { next }
     {
       i = index($0, "=")
       if (i > 1 && substr($0, 1, i - 1) == key) { print substr($0, i + 1); exit }
@@ -71,40 +71,70 @@ appliance_path() {
   printf '%s%s' "${SCA_APPLIANCE_ROOT}" "$1"
 }
 ################################################################################
-# resolve the board to use and set appliance_board to it
+# resolve the platform to use and set appliance_platform to it
 #
-# with a board asked for, it has to be a known one. without, the board is the
-# one whose profile 'compatible' matches an entry of the device tree's
-# compatible list. exits with the known boards listed if there is none.
+# with a platform asked for, it has to be a known one. without, the platform is
+# the one whose profile 'compatible' matches an entry of the device tree's
+# compatible list. a platform with no device tree (x86) is the one profile
+# without a 'compatible' key whose 'arch' is the machine's. exits with the
+# known platforms listed if there is none, or more than one.
 #
 # parameters
-#   board - the board asked for with --board, or empty
-appliance_resolve_board() {
-  local board=$1
-  local boards=$(appliance_boards | paste -sd ' ' -)
-  if [ -n "$board" ]; then
-    if ! appliance_boards | grep -qxF -- "$board"; then
-      error "unknown board '$board'. known boards: ${boards}." 1
+#   platform - the platform asked for with --platform, or empty
+appliance_resolve_platform() {
+  local platform=$1
+  local platforms=$(appliance_platforms | paste -sd ' ' -)
+  if [ -n "$platform" ]; then
+    if ! appliance_platforms | grep -qxF -- "$platform"; then
+      error "unknown platform '$platform'. known platforms: ${platforms}." 1
     fi
-    appliance_board=$board
+    appliance_platform=$platform
     return 0
   fi
+  local candidate pattern
   local compatible_file=$(appliance_path /proc/device-tree/compatible)
   if [ -r "$compatible_file" ]; then
     local compatible=$(tr '\0' '\n' < "$compatible_file")
-    local candidate pattern
-    for candidate in $(appliance_boards); do
+    for candidate in $(appliance_platforms); do
       pattern=$(appliance_profile_get "$candidate" compatible)
       [ -z "$pattern" ] && continue
       if printf '%s\n' "$compatible" | grep -qE -- "^(${pattern})\$"; then
-        log_detailed "appliance_resolve_board: detected '$candidate'"
-        appliance_board=$candidate
+        log_detailed "appliance_resolve_platform: detected '$candidate'"
+        appliance_platform=$candidate
         return 0
       fi
     done
   fi
-  error "could not detect the board: no board profile matches \
-${compatible_file}. known boards: ${boards}. name one with --board BOARD." 1
+  local arch=$(appliance_arch) matches=''
+  if [ -n "$arch" ]; then
+    for candidate in $(appliance_platforms); do
+      [ -n "$(appliance_profile_get "$candidate" compatible)" ] && continue
+      [ "$(appliance_profile_get "$candidate" arch)" = "$arch" ] || continue
+      matches="${matches:+${matches} }${candidate}"
+    done
+  fi
+  case "$matches" in
+    '' ) ;;
+    *' '* )
+      error "could not detect the platform: profiles ${matches} all match arch ${arch}. name one with --platform PLATFORM." 1
+      ;;
+    * )
+      log_detailed "appliance_resolve_platform: detected '$matches' by arch '$arch'"
+      appliance_platform=$matches
+      return 0
+      ;;
+  esac
+  error "could not detect the platform: no platform profile matches \
+${compatible_file} or arch '${arch:-unknown}'. known platforms: ${platforms}. \
+name one with --platform PLATFORM." 1
+}
+# the machine's architecture as a profile's 'arch' names it (amd64, arm64), or
+# empty when it is not one sca knows
+appliance_arch() {
+  case "$(uname -m)" in
+    x86_64 ) echo amd64 ;;
+    aarch64 | arm64 ) echo arm64 ;;
+  esac
 }
 ################################################################################
 # the gather functions read the system. verify and info both use them, so the
@@ -227,17 +257,17 @@ appliance_gather_journal() {
   [[ "$previous" =~ ^[0-9]+$ ]] && appliance_previous_boot_epoch=$previous
   return 0
 }
-# the value of the board's probe: the probe_file with NULs stripped, or the
+# the value of the platform's probe: the probe_file with NULs stripped, or the
 # output of probe_command. sets appliance_probe_value, or appliance_probe_error
 # and returns 1.
 #
 # parameters
-#   board - the board name
+#   platform - the platform name
 appliance_gather_probe() {
-  local board=$1
+  local platform=$1
   appliance_probe_value='' appliance_probe_error=''
-  local probe_file=$(appliance_profile_get "$board" probe_file)
-  local probe_command=$(appliance_profile_get "$board" probe_command)
+  local probe_file=$(appliance_profile_get "$platform" probe_file)
+  local probe_command=$(appliance_profile_get "$platform" probe_command)
   if [ -n "$probe_file" ]; then
     local path=$(appliance_path "$probe_file")
     if [ ! -r "$path" ]; then
@@ -259,7 +289,7 @@ appliance_gather_probe() {
       return 1
     fi
   else
-    appliance_probe_error="profile ${board} sets neither probe_file nor probe_command"
+    appliance_probe_error="profile ${platform} sets neither probe_file nor probe_command"
     return 1
   fi
   return 0

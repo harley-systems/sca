@@ -1,7 +1,9 @@
-The appliance command checks and describes the board the air-gapped sca
-appliance runs on: where the root file system comes from, which clock sets the
-time at boot, and whether anything can quietly move that clock.
+The appliance command checks and describes the platform the air-gapped sca
+appliance runs on, an ARM board or an x86 mini PC: where the root file system
+comes from, which clock sets the time at boot, and whether anything can
+quietly move that clock.
 
-What differs between boards is kept in a board profile, so the same commands
-work on every supported board. The known boards are: @@@APPLIANCE BOARDS@@@.
+What differs between platforms is kept in a platform profile, so the same
+commands work on every supported platform. The known platforms are:
+@@@APPLIANCE PLATFORMS@@@.
 Neither command needs an sca configuration, and neither changes anything.
