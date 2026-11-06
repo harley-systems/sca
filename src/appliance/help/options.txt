@@ -1,0 +1,3 @@
+appliance_options:
+
+  -h, --help                    - display appliance command help and exit

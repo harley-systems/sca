@@ -1,0 +1,9 @@
+The appliance info command shows what appliance verify looks at, without
+judging it: the board model and its profile (including whether the profile is
+verified on hardware and whether its boot setup is irreversible), every RTC
+with its name and hctosys flag, the root device and its transport, the NTP
+state, the state of each unit the profile wants masked, and the raw value of
+the board probe.
+
+It always exits 0, which makes it the command to run when verify fails. When
+no profile matches the board, the board-independent facts are still shown.

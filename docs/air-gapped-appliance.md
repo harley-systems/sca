@@ -18,6 +18,7 @@ choice knowingly.
 2. [Design decisions](#2-design-decisions)
 3. [Bill of materials](#3-bill-of-materials)
 4. [Assembly and details](#4-assembly-and-details)
+5. [Checking the appliance: `sca appliance verify`](#5-checking-the-appliance-sca-appliance-verify)
 
 ## 1. Board revisions
 
@@ -440,6 +441,71 @@ running. A CA session takes minutes, so that is dozens of sessions per charge.
 
 The case and the power bank stacked come to about **92 x 61 x 54 mm**: roughly
 a deck of cards in footprint, and three decks thick.
+
+## 5. Checking the appliance: `sca appliance verify`
+
+Every step in [4.1](#41-the-ds3231-rtc) can fail **silently**: the board boots,
+the time looks right, and nothing reports an error. `sca appliance verify`
+checks for each of those failures in one run, prints one row per check and
+exits non-zero if any check fails, so it can also be used from a script:
+
+```bash
+sudo sca appliance verify      # or as a member of the systemd-journal group
+sca appliance info             # the raw values behind every row, always exits 0
+```
+
+Neither command changes anything on the board or needs an sca configuration.
+Root, or the `systemd-journal` group, is needed only to read the kernel log.
+Without it, the `power cut` row fails and says how to fix it; it never passes
+silently.
+
+### 5.1 What each check catches
+
+Five checks read only `/proc`, `/sys`, systemd and the journal, so they work
+the same on every board. The sixth, `boot`, is the one check that comes from
+the board profile.
+
+| Row | Reads | Fails when | The trap |
+|-----|-------|------------|----------|
+| `boot` | ROCK64: `/proc/device-tree/chosen/u-boot,version` | the version carries the `_armbian` suffix: U-Boot came from the microSD card, not SPI | A jumper left on pins 23/25, or SPI not written: see [USB Boot on ARM](usb-boot-on-arm.md) |
+| `root` | `findmnt /`, `lsblk -o PKNAME,TRAN` | the root file system is not on a USB disk | The board quietly booted the microSD card or eMMC |
+| `rtc` | `/sys/class/rtc/rtc*/name`, `hctosys` | `rtc0` is not the DS3231, or the kernel does not set the time from it. The row lists every RTC | [Module invisible: I2C0 disabled](#module-invisible-no-error-enable-i2c0); [RTC registered but ignored](#rtc-registered-but-ignored-the-overlay): the PMIC holds `rtc0` |
+| `clock` | `timedatectl show` | the clock is synchronised by NTP | NTP quietly correcting a wrong RTC, so the time looks right while the appliance is networked |
+| `hwclock` | `systemctl is-enabled` | a `fake-hwclock` unit is neither masked nor absent | [Clock walks backwards at boot](#clock-walks-backwards-at-boot-remove-fake-hwclock) |
+| `power cut` | `journalctl -k -b 0`, `journalctl -b -1` | the time the kernel read from `rtc0` at boot is earlier than the previous boot's last log entry, or the line is missing | The RTC lost time while the power was off (a flat or missing cell) |
+
+### 5.2 Board profiles, and what is verified
+
+What differs between boards lives in a board profile,
+`src/appliance/boards/<board>.conf`: how the board is detected, the `boot`
+probe, the RTC's name, the units to mask, and what `sca appliance init` will
+need later (the base image, how USB boot and the RTC are enabled, the I2C bus,
+and whether enabling USB boot is **irreversible**). Adding a board is adding a
+file. `sca appliance init` is not implemented yet; `sca appliance info` shows
+those values.
+
+| Row | `rock64` | `raspberrypi` |
+|-----|----------|---------------|
+| `boot` | Verified on hardware, 2026-11-06: U-Boot from SPI reports `2026.04`, from microSD `2026.04_armbian-…` ([USB Boot on ARM](usb-boot-on-arm.md)) | Proposal: `vcgencmd bootloader_config`, USB (`4`) read before SD (`1`) in `BOOT_ORDER` |
+| `root` | **Not verified**: booting the root from a USB stick has not been done yet | Proposal |
+| `rtc` | Verified on hardware, 2026-11-06 ([4.1](#41-the-ds3231-rtc)) | Proposal: `dtoverlay=i2c-rtc,ds3231`, on `i2c-1` |
+| `clock` | Verified on hardware, 2026-11-06: acceptance test with the network disconnected | Proposal |
+| `hwclock` | Verified on hardware, 2026-11-06: the three units masked | Proposal: Raspberry Pi OS ships `fake-hwclock` too |
+| `power cut` | Verified on hardware, 2026-11-06: the [acceptance test](#acceptance-test) | Proposal |
+
+"Verified" means the state the row expects was set up and observed on that
+board. `sca appliance verify` itself has so far run only against simulated
+readings, in `tests/test_appliance_verify.sh`.
+
+The `raspberrypi` profile is a **proposal throughout**: none of it has been run
+on a Raspberry Pi. `verify` says so in its first line on that profile. It
+covers the Pi 4 and 5, where USB boot is a setting in the SPI EEPROM and can be
+changed back. A Pi 3 would need a profile marked irreversible: there, USB boot
+burns a one-time-programmable bit.
+
+**Expect `root` to fail on a ROCK64 that still boots its root from microSD.**
+That is the correct answer, "not yet set up as intended", not a bug. An SD
+card shows no transport.
 
 ---
 

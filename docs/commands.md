@@ -63,6 +63,7 @@ Each command has its own page, generated from the help that `sca <command> --hel
 
 | Command | Description |
 |---------|-------------|
+| [appliance](commands/appliance.md) | check and describe the air-gapped appliance board |
 | [approve](commands/approve.md) | approve request |
 | [completion](commands/completion.md) | get completion script |
 | [config](commands/config.md) | configuration management |
