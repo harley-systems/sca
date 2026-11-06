@@ -1,7 +1,7 @@
 # SCA Makefile - Simplified with macros
 # Uses scripts/build-help.sh to generate help text
 
-.PHONY: all clean deploy check docs docs-check
+.PHONY: all clean deploy check check-ubuntu-key integration docs docs-check
 
 all: sca
 
@@ -342,6 +342,16 @@ clean:
 # builds the 'sca test' subcommand.
 check: sca
 	./scripts/run-tests.sh
+
+# Integration tests, not part of 'check': they need the network and, for
+# 'integration', privileged docker and ~15 GB. See CONTRIBUTING.md (Tests).
+# check-ubuntu-key: the live ubuntu SHA256SUMS is still signed by the pinned key.
+check-ubuntu-key: sca
+	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) bash tests/integration/ubuntu_signing_key.sh
+
+# integration: build the sca usb stick image from a real ubuntu iso.
+integration: sca
+	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) ./tests/integration/run.sh
 
 # Generate the command reference (docs/commands.md, docs/commands/*.md) from
 # the help files. See scripts/build-docs.sh.

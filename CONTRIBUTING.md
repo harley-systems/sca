@@ -249,6 +249,37 @@ test_done
 A failed assertion is reported and the file keeps going, so one run shows every
 failure. Test files should pass `shellcheck`.
 
+### Integration tests
+
+`make check` stubs `sudo`, `wget` and the ISO tools, so a green `make check`
+does **not** mean the SCA USB stick builds. That is only shown by the
+integration tests in `tests/integration/`, which `make check` never runs:
+
+| Guarantee | `make check` | `make check-ubuntu-key` | `make integration` |
+|-----------|:---:|:---:|:---:|
+| The right commands are attempted (`mount`, `xorriso`, `apt-get`, ...) | ✓ | | |
+| Error paths that need a tool to fail, e.g. the failed ISO mount message | ✓ | | |
+| The signature and checksum logic, against fixtures | ✓ | | |
+| The live Ubuntu `SHA256SUMS` is signed by the pinned key, and the manual `gpgv` check in `docs/air-gapped-operations.md` works | | ✓ | ✓ |
+| The image really builds from a real Ubuntu ISO, keeps its boot setup and carries sca and the offline packages | | | ✓ |
+| A rebuild with the Ubuntu release servers unreachable uses the cached ISO and `SHA256SUMS` (the apt archive is still used) | | | ✓ |
+| A tampered local ISO stops the build before anything is mounted | | | ✓ |
+| The documented `sha256sum -c` check passes on the cached ISO | | | ✓ |
+
+- `make check-ubuntu-key` downloads a few kilobytes from `releases.ubuntu.com`
+  and needs `wget`, `gpg` and `gpgv`. No ISO, no `sudo`. It is the check that
+  fails first if Ubuntu ever re-signs with another key.
+- `make integration` needs Docker with `--privileged` (loop mounts), the
+  network and about 15 GB of disk. It runs `tests/integration/sca_usb_stick.sh`
+  in an `ubuntu:<version>` container, as a non-root user with `sudo`. The ISO
+  and its `SHA256SUMS` pair are kept between runs in the Docker volume
+  `sca-integration-downloads` (set `SCA_INTEGRATION_CACHE` to use another), so
+  only the first run downloads the ~6 GB ISO. A privileged container is root on
+  the host: run it only on code you trust, never on pull requests.
+
+Both are meant for a scheduled or manually started CI job on the self-hosted
+runner, not for every pull request.
+
 ## Code Style
 
 - Shell scripts should pass `shellcheck`
