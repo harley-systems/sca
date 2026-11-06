@@ -114,7 +114,7 @@ _sca_complete() {
   fi
 
   if [ -z "${COMP_WORDS[${sca_verb_index}]}" ]; then
-    suggestions=($(compgen -W "create display export import init install list request security_key approve revoke scrub_log config completion test" -- "$current_word"))
+    suggestions=($(compgen -W "create display export import init install list request security_key appliance approve revoke scrub_log config completion test" -- "$current_word"))
   else
     case "${COMP_WORDS[${sca_verb_index}]}" in
       create)
@@ -144,6 +144,9 @@ _sca_complete() {
       security_key)
         _sca_security_key_complete ${sca_verb_index}
         ;;
+      appliance)
+        _sca_appliance_complete ${sca_verb_index}
+        ;;
       approve)
         _sca_approve_complete ${sca_verb_index}
         ;;
@@ -163,7 +166,7 @@ _sca_complete() {
         _sca_test_complete ${sca_verb_index}
         ;;
       *)
-        suggestions=($(compgen -W "create display export import init install list request security_key approve revoke scrub_log config completion test" -- "$current_word"))
+        suggestions=($(compgen -W "create display export import init install list request security_key appliance approve revoke scrub_log config completion test" -- "$current_word"))
         ;;
     esac
   fi

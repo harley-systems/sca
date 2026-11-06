@@ -18,6 +18,7 @@ choice knowingly.
 2. [Design decisions](#2-design-decisions)
 3. [Bill of materials](#3-bill-of-materials)
 4. [Assembly and details](#4-assembly-and-details)
+5. [Checking the appliance: `sca appliance verify`](#5-checking-the-appliance-sca-appliance-verify)
 
 ## 1. Board revisions
 
@@ -440,6 +441,103 @@ running. A CA session takes minutes, so that is dozens of sessions per charge.
 
 The case and the power bank stacked come to about **92 x 61 x 54 mm**: roughly
 a deck of cards in footprint, and three decks thick.
+
+## 5. Checking the appliance: `sca appliance verify`
+
+Every step in [4.1](#41-the-ds3231-rtc) can fail **silently**: the board boots,
+the time looks right, and nothing reports an error. `sca appliance verify`
+checks for each of those failures in one run, prints one row per check and
+exits non-zero if any check fails, so it can also be used from a script:
+
+```bash
+sudo sca appliance verify      # or as a member of the systemd-journal group
+sca appliance info             # the raw values behind every row, always exits 0
+```
+
+Neither command changes anything on the appliance or needs an sca
+configuration.
+Root, or the `systemd-journal` group, is needed only to read the kernel log.
+Without it, the `power cut` row fails and says how to fix it; it never passes
+silently.
+
+### 5.1 What each check catches
+
+Five checks read only `/proc`, `/sys`, systemd and the journal, so they work
+the same on every platform. The sixth, `boot`, is the one check that comes from
+the platform profile. On a platform that boots USB out of the box
+(`boot_prep=none`, an x86 mini PC) there is nothing to check, and the row shows
+`n/a - platform boots USB natively` rather than a failure.
+
+| Row | Reads | Fails when | The trap |
+|-----|-------|------------|----------|
+| `boot` | ROCK64: `/proc/device-tree/chosen/u-boot,version`; x86: nothing (`n/a`) | the version carries the `_armbian` suffix: U-Boot came from the microSD card, not SPI | A jumper left on pins 23/25, or SPI not written: see [USB Boot on ARM](usb-boot-on-arm.md) |
+| `root` | `findmnt /`, `lsblk -o PKNAME,TRAN` | the root file system is not on a USB disk | The board quietly booted the microSD card or eMMC |
+| `rtc` | `/sys/class/rtc/rtc*/name`, `hctosys` | `rtc0` is not the profile's battery-backed clock (the DS3231, or `rtc_cmos` on x86), or the kernel does not set the time from it. The row lists every RTC | [Module invisible: I2C0 disabled](#module-invisible-no-error-enable-i2c0); [RTC registered but ignored](#rtc-registered-but-ignored-the-overlay): the PMIC holds `rtc0` |
+| `clock` | `timedatectl show` | the clock is synchronised by NTP | NTP quietly correcting a wrong RTC, so the time looks right while the appliance is networked |
+| `hwclock` | `systemctl is-enabled` | a `fake-hwclock` unit is neither masked nor absent | [Clock walks backwards at boot](#clock-walks-backwards-at-boot-remove-fake-hwclock) |
+| `power cut` | `journalctl -k -b 0`, `journalctl -b -1` | the time the kernel read from `rtc0` at boot is earlier than the previous boot's last log entry, or the line is missing | The RTC lost time while the power was off: a flat or missing cell, on the DS3231 or in a mini PC's CMOS |
+
+### 5.2 Platform profiles, and what is verified
+
+What differs between platforms lives in a platform profile,
+`src/appliance/platforms/<platform>.conf`: how the platform is detected (the
+device tree's `compatible` on an ARM board, the `arch` on x86), the `boot`
+probe, the RTC's name, the units to mask, and what `sca appliance init` will
+need later: the `arch` and base image, the boot preparation (`boot_prep`), the
+kind of RTC (`rtc`: `builtin` or `i2c-ds3231`) and how it is enabled, the I2C
+bus, and whether the boot preparation is **irreversible**. Adding a platform is
+adding a file, and `--platform` names one when detection is not wanted.
+`sca appliance init` is not implemented yet; `sca appliance info` shows those
+values.
+
+| `boot_prep` | Platform | Profile |
+|-------------|----------|---------|
+| `none` | x86 mini PC: boots today's `sca init sca_usb_stick` stick out of the box | `x86` (unverified) |
+| `uboot-spi` | ROCK64: U-Boot written into SPI flash | `rock64` (verified, see below) |
+| `rpi-eeprom` | Raspberry Pi 4/5: `BOOT_ORDER` in the SPI EEPROM | `raspberrypi` (unverified) |
+| `rpi-otp` | Raspberry Pi 3: a one-time-programmable bit, **irreversible** | none yet |
+
+| Row | `rock64` | `raspberrypi` | `x86` |
+|-----|----------|---------------|-------|
+| `boot` | Verified on hardware, 2026-11-06: U-Boot from SPI reports `2026.04`, from microSD `2026.04_armbian-…` ([USB Boot on ARM](usb-boot-on-arm.md)) | Proposal: `vcgencmd bootloader_config`, USB (`4`) read before SD (`1`) in `BOOT_ORDER` | `n/a`: no boot preparation |
+| `root` | **Not verified**: booting the root from a USB stick has not been done yet | Proposal | Proposal: the live stick's medium, `/cdrom`, on a USB disk |
+| `rtc` | Verified on hardware, 2026-11-06 ([4.1](#41-the-ds3231-rtc)) | Proposal: `dtoverlay=i2c-rtc,ds3231`, on `i2c-1` | Proposal: the built-in CMOS clock, `rtc_cmos`. None of the DS3231 work applies; the trap is a dead CMOS cell |
+| `clock` | Verified on hardware, 2026-11-06: acceptance test with the network disconnected | Proposal | Proposal |
+| `hwclock` | Verified on hardware, 2026-11-06: the three units masked | Proposal: Raspberry Pi OS ships `fake-hwclock` too | Proposal: Ubuntu does not ship `fake-hwclock`, and an absent unit passes |
+| `power cut` | Verified on hardware, 2026-11-06: the [acceptance test](#acceptance-test) | Proposal | Proposal |
+
+"Verified" means the state the row expects was set up and observed on that
+board. `sca appliance verify` itself has so far run only against simulated
+readings, in `tests/test_appliance_verify.sh`.
+
+The `raspberrypi` profile is a **proposal throughout**: none of it has been run
+on a Raspberry Pi. It covers the Pi 4 and 5, where USB boot is a setting in the
+SPI EEPROM and can be changed back. A Pi 3 would need a profile with
+`boot_prep=rpi-otp`, marked irreversible: there, USB boot burns a
+one-time-programmable bit.
+
+The `x86` profile is a proposal too: nobody has run `sca appliance verify` on a
+mini PC yet. `verify` says so in its first line on both profiles.
+
+**Expect `root` to fail on a ROCK64 that still boots its root from microSD.**
+That is the correct answer, "not yet set up as intended", not a bug. An SD
+card shows no transport.
+
+### 5.3 Bootstrap and recovery medium
+
+A platform with `boot_prep=none` needs none of this: the x86 mini PC boots the
+USB stick directly.
+
+A platform that needs boot preparation cannot boot from USB until that
+preparation has been done on the platform itself. Its first boot has to come
+from a medium its boot ROM can already read, in practice a **microSD card**
+holding the same image as the USB stick. On the ROCK64, that is the microSD
+from which the SPI flash is written ([USB Boot on ARM](usb-boot-on-arm.md#5-route-a-write-spi-from-armbian-on-microsd)).
+
+**Keep that card.** It is also the recovery medium: if the SPI flash ever
+needs to be undone, the recovery with a jumper on header pins 23 and 25 boots
+from it ([USB Boot on ARM, section 7](usb-boot-on-arm.md#7-recovering-from-a-bad-spi-write)).
+Store it in the safe beside the appliance.
 
 ---
 

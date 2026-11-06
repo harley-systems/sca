@@ -14,6 +14,7 @@
 #       - install
 #       - request
 #       - security_key
+#       - appliance
 #       - approve
 #       - revoke
 #       - scrub_log
@@ -102,7 +103,7 @@ sca() {
 
   # fail if sca_config is not present, otherwise load it
   if [ ! -f ${config_file} ]; then
-    if [ ! -z $verb ] && [ $verb != config ] && [ $verb != scrub_log ] && [ ! -z $2 ] && [ $2 != create ]; then
+    if [ ! -z $verb ] && [ $verb != config ] && [ $verb != scrub_log ] && [ $verb != appliance ] && [ ! -z $2 ] && [ $2 != create ]; then
       error "the sca configuration file ${config_file} doesn't
 exist. if this is the first time run, make sure to run
 
@@ -126,7 +127,7 @@ exiting.
   # eval set -- "$OPTS"
 
   case "$verb" in
-    create|display|export|import|init|request|security_key|approve|revoke|scrub_log|config|list|completion|install|test)
+    create|display|export|import|init|request|security_key|appliance|approve|revoke|scrub_log|config|list|completion|install|test)
       shift
       log_detailed "sca: calling function for the verb $verb "$@""
       if [ $verb == 'export' ]; then eval ${verb}_ "${@@Q}"; else eval $verb "${@@Q}"; fi
@@ -135,7 +136,8 @@ exiting.
       read -r -d '' message <<- ____EOM
         invalid value '$verb' for first argument - the command.
         supported commands are 'create' 'display' 'export' 'import' 'init' 'install'
-        'request' 'security_key' 'approve' 'revoke' 'scrub_log' 'completion' 'test'.
+        'request' 'security_key' 'appliance' 'approve' 'revoke' 'scrub_log' 'completion'
+        'test'.
 ____EOM
       error "$message" 1
       ;;

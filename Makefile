@@ -169,6 +169,35 @@ build/security_key/security_key.sh: src/security_key/security_key.sh build/secur
 security_key: build/security_key/security_key.sh
 
 #------------------------------------------------------------------------------
+# APPLIANCE command and subcommands
+#------------------------------------------------------------------------------
+APPLIANCE_SUBCMDS := info verify
+# one data file per platform. the platform names are substituted for
+# @@@APPLIANCE PLATFORMS@@@ in the code, help, completion and docs, so adding a
+# platform is adding a file.
+APPLIANCE_PLATFORM_FILES := $(sort $(wildcard src/appliance/platforms/*.conf))
+APPLIANCE_PLATFORMS := $(basename $(notdir $(APPLIANCE_PLATFORM_FILES)))
+
+$(eval $(call build_help,appliance,))
+$(foreach s,$(APPLIANCE_SUBCMDS),$(eval $(call build_help,appliance,$(s))))
+$(foreach s,$(APPLIANCE_SUBCMDS),$(eval $(call build_subcmd,appliance,$(s))))
+
+# the profiles, each under a [<platform>] header, for @@@APPLIANCE PLATFORM PROFILES@@@
+build/appliance/platforms.txt: $(APPLIANCE_PLATFORM_FILES)
+	@mkdir -p build/appliance
+	for f in $^; do b=$${f##*/}; echo "[$${b%.conf}]"; cat "$$f"; done > $@
+
+build/appliance/appliance.sh: src/appliance/appliance.sh build/appliance/help/help.txt \
+		build/appliance/platforms.txt \
+		$(foreach s,$(APPLIANCE_SUBCMDS),build/appliance/$(s)/appliance_$(s).sh)
+	@mkdir -p build/appliance
+	sed -e '/@@@HELP@@@/{r build/appliance/help/help.txt' -e 'd}' \
+		-e '/@@@APPLIANCE PLATFORM PROFILES@@@/{r build/appliance/platforms.txt' -e 'd}' $< > $@
+	cat $(foreach s,$(APPLIANCE_SUBCMDS),build/appliance/$(s)/appliance_$(s).sh) >> $@
+
+appliance: build/appliance/appliance.sh
+
+#------------------------------------------------------------------------------
 # APPROVE command (no subcommands)
 #------------------------------------------------------------------------------
 $(eval $(call build_help,approve,))
@@ -285,7 +314,8 @@ COMPLETION_SCRIPTS := src/approve/complete_bash.sh src/revoke/complete_bash.sh \
 	src/config/complete_bash.sh src/create/complete_bash.sh src/display/complete_bash.sh \
 	src/export/complete_bash.sh src/import/complete_bash.sh src/init/complete_bash.sh \
 	src/list/complete_bash.sh src/request/complete_bash.sh src/test/complete_bash.sh \
-	src/install/complete_bash.sh src/security_key/complete_bash.sh src/complete_bash.sh
+	src/install/complete_bash.sh src/security_key/complete_bash.sh \
+	src/appliance/complete_bash.sh src/complete_bash.sh
 
 $(eval $(call build_help,completion,))
 
@@ -318,17 +348,18 @@ common: build/common/common.sh
 # host. substituted for @@@UBUNTU VERSION ID@@@ in the code, help and completion.
 UBUNTU_VERSION_ID := 26.04-resolute
 
-COMMANDS := create display export import init request security_key approve revoke scrub_log config list test install completion common
+COMMANDS := create display export import init request security_key appliance approve revoke scrub_log config list test install completion common
 
 sca: src/sca.sh src/run.sh build/help/help.txt $(COMMANDS)
 	sed -e '/@@@HELP@@@/{r build/help/help.txt' -e 'd}' src/sca.sh > build/sca.sh
 	cat build/create/create.sh build/display/display.sh build/export/export.sh \
 		build/import/import.sh build/init/init.sh build/request/request.sh \
-		build/security_key/security_key.sh build/approve/approve.sh build/revoke/revoke.sh \
+		build/security_key/security_key.sh build/appliance/appliance.sh build/approve/approve.sh build/revoke/revoke.sh \
 		build/scrub_log/scrub_log.sh build/config/config.sh \
 		build/list/list.sh build/test/test.sh build/install/install.sh \
 		build/completion/completion.sh build/common/common.sh src/run.sh | \
-		sed -e 's/@@@UBUNTU VERSION ID@@@/$(UBUNTU_VERSION_ID)/g' >> build/sca.sh
+		sed -e 's/@@@UBUNTU VERSION ID@@@/$(UBUNTU_VERSION_ID)/g' \
+			-e 's/@@@APPLIANCE PLATFORMS@@@/$(APPLIANCE_PLATFORMS)/g' >> build/sca.sh
 	chmod 755 build/sca.sh
 
 #------------------------------------------------------------------------------
@@ -346,7 +377,8 @@ check: sca
 # Generate the command reference (docs/commands.md, docs/commands/*.md) from
 # the help files. See scripts/build-docs.sh.
 docs:
-	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) ./scripts/build-docs.sh
+	UBUNTU_VERSION_ID=$(UBUNTU_VERSION_ID) APPLIANCE_PLATFORMS='$(APPLIANCE_PLATFORMS)' \
+		./scripts/build-docs.sh
 
 # Fail when the committed command reference is stale, i.e. 'make docs' changes
 # or adds files under docs/. Changes already staged with 'git add' count as

@@ -1,0 +1,5 @@
+verify_options:
+
+  -h, --help                - print this help
+  --platform PLATFORM       - use the profile of this platform rather than
+                              detecting it. one of: @@@APPLIANCE PLATFORMS@@@

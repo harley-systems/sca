@@ -1,0 +1,2 @@
+type sca appliance <subcommand> --help for further information on each of the
+appliance related commands. see docs/air-gapped-appliance.md for the hardware.

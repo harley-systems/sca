@@ -13,6 +13,7 @@ allowed values for the verb are:
   - export                - export security documents
   - import                - import security documents
   - security_key          - manage and use security keys
+  - appliance             - check and describe the air-gapped appliance platform
   - init                  - initialize demo or sca usb stick
   - install               - install sca and it's prerequisites
   - config                - configuration management
