@@ -9,7 +9,8 @@
 #   --platform PLATFORM - use this platform profile instead of detecting it
 appliance_info() {
   local platform=''
-  local OPTS=`getopt -o h --long help,platform: -n "sca appliance info" -- "$@"`
+  local OPTS
+  OPTS=$(getopt -o h --long help,platform: -n "sca appliance info" -- "$@")
   if [ $? != 0 ] ; then error "failed parsing options. use sca appliance info -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -31,6 +32,7 @@ appliance_info() {
       ;;
     esac
   done
+  if [ $# -gt 0 ]; then error "unexpected argument '$1'. use sca appliance info -h for help." 1; fi
   log_detailed "appliance_info: started (platform:'$platform')"
   local appliance_platform=''
   if [ -n "$platform" ]; then

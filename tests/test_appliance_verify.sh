@@ -209,6 +209,19 @@ echo yes > "$stub_state/ntp_synced"
 sca appliance verify > "${HOME}/out" 2>&1 && fail "verify exited 0 with two failures"
 grep -q "appliance verify: 2 check(s) failed" "${HOME}/out" || fail "two failures not counted"
 
+# an unknown option or a stray argument is an error, not ignored: on a
+# platform set up as intended, ignoring it would exit 0
+setup_rock64
+assert_fails sca appliance verify --platfrom raspberrypi
+assert_fails sca appliance verify --board rock64
+assert_fails sca appliance verify raspberrypi
+assert_fails sca appliance verify --platform rock64 extra
+assert_fails sca appliance info --platfrom rock64
+assert_fails sca appliance info rock64
+sca appliance verify raspberrypi > "${HOME}/out" 2>&1
+grep -qF "unexpected argument 'raspberrypi'" "${HOME}/out" || fail "stray argument not named"
+grep -q '^  boot ' "${HOME}/out" && fail "verify ran checks despite a stray argument"
+
 # an unknown platform: exit 1 with the known platforms
 setup_rock64
 printf 'acme,widget\0' > "${SCA_APPLIANCE_ROOT}/proc/device-tree/compatible"

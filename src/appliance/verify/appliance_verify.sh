@@ -11,7 +11,8 @@
 #   --platform PLATFORM - use this platform profile instead of detecting it
 appliance_verify() {
   local platform=''
-  local OPTS=`getopt -o h --long help,platform: -n "sca appliance verify" -- "$@"`
+  local OPTS
+  OPTS=$(getopt -o h --long help,platform: -n "sca appliance verify" -- "$@")
   if [ $? != 0 ] ; then error "failed parsing options. use sca appliance verify -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -33,6 +34,7 @@ appliance_verify() {
       ;;
     esac
   done
+  if [ $# -gt 0 ]; then error "unexpected argument '$1'. use sca appliance verify -h for help." 1; fi
   log_detailed "appliance_verify: started (platform:'$platform')"
   local appliance_platform
   appliance_resolve_platform "$platform"
