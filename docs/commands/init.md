@@ -226,6 +226,13 @@ yubico-piv-tool and ykcs11 2.7, yubikey-manager 5.8, and GnuPG with scdaemon
 2.4, all from the Ubuntu 26.04 archive. See
 [Tools on the stick](../air-gapped-operations.md#tools-on-the-stick).
 
+**The sca on the stick:** the stick ships `~/bin/sca` and generates its bash
+completion from it, so it works after either `make deploy` (default
+`INSTALL_DIR`) or `sca install`. If `~/bin/sca` is missing, the command fails
+before downloading anything. `make deploy` writes the host's completion to
+`$(COMPLETION_DIR)/sca` (default `~/.local/share/bash-completion/completions/sca`),
+`sca install` to `~/bin/sca_completion`; neither file is used by the stick.
+
 **Reusing a built image:** an existing image is reused only if its
 `<image>.options` file matches the `-y`, `-i` and `-x` options requested;
 otherwise the command fails (see the syntax above). To build a new one, remove
