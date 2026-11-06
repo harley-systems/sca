@@ -16,11 +16,15 @@ board if the write goes wrong.
 > present, the Armbian U-Boot package ships **no SPI image**, and the device
 > tree puts the SPI flash's clock on GPIO3_A0. Building an SPI
 > image from upstream U-Boot has also been run on a ROCK64, and the image's
-> layout checked (see [section 4](#4-get-and-verify-the-u-boot-image)). Writing
-> that image to SPI, booting from it, and the recovery routes have **not been
-> run** on any board: nothing has been written to SPI for this page. Steps
-> marked **(unverified)** must be checked on a real board before you rely on
-> them. See [Tested on](#tested-on) at the bottom.
+> layout checked (see [section 4](#4-get-and-verify-the-u-boot-image)). On
+> 2026-11-06, [Route A](#5-route-a-write-spi-from-armbian-on-microsd) wrote
+> that image to SPI on a ROCK64 v2.0, the board booted U-Boot from SPI, and the
+> jumper recovery in [section 7](#7-recovering-from-a-bad-spi-write) was run
+> end to end. [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode),
+> booting from a USB stick, `git tag -v` on a shallow clone and the cross build
+> are **not** verified. Steps marked **(unverified)** must still be checked on
+> a real board before you rely on them. See [Tested on](#tested-on) at the
+> bottom.
 
 > **You need root.** Every step that writes or erases SPI needs `sudo`.
 > Reading the chip back through `/dev/mtdblock0` works without `sudo` if your
@@ -71,7 +75,7 @@ cards. If neither applies, stay on microSD.
 
 | Revision | SPI flash | Status |
 |----------|-----------|--------|
-| v2.0 | 128 Mbit (16 MB), seen as `mtd0 "spi0.0"` | SPI confirmed present and readable; flashing **(unverified)** |
+| v2.0 | 128 Mbit (16 MB), seen as `mtd0 "spi0.0"` | SPI written with Route A and boots U-Boot from SPI (verified); USB-stick boot **(unverified)** |
 | v3.0 | 128 Mbit | Expected to work the same way **(unverified)** |
 | v1.x (early boards) | | Not covered |
 
@@ -301,14 +305,13 @@ files must differ:
 cmp u-boot-rockchip-spi.bin u-boot-rockchip.bin     # must report a difference
 ```
 
-> **A correct layout does not mean the image boots.** No image built this way
-> has been written to SPI or boot-tested yet. A valid but broken SPI image
-> stops the board from booting from microSD. The first way out is
-> [section 7](#7-recovering-from-a-bad-spi-write) step 1: jumper header pin 23
-> to pin 25 at power-on, boot from microSD and run `flash_erase`. No recovery
-> route has been run on a board yet. Before your first write, do the optional
-> continuity check in section 7 step 1 to confirm that pin 23 is the flash's
-> clock line. [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode) is the
+> **A correct layout does not mean the image boots.** The reference image
+> booted from SPI, but that does not prove that *your* build does. A valid but
+> broken SPI image stops the board from booting from microSD. The first way out
+> is [section 7](#7-recovering-from-a-bad-spi-write) step 1: fit a jumper from
+> header pin 23 to pin 25 with the board powered off, power on, boot from
+> microSD and run `flash_erase`. That step has been run on a ROCK64 v2.0. The
+> continuity check in section 7 step 1 stays optional. [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode) is the
 > fallback for when a microSD boot is not possible; if you are counting on it,
 > run its read-back test (steps 1 to 5) first.
 
@@ -327,8 +330,6 @@ bootloader on SPI Flash"** entry on some boards. It installs from the same
 U-Boot package, which has no SPI image for the ROCK64 (see
 [section 4](#4-get-and-verify-the-u-boot-image)), so it is not expected to
 offer that option here **(unverified)**. Use the manual steps below.
-
-All write steps are **(unverified)**.
 
 1. **Install the tools.** `flashcp` is in `mtd-utils`:
 
@@ -354,25 +355,50 @@ All write steps are **(unverified)**.
    SPI read-back test (steps 1 to 5) first.
 
 3. **Write the image.** `flashcp` erases the blocks it needs, writes and
-   verifies **(unverified)**:
+   verifies:
 
    ```bash
    sudo flashcp -v u-boot-rockchip-spi.bin /dev/mtd0
    ```
 
+   For the 1346048-byte reference image the output is:
+
+   ```
+   Erasing blocks: 329/329 (100%)
+   Writing data: 1314k/1314k (100%)
+   Verifying data: 1314k/1314k (100%)
+   ```
+
    Do not power the board off during the write.
 
-4. **Read it back and compare.** `cmp` with no output means the SPI contents
-   match the image. As in step 2, a user in group `disk` does not need `sudo`:
+4. **Read it back and compare.** This read-back is independent of `flashcp`'s
+   own verify: it reads the chip again through a different device. `cmp` with
+   no output means the SPI contents match the image. As in step 2, a user in
+   group `disk` does not need `sudo`:
 
    ```bash
    cmp -n "$(stat -c %s u-boot-rockchip-spi.bin)" u-boot-rockchip-spi.bin /dev/mtdblock0
    ```
 
-5. **Test.** Power off, remove the microSD card, insert the USB stick with the
-   SCA image, and power on with the serial console attached. U-Boot should
-   report its version, find no eMMC or microSD system, scan USB and boot from
-   the stick.
+   On the tested board this matched (see [Tested on](#tested-on)).
+
+5. **Test.**
+
+   a. **Check that U-Boot now comes from SPI.** Leave the microSD card in,
+      reboot, and print the version of the U-Boot that started the kernel:
+
+      ```bash
+      tr -d '\0' < /proc/device-tree/chosen/u-boot,version; echo
+      ```
+
+      A self-built upstream image shows `2026.04`. The Armbian U-Boot on the
+      microSD card shows `2026.04_armbian-…`, which means the board did not
+      boot from SPI.
+
+   b. **Boot from the USB stick** **(unverified)**. Power off, remove the
+      microSD card, insert the USB stick with the SCA image, and power on with
+      the serial console attached. U-Boot should report its version, find no
+      eMMC or microSD system, scan USB and boot from the stick.
 
 ## 6. Route B: write SPI over USB in maskrom mode
 
@@ -466,37 +492,78 @@ The boot ROM reads SPI first, so it never gets to microSD. The serial console
 shows how far the boot gets.
 
 The fix is to **keep the boot ROM from reading SPI** for one boot, then erase or
-rewrite it. None of the steps below has been run on a board, so all of them
-are **(unverified)**. Only the device-tree facts in step 1 were read from a
-real board. Step 1 is the route to try first: it needs only a jumper wire and
-a microSD card.
+rewrite it. Step 1 and the microSD branch of step 2 were run on a ROCK64 v2.0
+on 2026-11-06. The maskrom branch of step 2 and step 3 are **(unverified)**.
+Step 1 is the route to try first: it needs only a jumper wire and a microSD
+card.
+
+> **Jumper safety.** Header pin 23 is a driven output of the SPI controller.
+> Grounding it on a running board shorts an active driver.
+>
+> - **Fit** the jumper only with the board **powered off**.
+> - **Remove** it at any time. Taking a short away is always safe.
+>
+> The steps below are ordered so that every change happens at a safe moment.
 
 1. **Disable SPI for one boot.** Short SPI clock to ground on the Pi-2
-   header, **pin 23 (SPI CLK) to pin 25 (GND)**, with a jumper wire, while you
-   power on. The boot ROM cannot read SPI and moves on to eMMC and microSD.
-   Remove the short once the serial console shows the boot has moved past SPI
-   **(unverified)**.
+   header, **pin 23 (SPI CLK) to pin 25 (GND)**, with a jumper wire:
+
+   1. Power the board off and fit the jumper from pin 23 to pin 25.
+   2. Power on. The boot ROM cannot read SPI and moves on to eMMC and
+      microSD.
+   3. Linux cannot read the flash either. `dmesg` shows
+
+      ```
+      spi-nor spi0.0: unrecognized JEDEC id bytes: ff ff ff ff ff ff
+      ```
+
+      and `/proc/mtd` is empty. This is **expected and harmless**: the jumper
+      is still holding the clock at ground. Step 2 brings `mtd0` back.
+
+   The jumper was tested on a ROCK64 v2.0 with a valid, bootable image in SPI
+   and nothing changed between the two boots but the wire:
+
+   | Jumper 23↔25 | SPI contents | `u-boot,version` after boot |
+   |---|---|---|
+   | out | valid image | `2026.04`: ran **from SPI** |
+   | in | *the same* valid image | `2026.04_armbian-…`: the boot ROM skipped SPI and used microSD |
+
+   The image on the chip was byte-identical before and after the whole drill.
 
    Why this works, read from the device tree of a running ROCK64: the board
    has one SPI controller, `spi@ff190000`, and the boot flash is its child
    node, `flash@0`. The controller's `pinctrl-0` group, `spi0m2`, puts the
    clock on GPIO3_A0 (TX on GPIO3_A1, RX on GPIO3_A2, CS0 on GPIO3_B0). Holding
-   the flash's clock line at ground is what should stop the boot ROM reading
-   SPI.
+   the flash's clock line at ground stops the boot ROM reading SPI.
 
    That header pin 23 is GPIO3_A0 comes from Pine64 forum posts, not from
-   official documentation **(unverified)**. If it holds, the header SPI pins
-   are the boot flash's own bus.
+   official documentation. The test above shows that grounding pin 23 stops
+   both the boot ROM and the kernel reading the flash, which is all this step
+   needs.
 
    **Optional pre-flight, before your first write.** With the board powered
    off, check continuity with a multimeter from header pin 23 to pin 6 (CLK)
    of the SOIC-8 SPI flash chip. Pin 1 is next to the dot or notch on the
-   chip. Continuity confirms the pin mapping. If there is none, do not rely on
-   this step.
+   chip. Continuity confirms the pin mapping. On a board other than the v2.0
+   tested here, no continuity means you should not rely on this step.
 
 2. **Then choose:**
-   - **With a bootable microSD card inserted**, the board boots Armbian. Erase
-     SPI or write a good image with [Route A](#5-route-a-write-spi-from-armbian-on-microsd):
+   - **With a bootable microSD card inserted**, the board boots Armbian. First
+     make the flash visible to Linux again:
+
+     1. Remove the jumper with the board running.
+     2. Bind the SPI flash driver by hand:
+
+        ```bash
+        echo spi0.0 | sudo tee /sys/bus/spi/drivers/spi-nor/bind
+        cat /proc/mtd    # mtd0: 01000000 00001000 "spi0.0"
+        ```
+
+        If you bind with the jumper still fitted, the probe just fails again,
+        which is harmless. Remove the jumper and retry.
+
+     Then erase SPI or write a good image with
+     [Route A](#5-route-a-write-spi-from-armbian-on-microsd):
 
      ```bash
      sudo flash_erase /dev/mtd0 0 0      # erase the whole chip
@@ -537,9 +604,10 @@ from eMMC or microSD as before.
 - Device tree: one SPI controller, `spi@ff190000` (`status = okay`), with the
   boot flash `flash@0` as its child. Its `pinctrl-0` group `spi0m2` resolves
   to CLK GPIO3_A0, TX GPIO3_A1, RX GPIO3_A2, CS0 GPIO3_B0. The mapping of
-  GPIO3_A0 to header pin 23 was not checked.
+  GPIO3_A0 to header pin 23 was not checked by continuity, but the jumper test
+  below shows it functionally.
 
-**Built, not flashed:**
+**Built:**
 
 - U-Boot: upstream tag `v2026.04`, cloned from the GitHub mirror, stock
   `rock64-rk3328_defconfig` with `TOOLS_MKEFICAPSULE` disabled.
@@ -555,14 +623,50 @@ from eMMC or microSD as before.
 - The idbloader's first bytes match those of Armbian's own
   `u-boot-rockchip.bin`.
 - `u-boot-rockchip-spi.bin` and `u-boot-rockchip.bin` differ.
-- The image has **not** been written to SPI or boot-tested.
 
-**Not yet run on hardware:** the flashing routes (A and B) and the recovery
-path. Before you rely on them, a person with a ROCK64 must record here:
+**Written, booted and recovered, 2026-11-06:**
 
-- U-Boot image: source, version and `sha256sum`;
-- route used (A or B), with `rkdeveloptool` and loader versions for Route B;
-- result of booting from a USB stick, and of the recovery path in section 7.
+- Image: the one built above, sha256
+  `19fac1ee433a65bbd16e154e5a06226c76bb8c145e9e89003ef0d8e40d7698fa`.
+- Before the write: 16 MB read off `/dev/mtdblock0` and kept as a backup.
+  `cmp` against 16 MB of `0xff` returned 0: the chip was blank. Baseline
+  `/proc/device-tree/chosen/u-boot,version` was `2026.04_armbian-2026.04-S88dc-…`.
+- Route A write:
+
+  ```
+  $ sudo flashcp -v ~/ubbuild/out/u-boot-rockchip-spi.bin /dev/mtd0
+  Erasing blocks: 329/329 (100%)
+  Writing data: 1314k/1314k (100%)
+  Verifying data: 1314k/1314k (100%)
+  ```
+
+- Independent read-back from `/dev/mtdblock0`: `cmp` against the file rc 0,
+  sha256 equal. Structure read from the chip, not the file:
+
+  ```
+  0x00000   ff ff ff ff ff ff ff ff
+  0x08000   3b 8c dc fc be 9f 9d 51     idbloader
+  0x60000   d0 0d fe ed                 FIT magic
+  beyond the image: 0 non-0xff bytes
+  ```
+
+- After a reboot with the jumper out, `u-boot,version` was `2026.04`, with no
+  `_armbian` suffix: U-Boot ran from SPI and booted the kernel from microSD.
+- Jumper 23↔25 fitted at power-on, same image in SPI: `u-boot,version` was
+  `2026.04_armbian-…` (the boot ROM skipped SPI), the kernel logged
+  `spi-nor spi0.0: unrecognized JEDEC id bytes: ff ff ff ff ff ff`, and
+  `/proc/mtd` was empty.
+- Jumper removed with the board running: `unbind` through
+  `/sys/bus/spi/drivers/spi-nor/` makes `mtd0` disappear, `bind` brings it back.
+- The image on the chip was byte-identical before and after the drill.
+
+**Not yet run on hardware:**
+
+- Route B, with the `rkdeveloptool` and loader versions to record;
+- booting from a USB stick;
+- `git tag -v` on a shallow clone;
+- the cross build;
+- the `armbian-install` SPI entry.
 
 ---
 
