@@ -168,7 +168,10 @@ That's it! The macros will automatically generate the help and build rules for y
   `docs/commands/<command>.md`) from the help files, and commit the result.
   `make docs-check` fails when the committed reference is stale
 - Update the Claude Code skill at `.claude/skills/sca-cskill/SKILL.md` and its quick reference at `.claude/skills/sca-cskill/references/commands-quick-ref.md`
-- If publishing globally, also update the [claude-skills](https://github.com/harley-systems/claude-skills) marketplace repo
+- No separate step is needed to publish the skill: the
+  [claude-skills](https://github.com/harley-systems/claude-skills) marketplace
+  fetches `.claude/skills/sca-cskill/` from this repository's `main` branch, so a
+  merge here is what publishes it
 
 ### Key Variables and Conventions
 
