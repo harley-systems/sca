@@ -496,7 +496,7 @@ prefix. Check that no other file overrides `Storage=`:
 systemd-analyze cat-config systemd/journald.conf | grep -E '^# /|Storage=|SystemMax'
 ```
 
-**Armbian ramlog (proposal, not verified on hardware).** Armbian normally runs
+**Armbian ramlog (verified on hardware, 2026-11-07).** Armbian normally runs
 `armbian-ramlog`, which keeps `/var/log` on a zram disk and copies it to
 `/var/log.hdd` only periodically and at a clean shutdown. A persistent journal
 under it would still lose everything since the last copy at a **power cut**,
@@ -504,7 +504,13 @@ which is exactly the case that matters. Check:
 
 ```bash
 findmnt /var/log
+zramctl
 ```
+
+On the ROCK64 with the stock Armbian image ([#108](https://github.com/harley-systems/sca/issues/108)),
+`findmnt /var/log` showed `/dev/zram1` as the source, and `zramctl` listed
+`/dev/zram1` at 50 M: the journal was in RAM, so this step is required, not
+optional.
 
 If the source is a `zram` device, disable ramlog and reboot:
 
@@ -588,15 +594,16 @@ values.
 | Row | `rock64` | `raspberrypi` | `x86` |
 |-----|----------|---------------|-------|
 | `boot` | Verified on hardware, 2026-11-06: U-Boot from SPI reports `2026.04`, from microSD `2026.04_armbian-…` ([USB Boot on ARM](usb-boot-on-arm.md)) | Proposal: `vcgencmd bootloader_config`, USB (`4`) read before SD (`1`) in `BOOT_ORDER` | `n/a`: no boot preparation |
-| `root` | **Not verified**: booting the root from a USB stick has not been done yet | Proposal | Proposal: the live stick's medium, `/cdrom`, on a USB disk |
+| `root` | Verified on hardware, 2026-11-07: `/` on `/dev/sda1` over USB with the microSD removed ([USB Boot on ARM](usb-boot-on-arm.md)) | Proposal | Proposal: the live stick's medium, `/cdrom`, on a USB disk |
 | `rtc` | Verified on hardware, 2026-11-06 ([4.1](#41-the-ds3231-rtc)) | Proposal: `dtoverlay=i2c-rtc,ds3231`, on `i2c-1` | Proposal: the built-in CMOS clock, `rtc_cmos`. None of the DS3231 work applies; the trap is a dead CMOS cell |
 | `clock` | Verified on hardware, 2026-11-06: acceptance test with the network disconnected | Proposal | Proposal |
 | `hwclock` | Verified on hardware, 2026-11-06: the three units masked | Proposal: Raspberry Pi OS ships `fake-hwclock` too | Proposal: Ubuntu does not ship `fake-hwclock`, and an absent unit passes |
-| `power cut` | Verified on hardware, 2026-11-06: the [acceptance test](#acceptance-test) | Proposal | Proposal |
+| `power cut` | Verified on hardware, 2026-11-06: the [acceptance test](#acceptance-test). Again on 2026-11-07: after about five minutes unpowered, the clock came from the DS3231 500 s after the previous boot's last journal entry | Proposal | Proposal |
 
 "Verified" means the state the row expects was set up and observed on that
-board. `sca appliance verify` itself has so far run only against simulated
-readings, in `tests/test_appliance_verify.sh`.
+board. `sca appliance verify` itself has run on the ROCK64 booted from a USB
+stick ([#108](https://github.com/harley-systems/sca/issues/108)), and against
+simulated readings in `tests/test_appliance_verify.sh`.
 
 The `raspberrypi` profile is a **proposal throughout**: none of it has been run
 on a Raspberry Pi. It covers the Pi 4 and 5, where USB boot is a setting in the
