@@ -3,8 +3,9 @@
 # when it is not on PATH already.
 #
 # install runs in a subshell that sources the built sca, so the package
-# installation steps (apt, sudo) can be replaced with no-ops: functions defined
-# in the script would override stubs exported from here.
+# installation steps (apt, sudo) and the mode check (network, /opt/sca) can be
+# replaced with no-ops: functions defined in the script would override stubs
+# exported from here.
 # shellcheck source=tests/lib.sh
 . "$(dirname "$0")/lib.sh"
 
@@ -18,6 +19,7 @@ run_install() {
   (
     # shellcheck source=/dev/null
     . "${SCA}"
+    install_check_mode() { :; }
     install_core_online() { :; }
     install_pkcs11_packages_online() { :; }
     install_packages_offline() { :; }
