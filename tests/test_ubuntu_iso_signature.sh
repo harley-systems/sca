@@ -59,6 +59,7 @@ run_sca() {
     fi
     check_build_host_ubuntu_version() { :; }
     check_iso_image_tools() { :; }
+    check_sca_to_ship() { :; }
     extract_iso_image_files() { touch "${extract_marker}"; exit 1; }
     "$@"
   )

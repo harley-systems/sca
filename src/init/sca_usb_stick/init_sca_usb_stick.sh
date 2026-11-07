@@ -22,7 +22,7 @@
 # /casper/<live layer>.sca.squashfs - a new layer on top of the live layer:
 #     - /etc/apt/              - configuring apt to use local apt-mirror (only
 #                                with --include-apt-mirror)
-#     - /etc/bash_completion.d/- adding sca completion
+#     - /etc/bash_completion.d/- adding sca completion, generated from ~/bin/sca
 #     - /etc/ssl/              - adding sca configuration related files
 #     - /etc/profile.d/sca.sh  - installs sca on login, adds ~/bin/ to path,
 #                                runs sca test on start as needed
@@ -91,6 +91,7 @@ init_sca_usb_stick() {
   check_ubuntu_version_id "$ubuntu_version_id" "init sca_usb_stick"
   check_build_host_ubuntu_version "init sca_usb_stick"
   check_iso_image_tools $include_apt_mirror
+  check_sca_to_ship
 
   log_detailed "init_sca_usb_stick: start (skip_cleanup=${skip_cleanup}, test_image=${test_image}, "\
     "yubikey_support=${yubikey_support}, "\
@@ -262,6 +263,14 @@ check_iso_image_tools() {
   done
   if [ ${#missing_tools[@]} != 0 ]; then
     error "init sca_usb_stick: missing tools: ${missing_tools[*]}. run 'sca install' to install them." 1
+  fi
+}
+################################################################################
+# fails unless ~/bin/sca, the sca shipped on the sca usb stick, is present. the
+# stick's sca completion is generated from it as well.
+check_sca_to_ship() {
+  if [ ! -f ~/bin/sca ] || [ ! -r ~/bin/sca ]; then
+    error "init sca_usb_stick: ~/bin/sca not found: the stick ships the sca installed in ~/bin. run 'make deploy' (default INSTALL_DIR) or 'sca install' first." 1
   fi
 }
 ################################################################################
@@ -787,7 +796,9 @@ add_repos() {
     "ubuntu_version_name=${ubuntu_version_name}, include_apt_mirror=${include_apt_mirror})"
 }
 ################################################################################
-# adds sca to live_filesystem_folder so it will be available in offline boot
+# adds sca to live_filesystem_folder so it will be available in offline boot:
+# copies ~/bin/sca and the sca configuration, and generates the sca completion
+# from ~/bin/sca. fails the build if any of them cannot be added.
 #
 # parameters
 #   - live_filesystem_folder  - the location of the sca filesystem layer
@@ -814,11 +825,23 @@ add_sca() {
   local profile_folder=${live_filesystem_folder}etc/profile.d/
   local systemd_user_folder=${live_filesystem_folder}etc/systemd/user/
   sudo mkdir -p ${sca_config_folder} ${sca_bin_folder} ${sca_completion_folder} ${profile_folder} ${systemd_user_folder}
+  if [ $? != 0 ]; then error "add_sca: could not create the sca folders in ${live_filesystem_folder}." 1; fi
   sudo cp ~/bin/sca $sca_bin_folder
-  sudo cp ~/bin/sca_completion ${sca_completion_folder}sca
+  if [ $? != 0 ]; then error "add_sca: could not copy ~/bin/sca to ${sca_bin_folder}." 1; fi
+  # the completion is generated from the sca shipped on the stick, so it matches
+  # it whatever way sca was installed on this host (make deploy or sca install).
+  # it is generated as the user, only the write runs as root.
+  (
+    set -o pipefail
+    bash ~/bin/sca completion bash | sudo tee ${sca_completion_folder}sca > /dev/null
+  )
+  if [ $? != 0 ]; then
+    error "add_sca: could not generate the sca completion from ~/bin/sca into ${sca_completion_folder}sca." 1
+  fi
   # copy only the configuration files, not the backups 'config create' leaves
   # next to them (*.bak, *.bak-<timestamp>)
   sudo cp ~/.sca/config/*.config ~/.sca/config/*.conventions ~/.sca/config/*.ini $sca_config_folder
+  if [ $? != 0 ]; then error "add_sca: could not copy the sca configuration from ~/.sca/config/ to ${sca_config_folder}." 1; fi
   # the live session starts the desktop installer wizard from a systemd user
   # unit in a lower layer. mask it from the sca layer (/etc/systemd/user takes
   # precedence over /usr/lib/systemd/user), so the base layers stay untouched

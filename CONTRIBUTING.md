@@ -195,6 +195,13 @@ sca <verb> <subcommand> --help
 sca <verb> <subcommand> <args>
 ```
 
+`make deploy` puts sca in `$(INSTALL_DIR)/sca` (default `~/bin/sca`) and its
+completion in `$(COMPLETION_DIR)/sca` (default
+`~/.local/share/bash-completion/completions/sca`). `sca install` puts them in
+`~/bin/sca` and `~/bin/sca_completion`. `sca init sca_usb_stick` ships
+`~/bin/sca` and generates the stick's completion from it, so either route
+works, but sca must be in `~/bin`.
+
 ## Tests
 
 The test suite lives in `tests/` and is plain bash: no extra tools to install.

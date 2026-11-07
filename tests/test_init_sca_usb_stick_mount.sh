@@ -24,6 +24,7 @@ init_sca_usb_stick() {
     . "${SCA}"
     check_build_host_ubuntu_version() { :; }
     check_iso_image_tools() { :; }
+    check_sca_to_ship() { :; }
     download_ubuntu_image() { echo "${original_iso}"; }
     mount() { :; }
     sudo() {

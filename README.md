@@ -70,6 +70,20 @@ sudo cp build/sca.sh /usr/local/bin/sca
 echo 'source <(sca completion bash)' >> ~/.bashrc
 ```
 
+#### Where sca and its completion are installed
+
+The two install routes are not equivalent (`sca install` also installs
+packages, creates the config and edits `~/.bashrc`), and they put the bash
+completion in different places:
+
+| Route | sca | Completion |
+|-------|-----|------------|
+| `make deploy` | `$(INSTALL_DIR)/sca` (default `~/bin/sca`) | `$(COMPLETION_DIR)/sca` (default `~/.local/share/bash-completion/completions/sca`) |
+| `sca install` | `~/bin/sca` | `~/bin/sca_completion` |
+
+`sca init sca_usb_stick` ships `~/bin/sca` and generates the stick's completion
+from it, so either route works, but sca must be in `~/bin`.
+
 ## Quick Start
 
 ### 1. Initialize Your CA
