@@ -453,8 +453,10 @@ IDX BOOT ID                          FIRST ENTRY                  LAST ENTRY
   0 483669c3b8af44df89719a173c6beb07 Fri 2026-11-06 14:47:44 IST  Fri 2026-11-06 15:12:03 IST
 ```
 
-**Cause:** Armbian ships no `/var/log/journal/`, so journald keeps the journal
-in `/run/log/journal`, in RAM, and it is gone at every power-off.
+**Cause:** Armbian sets `Storage=volatile` in `/etc/systemd/journald.conf`, so
+journald keeps the journal in `/run/log/journal`, in RAM, and it is gone at
+every power-off. `/var/log/journal/` may well exist, empty: the directory does
+not make the journal persistent, the `Storage=` setting does.
 
 **Why it matters for a CA:**
 
@@ -545,8 +547,11 @@ silently.
 A check that applies but could not run this time reads `skipped`. That is not
 a failure, so it does not change the exit status, and it is not a pass either.
 Only the `power cut` row can be skipped, when the journal holds no previous
-boot. That happens on every boot while the journal is volatile, and on the
-first boot after [Persistent journal](#46-persistent-journal) is set up.
+boot. That happens on every boot while the journal is volatile
+(`journal is volatile: kept in /run/log/journal`) or `/var/log` is on zram
+(`journal is in RAM: /var/log is on zram`), and on the first boot after
+[Persistent journal](#46-persistent-journal) is set up
+(`no previous boot in the journal`).
 
 ### 5.1 What each check catches
 

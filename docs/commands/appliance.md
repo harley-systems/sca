@@ -111,8 +111,9 @@ skipped:
 
 A skipped check is one that applies but could not run this time: it is neither
 a failure nor a pass. The power cut check needs the journal to remember the
-previous boot, which takes persistent journald (/var/log/journal); on a
-volatile journal it is skipped. Run verify again after a power cut.
+previous boot, which takes journald with Storage=persistent (a /var/log/journal
+directory alone is not enough) and a /var/log that is not on a zram disk; the
+row names whichever of the two is missing. Run verify again after a power cut.
 
 Every check runs, even after one fails. The exit status is non-zero if any
 check fails, so verify can be used from a script. The power cut check reads the
@@ -157,7 +158,7 @@ On a board whose journal does not remember the previous boot, the `power cut` ro
 ```bash
 $ sudo sca appliance verify
   ...
-  power cut journal is volatile: no /var/log/journal skipped
+  power cut journal is volatile: kept in /run/log/journal skipped
 ```
 
 [Persistent journal](../air-gapped-appliance.md#46-persistent-journal) makes the journal keep earlier boots, so that the row really compares two boots.

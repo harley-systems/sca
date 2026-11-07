@@ -16,6 +16,7 @@ export stub_state
 findmnt() {
   case "${*: -1}" in
     / ) cat "$stub_state/root_source" ;;
+    /var/log ) [ -f "$stub_state/var_log_source" ] && cat "$stub_state/var_log_source" ;;
     * ) return 1 ;;
   esac
 }
@@ -197,25 +198,55 @@ sca appliance verify > "${HOME}/out" 2>&1 || fail "forward clock: verify exited 
 assert_eq ok "$(row "power cut")" "forward clock: power cut row"
 grep -qF 'clock kept through power-off' "${HOME}/out" || fail "forward clock: no detail"
 
+# expect_skipped CASE DETAIL - verify exits 0, the power cut row is skipped
+# with DETAIL, and the other rows are ok
+expect_skipped() {
+  local label
+  sca appliance verify > "${HOME}/out" 2>&1 || fail "$1: verify exited non-zero"
+  assert_eq skipped "$(row "power cut")" "$1: power cut row"
+  for label in boot root rtc clock hwclock; do
+    assert_eq ok "$(row "$label")" "$1: $label row"
+  done
+  grep -qF "power cut $2" "${HOME}/out" || fail "$1: the row does not say '$2'"
+}
+# runtime_journal - journald keeps its files in /run/log/journal, i.e. the
+# journal is volatile
+runtime_journal() {
+  mkdir -p "${SCA_APPLIANCE_ROOT}/run/log/journal/c5d15c0b9de341cdb827cecfb49bce83"
+  touch "${SCA_APPLIANCE_ROOT}/run/log/journal/c5d15c0b9de341cdb827cecfb49bce83/system.journal"
+}
+
 # no previous boot in a volatile journal: skipped, not ok, and not a failure
 setup_rock64
 rm "$stub_state/previous_epoch"
-sca appliance verify > "${HOME}/out" 2>&1 || fail "volatile journal: verify exited non-zero"
-assert_eq skipped "$(row "power cut")" "volatile journal: power cut row"
-for label in boot root rtc clock hwclock; do
-  assert_eq ok "$(row "$label")" "volatile journal: $label row"
-done
-grep -qF 'journal is volatile: no /var/log/journal' "${HOME}/out" \
-  || fail "volatile journal: the row does not name the journal"
+runtime_journal
+expect_skipped "volatile journal" 'journal is volatile: kept in /run/log/journal'
+
+# volatile although /var/log/journal exists, empty, as on Armbian (#152)
+setup_rock64
+rm "$stub_state/previous_epoch"
+runtime_journal
+mkdir -p "${SCA_APPLIANCE_ROOT}/var/log/journal"
+expect_skipped "volatile journal with /var/log/journal" 'journal is volatile: kept in /run/log/journal'
 
 # no previous boot in a persistent journal yet: skipped too
 setup_rock64
 rm "$stub_state/previous_epoch"
 mkdir -p "${SCA_APPLIANCE_ROOT}/var/log/journal"
-sca appliance verify > "${HOME}/out" 2>&1 || fail "persistent journal: verify exited non-zero"
-assert_eq skipped "$(row "power cut")" "persistent journal: power cut row"
-grep -qF 'no previous boot in the journal' "${HOME}/out" \
-  || fail "persistent journal: the row does not name the journal"
+expect_skipped "persistent journal" 'no previous boot in the journal'
+
+# a persistent journal on a zram /var/log (armbian-ramlog) is still in RAM
+setup_rock64
+rm "$stub_state/previous_epoch"
+echo /dev/zram1 > "$stub_state/var_log_source"
+expect_skipped "zram /var/log" 'journal is in RAM: /var/log is on zram'
+
+# volatile and zram: the volatile journal is named first
+setup_rock64
+rm "$stub_state/previous_epoch"
+runtime_journal
+echo /dev/zram1 > "$stub_state/var_log_source"
+expect_skipped "volatile journal on zram" 'journal is volatile: kept in /run/log/journal'
 
 # a skipped power cut does not hide a real failure, and is not counted as one
 setup_rock64

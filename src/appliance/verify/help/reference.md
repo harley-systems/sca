@@ -16,7 +16,7 @@ On a board whose journal does not remember the previous boot, the `power cut` ro
 ```bash
 $ sudo sca appliance verify
   ...
-  power cut journal is volatile: no /var/log/journal skipped
+  power cut journal is volatile: kept in /run/log/journal skipped
 ```
 
 [Persistent journal](../air-gapped-appliance.md#46-persistent-journal) makes the journal keep earlier boots, so that the row really compares two boots.
