@@ -137,6 +137,10 @@ done
 
 # --board rock64: built from the armbian image
 reset
+# files staged by an earlier pc run kept with -s, which must not reach the image
+mkdir -p "$HOME/.sca/live_filesystem/opt/sca/packages" "$HOME/.sca/live_filesystem/opt/sca/test"
+touch "$HOME/.sca/live_filesystem/opt/sca/packages/foo_amd64.deb" \
+  "$HOME/.sca/live_filesystem/opt/sca/test/stale"
 output="$(init_sca_usb_stick -y --board rock64 2>&1)" || fail "rock64 build failed: ${output}"
 grep -qx "download_armbian_image rock64 resolute ${downloads}" "${calls}" || \
   fail "rock64: armbian image not downloaded: $(cat "${calls}")"
@@ -181,6 +185,8 @@ grep -q "/opt/sca/bin/sca -d install --air-gapped --yubikey-support" "${rootfs}e
   fail "rock64: the first login installer does not install sca"
 grep -q "sca test" "${rootfs}etc/profile.d/sca.sh" && fail "rock64: test commands in a regular image"
 assert_file_exists "${rootfs}opt/sca/packages/pcscd_2.4.1-1_arm64.deb" "rock64: arm64 packages"
+[ -e "${rootfs}opt/sca/packages/foo_amd64.deb" ] && fail "rock64: stale amd64 package in the image"
+[ -e "${rootfs}opt/sca/test/stale" ] && fail "rock64: stale staged file in the image"
 assert_file_exists "${rootfs}etc/ssl/sca/sca.config" "rock64: sca configuration"
 assert_file_exists "${rootfs}etc/bash_completion.d/sca" "rock64: sca completion"
 assert_file_exists "${rootfs}etc/armbian-release" "rock64: the image's own files"

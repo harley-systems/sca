@@ -841,6 +841,9 @@ build_armbian_image() {
     error "could not read the dpkg status of ${original_image}." 1
   fi
   local apt_options=$(get_armbian_apt_options ${board} ${ubuntu_version_name} ${image_sca_folder}apt/)
+  # files staged by an earlier run (kept by -s, or left by a failed run) may be
+  # for another architecture or the test mode, and must not reach the image
+  sudo rm -rf $live_filesystem_folder
   patch_live_filesystem \
     $live_filesystem_folder \
     $live_filesystem_repos_folder \
