@@ -88,4 +88,4 @@ sca install --force
 - `opensc`, `pcscd`, `libccid` - Smart card support
 - `libengine-pkcs11-openssl`, `pkcs11-provider` - PKCS#11 OpenSSL engine and provider
 - `yubico-piv-tool`, `ykcs11`, `yubikey-manager`, `gnupg`, `scdaemon` - YubiKey tools (with `-y`), from the Ubuntu archive
-- `xorriso`, `squashfs-tools`, `apt-mirror`, `qemu-system-x86`, `qemu-utils` - USB image creation and testing
+- `xorriso`, `squashfs-tools`, `apt-mirror`, `qemu-system-x86`, `qemu-utils` - USB image creation and testing (x86_64 hosts only; skipped elsewhere)
