@@ -74,18 +74,24 @@ appliance_verify() {
 # parameters
 #   label  - what is checked
 #   detail - what was found
-#   status - the check's return code, 0 for ok, or 'n/a' for a check that does
-#            not apply to the platform (not a failure)
+#   status - the check's return code, 0 for ok, 1 for FAIL, 2 for a check that
+#            applies but could not run this time (skipped, not a failure), or
+#            'n/a' for a check that does not apply to the platform (not a
+#            failure)
 appliance_verify_row() {
   local status=ok
   if [ "$3" = n/a ]; then
     status=n/a
+  elif [ "$3" -eq 2 ]; then
+    status=skipped
   elif [ "$3" -ne 0 ]; then
     status=FAIL; failed=$((failed + 1))
   fi
   printf '  %-9s %-40s %s\n' "$1" "$2" "$status"
 }
-# each appliance_verify_<check> sets detail and returns 0 for ok, 1 for FAIL
+# each appliance_verify_<check> sets detail and returns 0 for ok, 1 for FAIL.
+# only the power cut check also returns 2, for skipped: with no previous boot
+# in the journal there is nothing to compare, and that must not read as ok
 
 # the platform-specific probe matches probe_expect and not probe_reject
 appliance_verify_probe() {
@@ -180,7 +186,8 @@ appliance_verify_units() {
   return 0
 }
 # the time the kernel took from rtc0 at boot is not earlier than the end of the
-# previous boot, i.e. the clock kept running while the power was off
+# previous boot, i.e. the clock kept running while the power was off. skipped
+# when the journal holds no previous boot, as with a volatile journal
 appliance_verify_power_cut() {
   local rtc0_name=$(cat "$(appliance_path /sys/class/rtc/rtc0/name)" 2>/dev/null)
   if [ -z "$rtc0_name" ]; then
@@ -192,8 +199,12 @@ appliance_verify_power_cut() {
     return 1
   fi
   if [ -z "$appliance_previous_boot_epoch" ]; then
-    detail="no previous boot recorded"
-    return 0
+    if [ -d "$(appliance_path /var/log/journal)" ]; then
+      detail="no previous boot in the journal"
+    else
+      detail="journal is volatile: no /var/log/journal"
+    fi
+    return 2
   fi
   local behind=$((appliance_previous_boot_epoch - appliance_boot_clock_epoch))
   if [ $behind -gt 0 ]; then
