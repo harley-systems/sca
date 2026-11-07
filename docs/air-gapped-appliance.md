@@ -442,6 +442,88 @@ running. A CA session takes minutes, so that is dozens of sessions per charge.
 The case and the power bank stacked come to about **92 x 61 x 54 mm**: roughly
 a deck of cards in footprint, and three decks thick.
 
+### 4.6 Persistent journal
+
+**Symptom:** however many times the board has booted, the journal only knows
+the current boot:
+
+```
+$ journalctl --list-boots
+IDX BOOT ID                          FIRST ENTRY                  LAST ENTRY
+  0 483669c3b8af44df89719a173c6beb07 Fri 2026-11-06 14:47:44 IST  Fri 2026-11-06 15:12:03 IST
+```
+
+**Cause:** Armbian ships no `/var/log/journal/`, so journald keeps the journal
+in `/run/log/journal`, in RAM, and it is gone at every power-off.
+
+**Why it matters for a CA:**
+
+- **Audit trail.** Key generation, signing, PIN changes and failed
+  authentications are what you want to still be able to read next month. A
+  volatile journal forgets every ceremony when the power goes.
+- **Diagnosis.** Every fault in [4.1](#41-the-ds3231-rtc) was found from
+  journal lines (`rtc-ds1307 0-0068: setting system clock to …`), and some of
+  them were only visible because the board had not rebooted yet.
+- **The `power cut` row.** [`sca appliance verify`](#5-checking-the-appliance-sca-appliance-verify)
+  compares this boot's clock with the end of the previous boot. With no
+  previous boot in the journal there is nothing to compare, and the row reads
+  `skipped`.
+
+**Fix:** a journald drop-in that keeps the journal on disk, with a bounded
+size:
+
+```bash
+sudo mkdir -p /etc/systemd/journald.conf.d
+sudo tee /etc/systemd/journald.conf.d/zz-sca-appliance.conf <<'CONF'
+[Journal]
+Storage=persistent
+SystemMaxUse=64M
+SystemMaxFileSize=8M
+CONF
+sudo systemctl restart systemd-journald
+```
+
+`Storage=persistent` creates `/var/log/journal` itself. `SystemMaxUse=64M`
+caps the journal on the stick, and `SystemMaxFileSize=8M` makes journald
+rotate in small files, so it can drop the oldest one at a time rather than
+most of the journal at once. A CA appliance logs a few lines per session, so
+64M holds years of ceremonies while bounding flash wear.
+
+Drop-ins are read in alphabetical order and the last one wins, hence the `zz-`
+prefix. Check that no other file overrides `Storage=`:
+
+```bash
+systemd-analyze cat-config systemd/journald.conf | grep -E '^# /|Storage=|SystemMax'
+```
+
+**Armbian ramlog (proposal, not verified on hardware).** Armbian normally runs
+`armbian-ramlog`, which keeps `/var/log` on a zram disk and copies it to
+`/var/log.hdd` only periodically and at a clean shutdown. A persistent journal
+under it would still lose everything since the last copy at a **power cut**,
+which is exactly the case that matters. Check:
+
+```bash
+findmnt /var/log
+```
+
+If the source is a `zram` device, disable ramlog and reboot:
+
+```bash
+sudo sed -i 's/^ENABLED=.*/ENABLED=false/' /etc/default/armbian-ramlog
+sudo reboot
+```
+
+ramlog exists to spare flash from a busy server's logs. An appliance that is
+switched on for a few minutes per ceremony writes little, and the size limits
+above bound it; keeping the log is worth more than that wear.
+
+**Check:** after the next reboot, `findmnt /var/log` shows no zram, and
+`journalctl --list-boots` lists more than one boot. journald writes to disk
+every `SyncIntervalSec` (5 minutes by default), so after a power cut the
+previous boot's last entry on disk can be a few minutes before the actual cut.
+That only makes the `power cut` row more lenient by those minutes; it never
+fails a good clock.
+
 ## 5. Checking the appliance: `sca appliance verify`
 
 Every step in [4.1](#41-the-ds3231-rtc) can fail **silently**: the board boots,
@@ -460,6 +542,12 @@ Root, or the `systemd-journal` group, is needed only to read the kernel log.
 Without it, the `power cut` row fails and says how to fix it; it never passes
 silently.
 
+A check that applies but could not run this time reads `skipped`. That is not
+a failure, so it does not change the exit status, and it is not a pass either.
+Only the `power cut` row can be skipped, when the journal holds no previous
+boot. That happens on every boot while the journal is volatile, and on the
+first boot after [Persistent journal](#46-persistent-journal) is set up.
+
 ### 5.1 What each check catches
 
 Five checks read only `/proc`, `/sys`, systemd and the journal, so they work
@@ -475,7 +563,7 @@ the platform profile. On a platform that boots USB out of the box
 | `rtc` | `/sys/class/rtc/rtc*/name`, `hctosys` | `rtc0` is not the profile's battery-backed clock (the DS3231, or `rtc_cmos` on x86), or the kernel does not set the time from it. The row lists every RTC | [Module invisible: I2C0 disabled](#module-invisible-no-error-enable-i2c0); [RTC registered but ignored](#rtc-registered-but-ignored-the-overlay): the PMIC holds `rtc0` |
 | `clock` | `timedatectl show` | the clock is synchronised by NTP | NTP quietly correcting a wrong RTC, so the time looks right while the appliance is networked |
 | `hwclock` | `systemctl is-enabled` | a `fake-hwclock` unit is neither masked nor absent | [Clock walks backwards at boot](#clock-walks-backwards-at-boot-remove-fake-hwclock) |
-| `power cut` | `journalctl -k -b 0`, `journalctl -b -1` | the time the kernel read from `rtc0` at boot is earlier than the previous boot's last log entry, or the line is missing | The RTC lost time while the power was off: a flat or missing cell, on the DS3231 or in a mini PC's CMOS |
+| `power cut` | `journalctl -k -b 0`, `journalctl -b -1` | the time the kernel read from `rtc0` at boot is earlier than the previous boot's last log entry, or the line is missing. `skipped`, not failed, when the journal holds no previous boot: see [Persistent journal](#46-persistent-journal) | The RTC lost time while the power was off: a flat or missing cell, on the DS3231 or in a mini PC's CMOS |
 
 ### 5.2 Platform profiles, and what is verified
 

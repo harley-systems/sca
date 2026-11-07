@@ -191,10 +191,39 @@ setup_rock64
 echo 1793020000 > "$stub_state/previous_epoch"
 expect_fail "power cut"
 
-# no previous boot in the journal is fine
+# the clock moved forward across the power cut: a genuine pass
+setup_rock64
+sca appliance verify > "${HOME}/out" 2>&1 || fail "forward clock: verify exited non-zero"
+assert_eq ok "$(row "power cut")" "forward clock: power cut row"
+grep -qF 'clock kept through power-off' "${HOME}/out" || fail "forward clock: no detail"
+
+# no previous boot in a volatile journal: skipped, not ok, and not a failure
 setup_rock64
 rm "$stub_state/previous_epoch"
-assert_succeeds sca appliance verify
+sca appliance verify > "${HOME}/out" 2>&1 || fail "volatile journal: verify exited non-zero"
+assert_eq skipped "$(row "power cut")" "volatile journal: power cut row"
+for label in boot root rtc clock hwclock; do
+  assert_eq ok "$(row "$label")" "volatile journal: $label row"
+done
+grep -qF 'journal is volatile: no /var/log/journal' "${HOME}/out" \
+  || fail "volatile journal: the row does not name the journal"
+
+# no previous boot in a persistent journal yet: skipped too
+setup_rock64
+rm "$stub_state/previous_epoch"
+mkdir -p "${SCA_APPLIANCE_ROOT}/var/log/journal"
+sca appliance verify > "${HOME}/out" 2>&1 || fail "persistent journal: verify exited non-zero"
+assert_eq skipped "$(row "power cut")" "persistent journal: power cut row"
+grep -qF 'no previous boot in the journal' "${HOME}/out" \
+  || fail "persistent journal: the row does not name the journal"
+
+# a skipped power cut does not hide a real failure, and is not counted as one
+setup_rock64
+rm "$stub_state/previous_epoch"
+echo yes > "$stub_state/ntp_synced"
+sca appliance verify > "${HOME}/out" 2>&1 && fail "skipped: verify exited 0 with NTP synced"
+assert_eq skipped "$(row "power cut")" "skipped with a failure: power cut row"
+grep -q "appliance verify: 1 check(s) failed" "${HOME}/out" || fail "skipped counted as a failure"
 
 # a journal the user cannot read fails, never passes silently
 setup_rock64
