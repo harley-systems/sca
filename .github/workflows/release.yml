@@ -14,7 +14,7 @@ permissions:
 jobs:
   build-release:
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: [self-hosted, Linux, X64, home-network]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
             build/SHA256SUMS
 
   build-container:
-    runs-on: [self-hosted, Linux, X64, home-network]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
