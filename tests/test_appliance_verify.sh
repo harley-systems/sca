@@ -299,6 +299,9 @@ done
 for expected in 'arch: arm64' 'boot_prep: uboot-spi' 'rtc: i2c-ds3231'; do
   grep -qF -- "$expected" "${HOME}/out" || fail "info lacks '$expected'"
 done
+# the base image check is stated as it is: none (#143)
+grep -qF -- 'base_image_check: none' "${HOME}/out" || fail "info lacks 'base_image_check: none'"
+grep -qF -- 'gpg signature' "${HOME}/out" && fail "info claims a gpg signature for the base image"
 # on x86 the boot probe is n/a
 setup_x86
 sca appliance info > "${HOME}/out" 2>&1 || fail "x86: info exited non-zero"
