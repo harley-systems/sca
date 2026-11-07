@@ -17,7 +17,7 @@ comments. Values that are regular expressions are POSIX EREs (`grep -E`).
 | `arch` | verify, info | `amd64` or `arm64`. A profile without `compatible` is detected when its `arch` is the machine's (`uname -m`) and no other such profile has the same `arch` |
 | `verified` | verify, info | what was verified on hardware, when and where it is recorded; `no` for a proposal (verify then says so first) |
 | `irreversible` | info (init, later) | `yes` if the boot preparation cannot be undone (a Pi 3's OTP bit) |
-| `base_image`, `base_image_check` | info (init, later) | the OS image and how its authenticity is checked |
+| `base_image`, `base_image_check` | info (init, later) | the OS image and how its authenticity is checked. `base_image_check` names only a check somebody has actually performed; otherwise it says `none` or marks the route `(unverified)` |
 | `boot_prep` | verify, info (init, later) | how the platform is made to boot from USB: `none` (boots USB out of the box; verify then shows the boot row as `n/a`), `uboot-spi`, `rpi-eeprom` or `rpi-otp` |
 | `rtc` | info (init, later) | the battery-backed clock: `builtin` (a PC's CMOS clock) or `i2c-ds3231` |
 | `rtc_method`, `i2c_bus` | info (init, later) | for `rtc=i2c-ds3231`: how the RTC is enabled, and the I2C bus of header pins 3/5 |

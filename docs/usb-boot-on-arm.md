@@ -325,6 +325,49 @@ You boot the board normally from microSD, then write SPI from Linux.
 | **Pros** | No extra host or tools. The commands are the usual Linux ones. You can read SPI back to check the write. |
 | **Cons** | Cannot help a board that no longer boots. If the write is interrupted, see [section 7](#7-recovering-from-a-bad-spi-write). |
 
+### The microSD image and its integrity
+
+The image used for this guide
+([#108](https://github.com/harley-systems/sca/issues/108),
+[#136](https://github.com/harley-systems/sca/issues/136)) is
+`Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.img.xz`
+from the Armbian **community** nightly channel
+(`https://github.com/armbian/community/releases`). That channel publishes **no
+checksum and no signature** for its images, so the integrity of this image
+rests on the HTTPS download alone
+([#143](https://github.com/harley-systems/sca/issues/143)). A sha256 you
+compute yourself after the download attests to nothing.
+
+Only Armbian's **stable** images (the `archive` channel) are signed. For the
+ROCK64 the latest is 25.5.1, for example
+`Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz` from
+`https://archive.armbian.com/rock64/archive/`, with a `.sha` and an `.asc`
+next to it. To check one:
+
+```bash
+gpg --recv-keys DF00FAF1C577104B50BF1D0093D6889F9F0E78D5
+gpg --fingerprint DF00FAF1C577104B50BF1D0093D6889F9F0E78D5
+# must print DF00 FAF1 C577 104B 50BF  1D00 93D6 889F 9F0E 78D5
+sha256sum -c Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz.sha
+gpg --verify Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz.asc \
+    Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz
+```
+
+The signature is by "Igor Pecovnik <igor@armbian.com>". Three things to watch:
+
+- The `.asc` is a detached signature over the **`.img.xz` itself**. The `.sha`
+  is not signed; checking the `.asc` against the `.sha` reports a BAD
+  signature.
+- The `dl.armbian.com/rock64/archive/...` URLs in Armbian's image index return
+  404 at the time of writing. `archive.armbian.com` works; it redirects to a
+  third-party mirror, which is fine because the signature is what you trust.
+- The apt repository key (`apt.armbian.com/armbian.key`) is a **different key**
+  and does not verify image signatures.
+
+The 25.5.1 image is **(unverified)** on the board: nobody has run the DS3231
+overlay or Route A on it. The steps in this guide were done on the community
+nightly above.
+
 Armbian's own installer, `sudo armbian-install`, has an **"Install/Update the
 bootloader on SPI Flash"** entry on some boards. It installs from the same
 U-Boot package, which has no SPI image for the ROCK64 (see
