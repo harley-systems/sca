@@ -35,7 +35,7 @@ creation tools (add `--yubikey-support` if you will use YubiKeys):
 sca install --yubikey-support
 ```
 
-An online `sca install` also installs:
+An online `sca install` on an x86_64 host also installs (other architectures skip them, as they cannot build the stick):
 - `xorriso` - For creating the hybrid BIOS and UEFI ISO image
 - `squashfs-tools` - For reading and packing Ubuntu filesystem layers
 - `apt-mirror` - For offline package repositories
