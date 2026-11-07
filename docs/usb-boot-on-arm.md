@@ -20,9 +20,9 @@ board if the write goes wrong.
 > 2026-11-06, [Route A](#5-route-a-write-spi-from-armbian-on-microsd) wrote
 > that image to SPI on a ROCK64 v2.0, the board booted U-Boot from SPI, and the
 > jumper recovery in [section 7](#7-recovering-from-a-bad-spi-write) was run
-> end to end. [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode),
-> booting from a USB stick, `git tag -v` on a shallow clone and the cross build
-> are **not** verified. Steps marked **(unverified)** must still be checked on
+> end to end. On 2026-11-07, the same board booted its root from a USB stick
+> with the microSD removed. [Route B](#6-route-b-write-spi-over-usb-in-maskrom-mode),
+> `git tag -v` on a shallow clone and the cross build are **not** verified. Steps marked **(unverified)** must still be checked on
 > a real board before you rely on them. See [Tested on](#tested-on) at the
 > bottom.
 
@@ -75,7 +75,7 @@ cards. If neither applies, stay on microSD.
 
 | Revision | SPI flash | Status |
 |----------|-----------|--------|
-| v2.0 | 128 Mbit (16 MB), seen as `mtd0 "spi0.0"` | SPI written with Route A and boots U-Boot from SPI (verified); USB-stick boot **(unverified)** |
+| v2.0 | 128 Mbit (16 MB), seen as `mtd0 "spi0.0"` | SPI written with Route A and boots U-Boot from SPI (verified); USB-stick boot (verified) |
 | v3.0 | 128 Mbit | Expected to work the same way **(unverified)** |
 | v1.x (early boards) | | Not covered |
 
@@ -438,10 +438,19 @@ offer that option here **(unverified)**. Use the manual steps below.
       microSD card shows `2026.04_armbian-…`, which means the board did not
       boot from SPI.
 
-   b. **Boot from the USB stick** **(unverified)**. Power off, remove the
-      microSD card, insert the USB stick with the SCA image, and power on with
-      the serial console attached. U-Boot should report its version, find no
-      eMMC or microSD system, scan USB and boot from the stick.
+   b. **Boot from the USB stick**. Power off, remove the microSD card,
+      insert the USB stick with the SCA image, and power on. U-Boot finds no
+      eMMC or microSD system, scans USB and boots from the stick. Log in over
+      SSH and check where the root and U-Boot came from:
+
+      ```bash
+      findmnt /
+      tr -d '\0' < /proc/device-tree/chosen/u-boot,version; echo
+      ```
+
+      `/` should be on the stick (`/dev/sda1`), and the version should be
+      `2026.04` with no `_armbian` suffix. If the board does not come up, the
+      [serial console](#3-serial-console) shows where it stops.
 
 ## 6. Route B: write SPI over USB in maskrom mode
 
@@ -703,10 +712,17 @@ from eMMC or microSD as before.
   `/sys/bus/spi/drivers/spi-nor/` makes `mtd0` disappear, `bind` brings it back.
 - The image on the chip was byte-identical before and after the drill.
 
+**Booted from a USB stick, power cut, 2026-11-07:**
+
+- microSD removed, the board booted from the USB stick: `/` was `/dev/sda1`
+  (29 G), and `u-boot,version` was `2026.04` (U-Boot from SPI). Checked over
+  SSH; no serial console was attached.
+- It came back from several reboots and from a power cut of about five
+  minutes. The 90-second storage dropout seen on 2026-11-06 did not recur.
+
 **Not yet run on hardware:**
 
 - Route B, with the `rkdeveloptool` and loader versions to record;
-- booting from a USB stick;
 - `git tag -v` on a shallow clone;
 - the cross build;
 - the `armbian-install` SPI entry.
