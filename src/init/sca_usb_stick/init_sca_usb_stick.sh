@@ -33,6 +33,12 @@
 #
 # the boot setup (el torito, mbr, efi partition) of the original image is
 # replayed by xorriso unchanged.
+#
+# that is the image for --board pc, the default. for an arm board, such as
+# --board rock64, the image is the armbian disk image of the board instead, see
+# build_armbian_image. it gets the same /opt/sca, /etc/profile.d/sca.sh and
+# packages, built for the board's architecture, copied into its root file
+# system.
 
 init_sca_usb_stick() {
   local skip_cleanup=false
@@ -41,8 +47,9 @@ init_sca_usb_stick() {
   local yubikey_support=false
   local exclude_pkcs11_support=false
   local no_cache_iso=false
+  local board=pc
 
-  local OPTS=`getopt -o hstiyxon --long help,skip-cleanup,test-image,include-apt-mirror,yubikey-support,exclude-pkcs11-support,no-cache-iso,no-cache -n "init sca_usb_stick" -- "$@"`
+  local OPTS=`getopt -o hstiyxonb: --long help,skip-cleanup,test-image,include-apt-mirror,yubikey-support,exclude-pkcs11-support,no-cache-iso,no-cache,board: -n "init sca_usb_stick" -- "$@"`
   if [ $? != 0 ] ; then error "failed parsing options. use sca init sca_usb_stick -h for help." 1; fi
   eval set -- "$OPTS"
   while true; do
@@ -75,6 +82,10 @@ init_sca_usb_stick() {
         no_cache_iso=true
         shift
         ;;
+      -b | --board )
+        board=$2
+        shift 2
+        ;;
       -- )
         shift
         break
@@ -88,15 +99,16 @@ init_sca_usb_stick() {
   # use ubuntu version id specified below for the offline environment on sca usb
   # stick
   local ubuntu_version_id=${1:-$sca_ubuntu_version_id}
+  check_sca_usb_stick_board "$board" $test_image $include_apt_mirror
   check_ubuntu_version_id "$ubuntu_version_id" "init sca_usb_stick"
   check_build_host_ubuntu_version "init sca_usb_stick"
-  check_iso_image_tools $include_apt_mirror
+  check_iso_image_tools $include_apt_mirror $board
   check_sca_to_ship
 
   log_detailed "init_sca_usb_stick: start (skip_cleanup=${skip_cleanup}, test_image=${test_image}, "\
     "yubikey_support=${yubikey_support}, "\
     "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
-    "include_apt_mirror=${include_apt_mirror}, ubuntu_version_id=${ubuntu_version_id})"
+    "include_apt_mirror=${include_apt_mirror}, ubuntu_version_id=${ubuntu_version_id}, board=${board})"
   # extract the version number as all text preceeding the first - character
   local ubuntu_version_number=${ubuntu_version_id%%-*}
   # extract the version name as all text following the first - character
@@ -141,6 +153,30 @@ init_sca_usb_stick() {
   # repos folder fullpath when running offline booted from the live usb
   local offline_repos_folder=${offline_sca_home_folder}${repos_relative}
 
+  if [ $board != pc ]; then
+    build_armbian_image \
+      $board \
+      $ubuntu_version_name \
+      $downloads_folder \
+      ${sca_home_folder}armbian_image/ \
+      $iso_image_sca_folder \
+      $live_filesystem_folder \
+      $live_filesystem_repos_folder \
+      $live_filesystem_sca_home_folder \
+      $offline_repos_folder \
+      $live_filesystem_packages_folder \
+      $test_folder_relative \
+      $yubikey_support \
+      $exclude_pkcs11_support \
+      $skip_cleanup \
+      $no_cache_iso
+    log_detailed "init_sca_usb_stick: finish (skip_cleanup=${skip_cleanup}, "\
+      "yubikey_support=${yubikey_support}, "\
+      "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
+      "ubuntu_version_id=${ubuntu_version_id}, board=${board})"
+    return
+  fi
+
   local original_iso_image
   original_iso_image=$(download_ubuntu_image ${ubuntu_version_number} ${downloads_folder}) || exit 1
 
@@ -155,19 +191,7 @@ init_sca_usb_stick() {
     log_detailed "init_sca_usb_stick: removing the existing test image ${new_iso_image_file}"
     sudo rm -f ${new_iso_image_file} ${new_iso_options_file}
   fi
-  if [ -f ${new_iso_image_file} ]; then
-    # reuse the image only if it is known to be built with the requested options
-    if ! [ -f ${new_iso_options_file} ] || \
-      [ "$(cat ${new_iso_options_file})" != "${requested_options}" ]; then
-      local cached_options="unknown - no ${new_iso_options_file}"
-      [ -f ${new_iso_options_file} ] && cached_options=$(paste -sd " " ${new_iso_options_file})
-      >&2 echo "the iso image ${new_iso_image_file} was not built with the requested options."
-      >&2 echo "  built with: ${cached_options}"
-      >&2 echo "  requested:  ${requested_options//$'\n'/ }"
-      error "remove it to build a new one: rm -f ${new_iso_image_file} ${new_iso_options_file}" 1
-    fi
-    echo "the iso image $new_iso_image_file already exists. please use that one, or remove it to create another one."
-    print_sca_disk_image_help $new_iso_image_file
+  if reuse_sca_image ${new_iso_image_file} "${requested_options}" "iso image" pc; then
     log_detailed "init_sca_usb_stick: finish (skip_cleanup=${skip_cleanup}, test_image=${test_image}, "\
       "yubikey_support=${yubikey_support}, "\
       "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
@@ -241,6 +265,99 @@ get_sca_iso_options() {
   echo "exclude_pkcs11_support=${exclude_pkcs11_support}"
 }
 ################################################################################
+# reuses a sca image built by an earlier run. succeeds, printing the write
+# instructions, when the image exists and its options file records the
+# requested options. fails when there is no image to reuse. stops with an error
+# when the image exists but is not known to be built with the requested options.
+#
+# parameters
+#   sca_image_file    - the sca image
+#   requested_options - the options asked for, as printed by get_sca_iso_options
+#   image_kind        - what to call the image in the messages, e.g. iso image
+#   board             - the board the image is for
+reuse_sca_image() {
+  local sca_image_file=$1
+  local requested_options=$2
+  local image_kind=$3
+  local board=$4
+
+  [ -f ${sca_image_file} ] || return 1
+  local options_file=$(get_sca_iso_options_file ${sca_image_file})
+  # reuse the image only if it is known to be built with the requested options
+  if ! [ -f ${options_file} ] || \
+    [ "$(cat ${options_file})" != "${requested_options}" ]; then
+    local cached_options="unknown - no ${options_file}"
+    [ -f ${options_file} ] && cached_options=$(paste -sd " " ${options_file})
+    >&2 echo "the ${image_kind} ${sca_image_file} was not built with the requested options."
+    >&2 echo "  built with: ${cached_options}"
+    >&2 echo "  requested:  ${requested_options//$'\n'/ }"
+    error "remove it to build a new one: rm -f ${sca_image_file} ${options_file}" 1
+  fi
+  echo "the ${image_kind} $sca_image_file already exists. please use that one, or remove it to create another one."
+  print_sca_disk_image_help $sca_image_file $board
+}
+################################################################################
+# the boards the sca usb stick image is built for. pc is the ubuntu desktop iso
+# image for an x86 pc. each other board is an armbian disk image for that
+# board, described by its row in get_sca_usb_stick_board_field.
+get_sca_usb_stick_boards() {
+  echo "pc rock64"
+}
+################################################################################
+# prints a field of an arm board's row in the board table. adding a board means
+# adding its row here and its name to get_sca_usb_stick_boards.
+#
+#   image_url      - the latest armbian image of the board for an ubuntu
+#                    release (a .img.xz). armbian publishes <image_url>.sha,
+#                    its sha256, and <image_url>.asc, a detached signature over
+#                    the .img.xz (not over the .sha) by the armbian image
+#                    signing key, see get_armbian_image_signing_key_fingerprint
+#   arch           - the debian architecture of the packages the board needs
+#   root_partition - the number of the partition holding the root file system
+#   boot_medium    - the medium the board boots the image from as written
+#
+# parameters
+#   board               - the board, for example rock64
+#   field               - the field to print
+#   ubuntu_version_name - the ubuntu release name, for example resolute
+get_sca_usb_stick_board_field() {
+  local board=$1
+  local field=$2
+  local ubuntu_version_name=$3
+
+  case "${board}:${field}" in
+    # armbian community builds, signed like armbian's stable ones (#108)
+    rock64:image_url ) echo "https://dl.armbian.com/rock64/${ubuntu_version_name^}_current_minimal" ;;
+    rock64:arch ) echo "arm64" ;;
+    rock64:root_partition ) echo "1" ;;
+    # the rk3328 boot rom reads spi, emmc and microsd, never usb (docs/usb-boot-on-arm.md)
+    rock64:boot_medium ) echo "microSD card" ;;
+  esac
+}
+################################################################################
+# fails unless the board is supported, and supported with the requested options
+#
+# parameters
+#   board               - the --board value
+#   test_image          - whether --test-image is set
+#   include_apt_mirror  - whether --include-apt-mirror is set
+check_sca_usb_stick_board() {
+  local board=$1
+  local test_image=$2
+  local include_apt_mirror=$3
+
+  if [[ " $(get_sca_usb_stick_boards) " != *" ${board} "* ]]; then
+    error "init sca_usb_stick: unknown board '${board}'. the supported boards are: $(get_sca_usb_stick_boards)." 1
+  fi
+  [ "$board" = pc ] && return
+  if [ "$test_image" = true ]; then
+    error "init sca_usb_stick: --test-image is not supported with --board ${board}. sca test boots the test image in qemu-system-x86_64, which cannot boot a ${board} image. build the ${board} image without --test-image." 1
+  fi
+  if [ "$include_apt_mirror" = true ]; then
+    error "init sca_usb_stick: --include-apt-mirror is not supported with --board ${board}: the ubuntu $(get_sca_usb_stick_board_field ${board} arch) archive does not fit in the root file system of the ${board} image. build it without --include-apt-mirror; the packages sca needs are bundled regardless." 1
+  fi
+}
+################################################################################
 # the filesystem label of the test results disk. sca test creates the disk with
 # this label and the test image only ever mounts a disk carrying it, so it never
 # picks a disk by kernel name (at most 16 characters - the ext4 limit)
@@ -252,10 +369,14 @@ get_test_results_disk_label() {
 #
 # parameters
 #   include_apt_mirror - whether apt-mirror is needed as well
+#   board              - the board the image is for, pc by default
 check_iso_image_tools() {
   local include_apt_mirror=$1
+  local board=${2:-pc}
 
   local tools=(wget gpgv base64 sha256sum md5sum xorriso mksquashfs unsquashfs apt-get)
+  # an armbian image is decompressed and its root file system loop mounted
+  [ "$board" != pc ] && tools=(wget gpgv base64 sha256sum xz losetup apt-get)
   [ "$include_apt_mirror" = true ] && tools+=(apt-mirror)
   local missing_tools=()
   for tool in "${tools[@]}"; do
@@ -362,6 +483,29 @@ get_ubuntu_cdimage_keyring() {
 UBUNTU_CDIMAGE_KEYRING
 }
 ################################################################################
+# checks a detached signature with gpgv against a bundled keyring only, never
+# the user's, and prints the gpgv status lines. the caller decides from them:
+# a VALIDSIG line ends with the fingerprint of the signing primary key.
+#
+# parameters
+#   keyring_function  - the function printing the ascii armored keyring
+#   signature_file    - the detached signature
+#   signed_file       - the file it signs
+get_gpgv_status() {
+  local keyring_function=$1
+  local signature_file=$2
+  local signed_file=$3
+
+  local keyring_file
+  keyring_file=$(mktemp "${TMPDIR:-/tmp}/sca-keyring.XXXXXX") || \
+    error "could not create a temporary file for the keyring of ${keyring_function}." 1
+  # strip the armor: the header up to the empty line, the checksum and the footer
+  ${keyring_function} | \
+    sed -e '1,/^$/d' -e '/^=/d' -e '/^-----END/d' | base64 -d > "${keyring_file}"
+  gpgv --status-fd 1 --keyring "${keyring_file}" "${signature_file}" "${signed_file}" 2> /dev/null
+  rm -f "${keyring_file}"
+}
+################################################################################
 # checks with gpgv that a SHA256SUMS file carries a good signature of the ubuntu
 # cd image signing key, pinned by its fingerprint. otherwise removes the
 # SHA256SUMS file and its signature and stops with an error telling why:
@@ -379,15 +523,8 @@ check_ubuntu_sha256sums_signature() {
 
   log_detailed "check_ubuntu_sha256sums_signature: start (sums_file=${sums_file}, signature_file=${signature_file})"
   local fingerprint=$(get_ubuntu_cdimage_signing_key_fingerprint)
-  local keyring_file
-  keyring_file=$(mktemp "${TMPDIR:-/tmp}/sca-ubuntu-cdimage-keyring.XXXXXX") || \
-    error "could not create a temporary file for the ubuntu cd image keyring." 1
-  # strip the armor: the header up to the empty line, the checksum and the footer
-  get_ubuntu_cdimage_keyring | \
-    sed -e '1,/^$/d' -e '/^=/d' -e '/^-----END/d' | base64 -d > "${keyring_file}"
   local status
-  status=$(gpgv --status-fd 1 --keyring "${keyring_file}" "${signature_file}" "${sums_file}" 2> /dev/null)
-  rm -f "${keyring_file}"
+  status=$(get_gpgv_status get_ubuntu_cdimage_keyring "${signature_file}" "${sums_file}") || exit 1
   log_detailed "check_ubuntu_sha256sums_signature: gpgv status: ${status}"
   # VALIDSIG <key fingerprint> ... <primary key fingerprint>
   local signers=$(echo "${status}" | awk '$2 == "VALIDSIG" { print $NF }')
@@ -479,6 +616,404 @@ download_ubuntu_image() {
   mv ${downloaded_file}.part ${downloaded_file}
   echo $downloaded_file
   log_detailed "download_ubuntu_image: finish (version=${version}, downloads_folder=${downloads_folder})"
+}
+################################################################################
+# the fingerprint of the armbian image signing key, "Igor Pecovnik
+# <igor@armbian.com>", which signs the armbian images. an armbian image is
+# trusted only when signed by this key.
+get_armbian_image_signing_key_fingerprint() {
+  echo "DF00FAF1C577104B50BF1D0093D6889F9F0E78D5"
+}
+################################################################################
+# prints the bundled, ascii armored, public key of the armbian image signing
+# key. the build embeds src/init/sca_usb_stick/armbian-keyring.asc here, so the
+# key is never fetched from a keyserver.
+get_armbian_image_keyring() {
+  cat <<'ARMBIAN_IMAGE_KEYRING'
+@@@ARMBIAN IMAGE KEYRING@@@
+ARMBIAN_IMAGE_KEYRING
+}
+################################################################################
+# checks with gpgv that an armbian image carries a good signature of the armbian
+# image signing key, pinned by its fingerprint. the signature is over the
+# .img.xz itself. otherwise removes the signature, and the image if asked to,
+# and stops with an error telling why.
+#
+# parameters
+#     image_file      - the .img.xz image
+#     signature_file  - its detached signature, <image>.asc
+#     remove_image    - true to remove the image as well when the check fails
+check_armbian_image_signature() {
+  local image_file=$1
+  local signature_file=$2
+  local remove_image=$3
+
+  log_detailed "check_armbian_image_signature: start (image_file=${image_file}, signature_file=${signature_file})"
+  local fingerprint=$(get_armbian_image_signing_key_fingerprint)
+  local status
+  status=$(get_gpgv_status get_armbian_image_keyring "${signature_file}" "${image_file}") || exit 1
+  log_detailed "check_armbian_image_signature: gpgv status: ${status}"
+  # VALIDSIG <key fingerprint> ... <primary key fingerprint>
+  local signers=$(echo "${status}" | awk '$2 == "VALIDSIG" { print $NF }')
+  if echo "${signers}" | grep -qx "${fingerprint}" && \
+      ! echo "${status}" | grep -q '^\[GNUPG:\] BADSIG '; then
+    log_detailed "check_armbian_image_signature: finish (signed by ${fingerprint})"
+    return
+  fi
+  local removed="its signature was removed"
+  rm -f "${signature_file}"
+  if [ "${remove_image}" = true ]; then
+    rm -f "${image_file}"
+    removed="it was removed with its signature"
+  fi
+  if echo "${status}" | grep -q '^\[GNUPG:\] BADSIG '; then
+    error "${image_file} does not match its signature ${signature_file}: it was modified. ${removed}." 1
+  elif [ -n "${signers}" ]; then
+    error "${image_file} is signed by ${signers//$'\n'/ }, not by the armbian image signing key ${fingerprint}. ${removed}." 1
+  fi
+  error "the signature ${signature_file} could not be checked with the armbian image signing key ${fingerprint}. ${removed}." 1
+}
+################################################################################
+# succeeds when a .sha file published by armbian is one line of the form
+# "<sha256> <image file name>", naming an armbian .img.xz image of the ubuntu
+# release. the file name comes from the network, so it may hold no path.
+#
+# parameters
+#     sha_file            - the .sha file
+#     ubuntu_version_name - the ubuntu release name, for example resolute
+is_armbian_image_sha_file() {
+  local sha_file=$1
+  local ubuntu_version_name=$2
+
+  [ "$(grep -c '' "${sha_file}")" = 1 ] && \
+    grep -qE "^[0-9a-f]{64} \*?Armbian[A-Za-z0-9._-]*_${ubuntu_version_name}_[A-Za-z0-9._-]*\.img\.xz$" "${sha_file}"
+}
+################################################################################
+# downloads the latest armbian image of a board, checks it against both its
+# published sha256 (.sha) and its detached signature (.asc) and echoes the
+# downloaded image file name, for example
+# ~/.sca/downloads/Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.img.xz
+#
+# the .sha names the image, so it is kept as
+# armbian-<board>-<ubuntu release>.sha. if it cannot be downloaded, the one
+# kept by an earlier run is used, with the image and signature it names.
+#
+# a missing or bad signature, or a sha256 that does not match, always stops
+# the build. a downloaded image that fails a check is removed. an image already
+# in the downloads folder that fails one is left for the user to remove, as
+# download_ubuntu_image does.
+#
+# parameters
+#     board               - the board, for example rock64
+#     ubuntu_version_name - the ubuntu release name, for example resolute
+#     downloads_folder    - the folder into which to download the image
+#
+# example call:
+# download_armbian_image rock64 resolute ~/.sca/downloads/
+download_armbian_image() {
+  local board=$1
+  local ubuntu_version_name=$2
+  local downloads_folder=$3
+
+  log_detailed "download_armbian_image: start (board=${board}, ubuntu_version_name=${ubuntu_version_name}, downloads_folder=${downloads_folder})"
+  local image_url=$(get_sca_usb_stick_board_field ${board} image_url ${ubuntu_version_name})
+  local sha_file=${downloads_folder}armbian-${board}-${ubuntu_version_name}.sha
+  mkdir -p ${downloads_folder}
+  if wget --quiet -O "${sha_file}.new" "${image_url}.sha" && \
+      is_armbian_image_sha_file "${sha_file}.new" ${ubuntu_version_name}; then
+    mv "${sha_file}.new" "${sha_file}"
+  else
+    rm -f "${sha_file}.new"
+    if ! [ -f "${sha_file}" ]; then
+      error "could not download ${image_url}.sha, the sha256 of the latest ${board} image, or it does not name an armbian ${ubuntu_version_name} image." 1
+    fi
+    >&2 echo "could not download ${image_url}.sha. using the previously downloaded ${sha_file}."
+    if ! is_armbian_image_sha_file "${sha_file}" ${ubuntu_version_name}; then
+      rm -f "${sha_file}"
+      error "the previously downloaded ${sha_file} does not name an armbian ${ubuntu_version_name} image. it was removed." 1
+    fi
+  fi
+  local expected_sum file
+  read -r expected_sum file < "${sha_file}"
+  file=${file#\*}
+  log_detailed "download_armbian_image: latest image ${file}"
+  local downloaded_file=${downloads_folder}${file}
+  local signature_file=${downloaded_file}.asc
+  if ! [ -f "${signature_file}" ]; then
+    if ! wget --quiet -O "${signature_file}.new" "${image_url}.asc"; then
+      rm -f "${signature_file}.new"
+      error "could not download ${image_url}.asc, the signature of ${file}. an unsigned image is never used." 1
+    fi
+    mv "${signature_file}.new" "${signature_file}"
+  fi
+  if [ -f "${downloaded_file}" ]; then
+    log_detailed "download_armbian_image: local image found. checking it."
+    if [ "$(sha256sum "${downloaded_file}" | cut -d ' ' -f 1)" != "$expected_sum" ]; then
+      error "the local image ${downloaded_file} does not match the sha256 in ${sha_file}. it is not used. remove it to download it again: rm -f ${downloaded_file}" 1
+    fi
+    check_armbian_image_signature "${downloaded_file}" "${signature_file}" false || exit 1
+    echo "${downloaded_file}"
+    log_detailed "download_armbian_image: finish (board=${board}, ubuntu_version_name=${ubuntu_version_name}, downloads_folder=${downloads_folder})"
+    return
+  fi
+  >&2 echo "downloading ${image_url} (${file}). this may take a while..."
+  if ! wget --append-output ${log_file} -O "${downloaded_file}.part" "${image_url}"; then
+    rm -f "${downloaded_file}.part"
+    error "failed downloading ${image_url}." 1
+  fi
+  # a mismatch here is also what a newer image published between the
+  # downloads of the .sha and of the image looks like: running again helps then
+  if [ "$(sha256sum "${downloaded_file}.part" | cut -d ' ' -f 1)" != "$expected_sum" ]; then
+    rm -f "${downloaded_file}.part" "${signature_file}"
+    error "the downloaded ${image_url} does not match the sha256 of ${file} in ${image_url}.sha. it was removed with its signature." 1
+  fi
+  check_armbian_image_signature "${downloaded_file}.part" "${signature_file}" true || exit 1
+  mv "${downloaded_file}.part" "${downloaded_file}"
+  echo "${downloaded_file}"
+  log_detailed "download_armbian_image: finish (board=${board}, ubuntu_version_name=${ubuntu_version_name}, downloads_folder=${downloads_folder})"
+}
+################################################################################
+# builds the sca image for an arm board from the board's armbian image:
+#
+# - downloads and checks the armbian image, see download_armbian_image
+# - decompresses it to <image>.sca.img
+# - reads the dpkg status of its root file system
+# - stages /opt/sca, /etc/profile.d/sca.sh and the packages for the board's
+#   architecture with patch_live_filesystem, as for the pc image, plus the
+#   appliance settings, see add_armbian_appliance_settings
+# - copies the staged files into the root file system of the image
+#
+# nothing runs inside the image: sca is installed on the board at first login,
+# as on the pc image, so no chroot or qemu-user is needed. the root file system
+# is mounted only while reading the dpkg status and while copying, so a failed
+# step in between leaves nothing mounted.
+#
+# parameters
+#   board, ubuntu_version_name, downloads_folder, image_mount_folder (where to
+#   mount the root file system), image_sca_folder (intermediary files), then
+#   the folders and options patch_live_filesystem takes, then skip_cleanup and
+#   no_cache_iso
+#
+# NOTE: this function requires sudo priviledges to attach and mount the image
+build_armbian_image() {
+  local board=$1
+  local ubuntu_version_name=$2
+  local downloads_folder=$3
+  local image_mount_folder=$4
+  local image_sca_folder=$5
+  local live_filesystem_folder=$6
+  local live_filesystem_repos_folder=$7
+  local live_filesystem_sca_home_folder=$8
+  local offline_repos_folder=$9
+  local live_filesystem_packages_folder=${10}
+  local test_folder_relative=${11}
+  local yubikey_support=${12}
+  local exclude_pkcs11_support=${13}
+  local skip_cleanup=${14}
+  local no_cache_iso=${15}
+
+  log_detailed "build_armbian_image: start (board=${board}, ubuntu_version_name=${ubuntu_version_name})"
+  local original_image
+  original_image=$(download_armbian_image ${board} ${ubuntu_version_name} ${downloads_folder}) || exit 1
+  local new_image_file=${original_image%.img.xz}.sca.img
+  local new_options_file=$(get_sca_iso_options_file ${new_image_file})
+  local requested_options=$(get_sca_iso_options ${yubikey_support} false ${exclude_pkcs11_support})
+  log_detailed "build_armbian_image: new_image_file ${new_image_file}"
+  reuse_sca_image ${new_image_file} "${requested_options}" image ${board} && return
+  local root_partition=$(get_sca_usb_stick_board_field ${board} root_partition)
+  local live_dpkg_status_file=${image_sca_folder}dpkg-status
+  # an options file left from an earlier image must not vouch for this one
+  rm -f ${new_options_file}
+  >&2 echo "decompressing ${original_image}..."
+  if ! xz -dc ${original_image} > ${new_image_file}.part; then
+    rm -f ${new_image_file}.part
+    error "could not decompress ${original_image}." 1
+  fi
+  local loop_device
+  loop_device=$(attach_armbian_image ${new_image_file}.part ${root_partition} ${image_mount_folder}) || \
+    { rm -f ${new_image_file}.part; exit 1; }
+  mkdir -p ${image_sca_folder}
+  cp ${image_mount_folder}var/lib/dpkg/status ${live_dpkg_status_file}
+  local copied=$?
+  detach_armbian_image ${image_mount_folder} ${loop_device}
+  if [ $copied != 0 ]; then
+    rm -f ${new_image_file}.part
+    error "could not read the dpkg status of ${original_image}." 1
+  fi
+  local apt_options=$(get_armbian_apt_options ${board} ${ubuntu_version_name} ${image_sca_folder}apt/)
+  patch_live_filesystem \
+    $live_filesystem_folder \
+    $live_filesystem_repos_folder \
+    $live_filesystem_sca_home_folder \
+    $offline_repos_folder \
+    $live_filesystem_packages_folder \
+    false \
+    $test_folder_relative \
+    $ubuntu_version_name \
+    false \
+    $yubikey_support \
+    $exclude_pkcs11_support \
+    $live_dpkg_status_file \
+    "${apt_options}"
+  add_armbian_appliance_settings $live_filesystem_folder
+  loop_device=$(attach_armbian_image ${new_image_file}.part ${root_partition} ${image_mount_folder}) || \
+    { rm -f ${new_image_file}.part; exit 1; }
+  copy_into_armbian_image $live_filesystem_folder $image_mount_folder
+  copied=$?
+  detach_armbian_image ${image_mount_folder} ${loop_device}
+  if [ $copied != 0 ]; then
+    rm -f ${new_image_file}.part
+    error "could not add sca to ${new_image_file}. the image was removed." 1
+  fi
+  mv ${new_image_file}.part ${new_image_file}
+  echo "${requested_options}" > ${new_options_file}
+  echo "written: ${new_image_file}"
+  print_sca_disk_image_help ${new_image_file} ${board}
+  [ $skip_cleanup != true ] && clean_up_live_usb_intermediary_files \
+    $live_filesystem_folder \
+    $image_sca_folder \
+    $original_image \
+    $no_cache_iso
+  log_detailed "build_armbian_image: finish (board=${board}, ubuntu_version_name=${ubuntu_version_name})"
+}
+################################################################################
+# attaches a disk image to a loop device, mounts the root file system on its
+# partition and echoes the loop device. fails, leaving nothing attached or
+# mounted, unless the partition holds an armbian root file system.
+#
+# parameters
+#   image_file          - the disk image
+#   root_partition      - the number of the root file system partition
+#   image_mount_folder  - where to mount it
+attach_armbian_image() {
+  local image_file=$1
+  local root_partition=$2
+  local image_mount_folder=$3
+
+  log_detailed "attach_armbian_image: start (image_file=${image_file}, root_partition=${root_partition}, image_mount_folder=${image_mount_folder})"
+  local loop_device
+  loop_device=$(sudo losetup --find --show --partscan ${image_file})
+  if [ $? != 0 ] || [ -z "${loop_device}" ]; then
+    error "could not attach ${image_file} to a loop device (sudo losetup failed, see above)." 1
+  fi
+  local root_device=${loop_device}p${root_partition}
+  # the partition device node can show up a moment after losetup returns
+  local tries=0
+  while ! [ -b ${root_device} ] && [ $tries -lt 20 ]; do
+    sleep 0.5
+    tries=$((tries+1))
+  done
+  mkdir -p ${image_mount_folder}
+  if ! sudo mount -t ext4 ${root_device} ${image_mount_folder}; then
+    sudo losetup -d ${loop_device}
+    rmdir ${image_mount_folder} 2> /dev/null
+    error "could not mount ${root_device}, partition ${root_partition} of ${image_file}, at ${image_mount_folder} (sudo mount -t ext4 failed, see above)." 1
+  fi
+  if ! [ -f ${image_mount_folder}etc/armbian-release ] || \
+      ! [ -f ${image_mount_folder}var/lib/dpkg/status ]; then
+    detach_armbian_image ${image_mount_folder} ${loop_device}
+    error "$(basename ${image_file}) does not have the expected layout: an armbian root file system, with etc/armbian-release and var/lib/dpkg/status, on partition ${root_partition}." 1
+  fi
+  echo ${loop_device}
+  log_detailed "attach_armbian_image: finish (loop_device=${loop_device})"
+}
+################################################################################
+# unmounts the root file system of a disk image and detaches its loop device
+detach_armbian_image() {
+  local image_mount_folder=$1
+  local loop_device=$2
+
+  log_detailed "detach_armbian_image: start (image_mount_folder=${image_mount_folder}, loop_device=${loop_device})"
+  sudo umount ${image_mount_folder}
+  sudo losetup -d ${loop_device}
+  rmdir ${image_mount_folder}
+  log_detailed "detach_armbian_image: finish"
+}
+################################################################################
+# prints the apt-get options that resolve and download the packages for an arm
+# board instead of this host: the board's architecture, from ports.ubuntu.com,
+# where ubuntu publishes the arm archives. the sources are kept in apt_folder,
+# so this host's apt configuration is never changed. the archive is checked
+# with this host's ubuntu archive key, which signs ports.ubuntu.com too.
+#
+# parameters
+#   board               - the board
+#   ubuntu_version_name - the ubuntu release name, for example resolute
+#   apt_folder          - the folder to keep the sources and lists in
+get_armbian_apt_options() {
+  local board=$1
+  local ubuntu_version_name=$2
+  local apt_folder=$3
+
+  local arch=$(get_sca_usb_stick_board_field ${board} arch)
+  mkdir -p ${apt_folder}sources.list.d ${apt_folder}lists/partial ${apt_folder}cache
+  echo "Types: deb
+URIs: http://ports.ubuntu.com/ubuntu-ports/
+Suites: ${ubuntu_version_name} ${ubuntu_version_name}-security ${ubuntu_version_name}-updates
+Components: main restricted universe
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg" > ${apt_folder}sources.list.d/ubuntu-ports.sources
+  echo "-o APT::Architecture=${arch} -o APT::Architectures=${arch}" \
+    "-o Dir::Etc::SourceList=/dev/null -o Dir::Etc::SourceParts=${apt_folder}sources.list.d" \
+    "-o Dir::State::Lists=${apt_folder}lists -o Dir::Cache=${apt_folder}cache"
+}
+################################################################################
+# adds the settings an armbian board needs as an air-gapped ca appliance to the
+# staged files, as described in docs/air-gapped-appliance.md:
+#
+# - masks the fake-hwclock units (4.1): fake-hwclock-load sets the clock back
+#   to a stale saved time at every boot (debian #1093227), which puts wrong
+#   notBefore dates on the certificates the ca issues
+# - keeps the journal on disk, bounded in size (4.6): armbian keeps it in RAM,
+#   so it is gone at every power cut
+#
+# armbian-ramlog is disabled by copy_into_armbian_image, as it edits a file of
+# the image.
+add_armbian_appliance_settings() {
+  local live_filesystem_folder=$1
+
+  log_detailed "add_armbian_appliance_settings: start (live_filesystem_folder=${live_filesystem_folder})"
+  local systemd_system_folder=${live_filesystem_folder}etc/systemd/system/
+  local journald_folder=${live_filesystem_folder}etc/systemd/journald.conf.d/
+  sudo mkdir -p ${systemd_system_folder} ${journald_folder}
+  local unit
+  for unit in fake-hwclock-load.service fake-hwclock-save.service fake-hwclock-save.timer; do
+    sudo ln -sfn /dev/null ${systemd_system_folder}${unit}
+  done
+  printf '[Journal]\nStorage=persistent\nSystemMaxUse=64M\nSystemMaxFileSize=8M\n' | \
+    sudo tee ${journald_folder}zz-sca-appliance.conf > /dev/null
+  log_detailed "add_armbian_appliance_settings: finish (live_filesystem_folder=${live_filesystem_folder})"
+}
+################################################################################
+# copies the staged files into the mounted root file system of an armbian
+# image, owned by root, and disables armbian-ramlog, which keeps /var/log in RAM
+# and so would lose the journal at a power cut (docs/air-gapped-appliance.md
+# 4.6). fails, saying why, if the files do not fit.
+#
+# parameters
+#   live_filesystem_folder  - the staged files
+#   image_mount_folder      - where the root file system is mounted
+copy_into_armbian_image() {
+  local live_filesystem_folder=$1
+  local image_mount_folder=$2
+
+  log_detailed "copy_into_armbian_image: start (live_filesystem_folder=${live_filesystem_folder}, image_mount_folder=${image_mount_folder})"
+  local needed=$(sudo du -sB1 ${live_filesystem_folder} | cut -f 1)
+  local available=$(df --output=avail -B1 ${image_mount_folder} | tail -n 1 | tr -d ' ')
+  if ! [ "${needed}" -lt "${available}" ] 2> /dev/null; then
+    >&2 echo "the sca files (${needed} bytes) do not fit in the root file system of the image (${available} bytes free)."
+    return 1
+  fi
+  # -d keeps the symbolic links, such as the unit masks. without -p, existing
+  # folders of the image keep their owner and mode
+  if ! sudo cp -dR ${live_filesystem_folder}. ${image_mount_folder}; then
+    >&2 echo "could not copy ${live_filesystem_folder} into the image."
+    return 1
+  fi
+  local ramlog_file=${image_mount_folder}etc/default/armbian-ramlog
+  if [ -f ${ramlog_file} ]; then
+    sudo sed -i 's/^ENABLED=.*/ENABLED=false/' ${ramlog_file} || return 1
+  fi
+  log_detailed "copy_into_armbian_image: finish"
 }
 ################################################################################
 # mounts the original iso image and extracts the files needed for building the
@@ -605,6 +1140,7 @@ patch_live_filesystem() {
   local yubikey_support=${10}
   local exclude_pkcs11_support=${11}
   local live_dpkg_status_file=${12}
+  local apt_options=${13}
 
   log_detailed "patch_live_filesystem start ("\
     "live_filesystem_folder=${live_filesystem_folder}, "\
@@ -618,7 +1154,7 @@ patch_live_filesystem() {
   add_sca $live_filesystem_folder $live_filesystem_sca_home_folder $test_mode $test_folder_relative $yubikey_support $include_apt_mirror
   add_repos $live_filesystem_repos_folder $ubuntu_version_name $include_apt_mirror
   add_sources_list $live_filesystem_folder $offline_repos_folder $ubuntu_version_name $include_apt_mirror
-  add_packages $live_filesystem_packages_folder $exclude_pkcs11_support $yubikey_support $live_dpkg_status_file
+  add_packages $live_filesystem_packages_folder $exclude_pkcs11_support $yubikey_support $live_dpkg_status_file "${apt_options}"
   log_detailed "patch_live_filesystem finish ("\
     "live_filesystem_folder=${live_filesystem_folder}, "\
     "live_filesystem_repos_folder=${live_filesystem_repos_folder}, "\
@@ -727,23 +1263,53 @@ create_live_iso() {
     "iso_image_file=${iso_image_file}, iso_image_sca_folder=${iso_image_sca_folder}, "\
     "new_iso_image_file=${new_iso_image_file})"
 }
+################################################################################
+# prints how to write the sca image to the medium the board boots
+#
+# parameters
+#   new_iso_image_file  - the sca image
+#   board               - the board the image is for, pc by default
 print_sca_disk_image_help() {
   local new_iso_image_file=$1
+  local board=${2:-pc}
 
   # never print a concrete device: a pasted command would overwrite whatever
   # disk happens to have that name on the user's machine
-  echo "to write the image to a usb stick, insert the stick and identify its device"
-  echo "(BE CAREFUL - wrong device = data loss). a usb stick usually shows TRAN=usb, RM=1:"
+  if [ "$board" = pc ]; then
+    echo "to write the image to a usb stick, insert the stick and identify its device"
+    echo "(BE CAREFUL - wrong device = data loss). a usb stick usually shows TRAN=usb, RM=1:"
+    print_block_devices stick
+    echo "then, replacing sdX with your stick's device, type:"
+  else
+    local boot_medium=$(get_sca_usb_stick_board_field ${board} boot_medium)
+    echo "${board} boots this image from a ${boot_medium} as written. to boot it from a usb"
+    echo "stick instead, the board needs u-boot in its spi flash first - a one-time step"
+    echo "per board, see docs/usb-boot-on-arm.md"
+    echo
+    echo "to write the image to a ${boot_medium}, insert the card and identify its device"
+    echo "(BE CAREFUL - wrong device = data loss). a card in a usb reader usually shows"
+    echo "TRAN=usb, RM=1; a built-in reader names it mmcblkN, its first partition mmcblkNp1:"
+    print_block_devices card
+    echo "then, replacing sdX with your card's device, type:"
+  fi
+  echo "sudo umount /dev/sdX1"
+  echo "sudo dd bs=4M if=${new_iso_image_file} of=/dev/sdX conv=fdatasync"
+}
+################################################################################
+# lists the disks the image can be written to, never loop devices
+#
+# parameters
+#   medium  - what to call the medium if the disks cannot be listed
+print_block_devices() {
+  local medium=$1
+
   # -e 7 hides loop devices (snaps etc.), which would bury the real disks
   if command -v lsblk >/dev/null 2>&1; then
     lsblk -do NAME,TRAN,RM,SIZE,MODEL -e 7 2>/dev/null \
       || echo "  (could not list devices; run: lsblk -do NAME,TRAN,RM,SIZE,MODEL -e 7)"
   else
-    echo "  (lsblk not found; identify the stick with your system's disk tools)"
+    echo "  (lsblk not found; identify the ${medium} with your system's disk tools)"
   fi
-  echo "then, replacing sdX with your stick's device, type:"
-  echo "sudo umount /dev/sdX1"
-  echo "sudo dd bs=4M if=${new_iso_image_file} of=/dev/sdX conv=fdatasync"
 }
 ################################################################################
 # mirrors the ubuntu main and restricted repositories into the sca layer, when
@@ -974,6 +1540,9 @@ Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg"
 #   - exclude_pkcs11_support          - skip the pkcs11 packages
 #   - yubikey_support                 - add the yubikey packages
 #   - live_dpkg_status_file           - the dpkg status of the live filesystem
+#   - apt_options                     - optional apt-get options, to download
+#                                       the packages for an arm board, see
+#                                       get_armbian_apt_options
 #
 # example call
 #   add_packages ~/.sca/live_filesystem/opt/sca/packages/ false true ~/.sca/iso_image_sca/dpkg-status
@@ -983,6 +1552,7 @@ add_packages() {
   local exclude_pkcs11_support=$2
   local yubikey_support=$3
   local live_dpkg_status_file=$4
+  local apt_options=$5
 
   log_detailed "add_packages: start ("\
     "live_filesystem_packages_folder=${live_filesystem_packages_folder}, "\
@@ -996,12 +1566,14 @@ add_packages() {
   sudo mkdir -p ${live_filesystem_packages_folder}partial
   local redirect_output='> /dev/null'
   [[ $verbosity == vv* ]] && redirect_output=">> ${log_file}"
-  eval sudo apt-get update ${redirect_output}
-  eval sudo apt-get install --download-only --yes --no-install-recommends \
+  eval sudo apt-get ${apt_options} update ${redirect_output}
+  eval sudo apt-get ${apt_options} install --download-only --yes --no-install-recommends \
     -o Dir::State::status=${live_dpkg_status_file} \
     -o Dir::Cache::archives=${live_filesystem_packages_folder} \
     ${packages[*]} ${redirect_output}
   if [ $? != 0 ]; then
+    [ -n "${apt_options}" ] && \
+      error "failed downloading ${packages[*]} for the offline environment from ports.ubuntu.com." 1
     error "failed downloading ${packages[*]} for the offline environment. check that this host's apt sources include the ubuntu universe component." 1
   fi
   sudo rm -rf ${live_filesystem_packages_folder}partial ${live_filesystem_packages_folder}lock
