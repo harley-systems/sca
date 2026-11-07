@@ -6,64 +6,22 @@ on:
     branches: [test/gh-hosted-probe]
 
 jobs:
-  probe:
+  signing-key:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - run: make check-ubuntu-key
 
-      - name: disk as delivered
-        run: |
-          echo "### / ###";    df -h /
-          echo "### /mnt ###"; df -h /mnt || true
-          echo "### docker data root ###"
-          docker info --format '{{.DockerRootDir}}'
-          df -h "$(docker info --format '{{.DockerRootDir}}')"
-
-      - name: reclaimable space
-        run: |
-          echo "preinstalled bulk:"
-          sudo du -sh /usr/local/lib/android /opt/ghc /usr/share/dotnet \
-                      /usr/local/share/boost /opt/hostedtoolcache 2>/dev/null || true
-
-      - name: privileged container + loop device + mount
-        run: |
-          set -x
-          docker run --rm --privileged ubuntu:24.04 bash -c '
-            set -e
-            apt-get update -qq && apt-get install -y -qq util-linux e2fsprogs > /dev/null
-            dd if=/dev/zero of=/tmp/img bs=1M count=64 status=none
-            lo=$(losetup --find --show /tmp/img)
-            echo "loop device: $lo"
-            mkfs.ext4 -q "$lo"
-            mkdir -p /mnt/t && mount "$lo" /mnt/t
-            echo ok > /mnt/t/probe && cat /mnt/t/probe
-            umount /mnt/t && losetup -d "$lo"
-            echo "LOOP_AND_MOUNT=ok"
-          '
-
-      - name: iso tooling in a container
-        run: |
-          docker run --rm ubuntu:24.04 bash -c '
-            apt-get update -qq
-            apt-get install -y -qq xorriso squashfs-tools > /dev/null
-            xorriso -version 2>&1 | head -2
-            mksquashfs -version | head -1
-            echo "ISO_TOOLS=ok"
-          '
-
-      - name: the bind mount that fails on the self-hosted runner
-        run: |
-          echo "PWD=$PWD"
-          n=$(docker run --rm -v "${PWD}":/src:ro ubuntu:24.04 sh -c 'ls /src | wc -l')
-          echo "files visible at /src: $n"
-          test "$n" -gt 0 && echo "BIND_MOUNT=ok" || { echo "BIND_MOUNT=EMPTY"; exit 1; }
-
-      - name: can a 6.5 GB iso plus a rebuild fit
-        run: |
-          avail_kb=$(df --output=avail -k / | tail -1)
-          echo "available on /: $((avail_kb/1024/1024)) GiB"
-          echo "need roughly: 6.5 iso + ~6.5 rebuild + ~3 unpack = ~16 GiB"
-          if [ "$avail_kb" -gt $((18*1024*1024)) ]; then echo "FITS=yes"
-          elif [ "$avail_kb" -gt $((12*1024*1024)) ]; then echo "FITS=after-cleanup"
-          else echo "FITS=no"; fi
+  full-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: disk before
+        run: df -h /
+      - name: make integration (cold cache)
+        run: make integration
+      - name: disk after
+        if: always()
+        run: df -h /
