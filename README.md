@@ -180,7 +180,9 @@ This repo includes a [Claude Code](https://claude.com/claude-code) skill that pr
 /plugin marketplace add harley-systems/claude-skills
 ```
 
-Then install "sca-plugin" when prompted.
+Then install "sca-plugin" when prompted. The marketplace fetches the skill
+straight from `.claude/skills/sca-cskill/` on this repository's `main` branch, so
+the installed skill is never behind the one in this repo.
 
 ## Architecture
 
