@@ -187,7 +187,13 @@ appliance_verify_units() {
 }
 # the time the kernel took from rtc0 at boot is not earlier than the end of the
 # previous boot, i.e. the clock kept running while the power was off. skipped
-# when the journal holds no previous boot, as with a volatile journal
+# when the journal holds no previous boot, with the first reason that applies:
+#   - runtime journal files in /run/log/journal: journald writes there only
+#     when it does not persist (or before systemd-journal-flush, long before
+#     a login shell), whatever /var/log/journal looks like
+#   - /var/log on a zram disk (armbian-ramlog): a persistent journal is still
+#     in RAM, and lost at a power cut
+#   - otherwise, genuinely the first boot since the journal persists
 appliance_verify_power_cut() {
   local rtc0_name=$(cat "$(appliance_path /sys/class/rtc/rtc0/name)" 2>/dev/null)
   if [ -z "$rtc0_name" ]; then
@@ -199,11 +205,19 @@ appliance_verify_power_cut() {
     return 1
   fi
   if [ -z "$appliance_previous_boot_epoch" ]; then
-    if [ -d "$(appliance_path /var/log/journal)" ]; then
-      detail="no previous boot in the journal"
-    else
-      detail="journal is volatile: no /var/log/journal"
+    local runtime_journal
+    for runtime_journal in "$(appliance_path /run/log/journal)"/*/*.journal*; do
+      if [ -e "$runtime_journal" ]; then
+        detail="journal is volatile: kept in /run/log/journal"
+        return 2
+      fi
+    done
+    local var_log_source=$(findmnt -n -o SOURCE /var/log 2>/dev/null | head -n 1)
+    if [[ "$var_log_source" == /dev/zram* ]]; then
+      detail="journal is in RAM: /var/log is on zram"
+      return 2
     fi
+    detail="no previous boot in the journal"
     return 2
   fi
   local behind=$((appliance_previous_boot_epoch - appliance_boot_clock_epoch))
