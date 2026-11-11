@@ -44,7 +44,7 @@ Some dimensions come from listings and datasheets, not from the parts in hand. T
 parameters at the top of `fixture.scad`:
 
 - **Pin position under each touch pad:** `pin_ty_yk4` and `pin_ty_yk5`. The test piece showed the pad centre is about 29 mm from the plug tip (YubiKey 4, Security Key and 5C alike). In rev E the pins sit about 7 mm too far from the hub, so move them once the hub's socket faces are measured: pin = plug tip position − 29 mm.
-- **Pin height:** `pin_len` (barrel top to tip, plunger out) and `pad_z` (height of the touch disk in the tunnel). Together they set how hard the pin presses.
+- **Pin height:** `pad_z` (height of the touch disk in the tunnel). With `pin_len` (16.5 mm, measured: barrel top to tip, plunger out) it sets how hard the pin presses.
 - **Key tunnel:** 18.3 × 5.2 mm, for a key body of 18 × 3.3 mm.
 - **Hub board:** the size, the four mounting holes (`HUB_POSTS`) and the socket positions (`yk4_opening`, `yk5_recess`, `plug_opening`).
 

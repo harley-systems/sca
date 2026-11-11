@@ -29,7 +29,7 @@ pin_ty_yk4  = -22;     // 21 mm north of the box wall
 pin_ty_yk5  = 85;      // 23 mm south of the box wall
 
 // pogo pin P75 (barrel 1.02 mm)
-pin_len     = 15.85;   // barrel top to tip, plunger fully out (MEASURE)
+pin_len     = 16.5;    // barrel top to tip, plunger fully out (measured)
 pad_z       = 7.6;     // height of the touch disk in the tunnel: key on the floor, 3.3 thick, 0.3 dip (MEASURE)
 pin_press   = 1.0;     // how far the plunger is pushed in when the pin is down on the disk
 pin_lift    = 2.5;     // how far the bar lifts the pin; the tip then clears the key by ~1.2 mm
@@ -37,13 +37,11 @@ channel_d   = 1.6;     // touch-wire channel (30 AWG)
 
 // knob and slide bar
 knob_w      = 3.6;     // square knob, in a knob_w + 0.3 square hole
-knob_z0     = 12.3;    // knob bottom when the pin is down
-knob_h      = 18.2;    // sticks out 1.5 mm above the tower when down, 4 mm when up
+knob_h      = 18.2;    // sticks out about 1.5 mm above the tower when down, 4 mm when up
 knob_bore_d = 1.4;     // loose on the 1.02 barrel, so the tip passes; the solder joint rests on the slot floor
 fil_d       = 1.75;    // filament cross pin
 tower_w     = 7;       // square tower
-tower_top   = 29;
-barrel_top  = pad_z - pin_press + pin_len;   // 22.45 with the values above
+barrel_top  = pad_z - pin_press + pin_len;   // 23.1 with the values above
 fil_z       = barrel_top + fil_d / 2 + 0.03;   // the filament sits right on top of the barrel
 bar_t       = 1.6;     // slide bar: 11 long x 6.9 tall x 1.6 thick
 bar_len     = 11;
@@ -52,6 +50,8 @@ bar_v_low   = 2.2;     // slot height in the bar, from its bottom edge, for pin 
 bar_u_down  = 1.5;     // slot positions along the bar where the filament rests (flat ends)
 bar_u_up    = 9.5;
 slot_w      = 1.95;
+knob_z0     = barrel_top - 10.15;   // knob bottom when the pin is down
+tower_top   = fil_z - bar_v_low + bar_h + 0.95;   // 0.8 mm roof over the bar sleeve
 
 // M2 heat-set insert 3.5 OD x 3: hole 3.2, pressed in with the Pinecil at ~220 C (PLA)
 insert_hole_d = 3.2;
