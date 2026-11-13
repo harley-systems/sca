@@ -14,6 +14,8 @@
 // top of the pin barrel, and runs in a slanted slot in a slide bar held in a sleeve on the tower's
 // west face. Bar pushed south: pin pressed onto the button. Bar pushed north: pin lifted pin_lift mm
 // so the key slides freely. The flat ends of the slot hold the bar where it is left.
+// The wire is soldered to the pin outside the fixture, never in place: it leaves the knob through a side
+// slot and runs down a slot in the tower wall that is open at the top, then through a channel into the box.
 //
 // Coordinates (mm): x runs west -> east, ty runs north -> south (the YubiKey 4 drawer is north,
 // the YubiKey 5 drawer south), z is up from the bed. ty = 0 is the outside of the north wall.
@@ -155,7 +157,9 @@ module drawer_cuts(d) {
         cy(pin_x, pty, 9.0, 12.1, 2.2, 24);                         // hole in the tunnel roof for the plunger
         bx(pin_x - kh, pin_x + kh, pty - kh, pty + kh, 12.0, tower_top + 1);   // square hole for the knob
         w = s > 0 ? [pty + kh - 0.1, pty + tw + 0.1] : [pty - tw - 0.1, pty - kh + 0.1];
-        bx(pin_x - 0.8, pin_x + 0.8, w[0], w[1], barrel_top - 1.6, barrel_top + pin_lift + 1.05);   // wire slot, box side
+        // wire slot on the box side, open at the top: the wire, soldered to the pin on the bench, slides down it
+        // with the knob (a closed window pinched the wire between the knob and the wall above it)
+        bx(pin_x - 0.8, pin_x + 0.8, w[0], w[1], barrel_top - 1.6, tower_top + 1);
         rod([pin_x, pty + s * 2.9, barrel_top - 0.4], d[6], channel_d);   // wire channel to the box
         bx(xf - 0.1, pin_x - kh + 0.1, pty - 1, pty + 1, fz0, fz1);   // filament slot, west wall
         bx(xf - bar_t - 0.25, xf + 0.01, pty - tw - 1, pty + tw + 1, bz - 0.15, bz + bar_h + 0.15);   // inside of the sleeve

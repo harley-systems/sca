@@ -38,6 +38,9 @@ or out:
   `pin_lift` (2.5 mm) and the key slides freely. Push it **south**: the pin presses onto the disk with
   `pin_press` (1 mm) of spring travel. The slot is flat at both ends, so the bar stays where you leave it.
 - The knob sticks out 1.5 mm above the tower when the pin is down and 4 mm when it is up, so you can see which.
+- The touch wire is soldered to the pin on the bench, never in place (there is no room in the tower, and the
+  iron would melt it). It leaves the knob through a side slot facing the box, runs down a slot in the tower's
+  box-side wall that is open at the top, and goes through a channel in the sloped rib into the box.
 
 ## Layout (rev G, measured)
 
@@ -118,11 +121,11 @@ Commands (one line each, every reply starts with `ok` or `err`):
 1. Press in the M2 heat-set inserts with the Pinecil insert tip at about 220 °C. The plastic melts into the knurls and holds them.
 2. Plug both adapters (the YubiKey 5 adapter and the U-turn) into the hub, then lower the hub onto its corner pads, north sockets against the north wall and the YubiKey 5 adapter face against the south wall.
 3. Fit the deck, the switch boards and the RP2040-Zero, which slides onto the U-turn plug. Then wire the power.
-4. Fit each pin lift:
-   1. Push the touch wire through its channel from the box until it comes out of the slot on the box side of the tower. Pull out a few centimetres.
-   2. On the bench, solder the wire to the **side** of the pin barrel, within 1 mm of its top end. Keep the top end itself clean: the filament presses on it.
-   3. Drop the pin into the knob from the top, tip first, with the wire lying in the knob's side slot. The solder joint rests on the floor of the slot, which stops the pin from falling through.
-   4. Slide the bar into the sleeve on the tower's west face, pushed south. Drop the knob into the tower with its wire slot facing the box.
-   5. Cut 7.5 mm of 1.75 mm filament and push it through the sleeve window, the bar slot and the tower slot into the knob's cross hole, until it stops against the far wall.
-   6. Gently pull the extra wire back into the box.
+4. Fit each pin lift. Solder before the pin goes in: once it is in the tower you can't reach it.
+   1. Slide the bar into the sleeve on the tower's west face, pushed south.
+   2. Push the touch wire through its channel from the box until it comes out in the tower, then pull it up out of the top of the tower, a few centimetres (tweezers help).
+   3. Hold the pin above the fixture and solder the wire to the **side** of the barrel, within 1 mm of its top end. Keep the top end itself clean: the filament presses on it.
+   4. Drop the pin into the knob from the top, tip first, with the wire lying in the knob's side slot. The solder joint rests on the floor of the slot, which stops the pin from falling through.
+   5. Lower the knob into the tower with its side slot facing the box. The wire slides down the open slot in the tower's box-side wall; pull the extra wire gently back into the box as you go.
+   6. With the key in its drawer, press the knob down until its cross hole lines up with the bar slot. Cut 7.5 mm of 1.75 mm filament and push it through the sleeve window, the bar slot and the tower slot into the knob's cross hole, until it stops against the far wall.
 5. Drop the lid in 1 mm south, slide it north so the tab enters the wall slot, and fit the two M2×6 screws.
