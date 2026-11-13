@@ -1,0 +1,2 @@
+# YubiKey touch fixture (RP2040-Zero): let the logged-in user open its serial port.
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", ATTRS{product}=="YubiKey touch*", TAG+="uaccess"

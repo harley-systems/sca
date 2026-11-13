@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Send one command to the YubiKey touch fixture and print its reply.
+
+    yktouch touch 5          # touch the YubiKey 5 for 500 ms
+    yktouch touch 4 1500     # touch the YubiKey 4 for 1.5 s
+    yktouch status
+
+Set YKTOUCH_PORT to choose the serial port; by default the fixture is found by name.
+"""
+import glob, os, select, sys, termios, time
+
+def find_port():
+    if os.environ.get("YKTOUCH_PORT"):
+        return os.environ["YKTOUCH_PORT"]
+    ports = glob.glob("/dev/serial/by-id/*YubiKey_touch*")
+    if not ports:
+        sys.exit("yktouch: fixture not found (is it plugged in and programmed?)")
+    return ports[0]
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit(__doc__.strip())
+    fd = os.open(find_port(), os.O_RDWR | os.O_NOCTTY)
+    attrs = termios.tcgetattr(fd)
+    attrs[0] = attrs[1] = attrs[3] = 0          # raw: no echo, no line editing
+    attrs[2] |= termios.CLOCAL | termios.CREAD
+    termios.tcsetattr(fd, termios.TCSANOW, attrs)
+    termios.tcflush(fd, termios.TCIFLUSH)
+    os.write(fd, (" ".join(sys.argv[1:]) + "\n").encode())
+    reply, deadline = b"", time.time() + 15
+    while b"\n" not in reply and time.time() < deadline:
+        if select.select([fd], [], [], 0.5)[0]:
+            reply += os.read(fd, 256)
+    os.close(fd)
+    line = reply.decode(errors="replace").strip()
+    if not line:
+        sys.exit("yktouch: no reply")
+    print(line)
+    sys.exit(0 if line.startswith("ok") else 1)
+
+main()
