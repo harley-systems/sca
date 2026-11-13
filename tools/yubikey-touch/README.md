@@ -1,4 +1,4 @@
-# YubiKey touch fixture (rev F)
+# YubiKey touch fixture (rev G)
 
 A printed holder that presses a pogo pin onto the touch pad of a YubiKey 4 (USB-A) and a
 YubiKey 5 NFC (USB-C), so an RP2040-Zero can "touch" each key by grounding its pin. It also
@@ -8,14 +8,14 @@ switches each key's power. Use it only with test keys: it removes the user-prese
 
 | File | What | Print |
 |---|---|---|
-| `stl/yubikey-touch-test.stl` | North drawer and pin tower only | First, about 45 min: checks the key fit and the pin lift. Print one knob and one bar with it |
+| `stl/yubikey-touch-test.stl` | North drawer, pin tower and the north strip of the box, with its hub pads and fences | First: sit the hub on it with a YubiKey 4 to check the socket-face seat, the key height, the pin over the button and the pin lift. Print one knob and one bar with it |
 | `stl/yubikey-touch-body.stl` | Box, both drawers, towers, insert blocks | Floor on the bed |
 | `stl/yubikey-touch-deck.stl` | Board tray above the hub | Flat |
 | `stl/yubikey-touch-lid.stl` | Lid with hold-down ribs | Top face on the bed |
 | `stl/yubikey-touch-knob.stl` | Square knob that holds the pogo pin | Standing up, one per pin. Use a brim: it is tall and thin |
 | `stl/yubikey-touch-bar.stl` | Slide bar that lifts the knob | Flat, one per pin |
 
-`yubikey-touch-fixture.mp4` is an animation of the assembly.
+`yubikey-touch-fixture.mp4` is an animation of the assembly. It still shows rev F.
 
 ## Print settings (Prusa, PLA)
 
@@ -40,13 +40,26 @@ or out:
 
 ## Check before printing the body
 
-Some dimensions come from listings and datasheets, not from the parts in hand. They are
-parameters at the top of `fixture.scad`:
+Rev G is laid out from parts measured with calipers. Every position is derived from a few datums at the
+top of `fixture.scad`, so a correction is one line. These are still assumed, not measured:
 
-- **Pin position under each touch pad:** `pin_ty_yk4` and `pin_ty_yk5`. The test piece showed the pad centre is about 29 mm from the plug tip (YubiKey 4, Security Key and 5C alike). In rev E the pins sit about 7 mm too far from the hub, so move them once the hub's socket faces are measured: pin = plug tip position − 29 mm.
-- **Pin height:** `pad_z` (height of the touch disk in the tunnel). With `pin_len` (16.5 mm, measured: barrel top to tip, plunger out) it sets how hard the pin presses.
-- **Key tunnel:** 18.3 × 5.2 mm, for a key body of 18 × 3.3 mm.
-- **Hub board:** the size, the four mounting holes (`HUB_POSTS`) and the socket positions (`yk4_opening`, `yk5_recess`, `plug_opening`).
+- **A1** The hub board is 32.3 mm along the socket edges (x) and 35.5 mm along the USB-C edge (`hub_w`, `hub_l`).
+- **A2** "3.6 above the board" is the top of the A socket shell above the board's top face, with a 7.0 mm
+  shell (`sock_above`, `sock_h`), so the socket centre sits about at the board plane.
+- **A3** "RP2040 15.4 above the board" is the RP2040-Zero's PCB underside above the hub board top (`rp_above`).
+  Its total height to the top of its USB-C socket is taken as 4.4 mm (`rp_h`).
+- **A4** "Reaches 2.5 below its plug" is measured from the underside of the U-turn's A plug (`uturn_below`).
+- **A5** The U-turn's socket position in x and its depth in ty aren't measured. The deck notch keeps its rev F
+  x (23.6 to 35.6) and is 8.5 mm deep from the south socket face.
+- **A6** The north edge has one A socket (the YubiKey 4's) and the south edge two, the far one mirrored
+  (`sock_x2`); shells 13.1 mm wide (`sock_w`). The corner pads must stay clear of them.
+- **Board thickness:** `hub_t` (1.6 mm).
+- **Key height in the tunnel:** `yk4_dz` and `yk5_dz`, the key body centre above its connector centre (0).
+  With `pin_len` and `pin_press` they set how hard the pin presses.
+
+The test piece checks A1, A2 and the key height before the full body is printed. Rendering fails with an
+`assert` message if a change puts the U-turn or the RP2040 within 1 mm of the lid, the U-turn within 0.5 mm
+of the floor, a pad over a socket, a wire channel outside the box, or a bar wall under 1.8 mm.
 
 ## Render
 
@@ -55,7 +68,8 @@ docker run --rm -u $(id -u):$(id -g) -v "$PWD":/w -w /w openscad/openscad:2021.0
   openscad -D 'part="body"' -o stl/yubikey-touch-body.stl fixture.scad
 ```
 
-The parts are `body`, `deck`, `lid`, `knob`, `bar`, `test`, `assembly` (everything in place, for viewing only) and `test_assembly` (the test piece with its knob and bar; add `-D lift_up=true` to see the pin lifted).
+The parts are `body`, `deck`, `lid`, `knob`, `bar`, `test`, `assembly` (everything in place, for viewing only) and `test_assembly` (the test piece with its knob and bar; add `-D lift_up=true` to see the pin lifted). Each render
+echoes the derived pin positions, hub and socket heights, box height and filament length.
 
 ## Firmware
 
@@ -103,13 +117,13 @@ Commands (one line each, every reply starts with `ok` or `err`):
 ## Assembly order
 
 1. Press in the M2 heat-set inserts with the Pinecil insert tip at about 220 °C. The plastic melts into the knurls and holds them.
-3. Plug both adapters into the hub, then lower the hub onto its posts.
-4. Fit the deck, the switch boards and the RP2040-Zero, which slides onto the U-turn plug. Then wire the power.
-5. Fit each pin lift:
+2. Plug both adapters into the hub, then set the hub on its pads inside the fences.
+3. Fit the deck, the switch boards and the RP2040-Zero, which slides onto the U-turn plug. Then wire the power.
+4. Fit each pin lift:
    1. Push the touch wire through its channel from the box until it comes out of the slot on the box side of the tower. Pull out a few centimetres.
    2. On the bench, solder the wire to the **side** of the pin barrel, within 1 mm of its top end. Keep the top end itself clean: the filament presses on it.
    3. Drop the pin into the knob from the top, tip first, with the wire lying in the knob's side slot. The solder joint rests on the floor of the slot, which stops the pin from falling through.
    4. Slide the bar into the sleeve on the tower's west face, pushed south. Drop the knob into the tower with its wire slot facing the box.
-   5. Cut 7.5 mm of 1.75 mm filament and push it through the sleeve window, the bar slot and the tower slot into the knob's cross hole, until it stops against the far wall.
+   5. Cut 8.3 mm of 1.75 mm filament and push it through the sleeve window, the bar slot and the tower slot into the knob's cross hole, until it stops against the far wall.
    6. Gently pull the extra wire back into the box.
-6. Drop the lid in 1 mm south, slide it north so the tab enters the wall slot, and fit the two M2×6 screws.
+5. Drop the lid in 1 mm south, slide it north so the tab enters the wall slot, and fit the two M2×6 screws.
