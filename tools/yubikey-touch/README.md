@@ -40,6 +40,49 @@ docker run --rm -u $(id -u):$(id -g) -v "$PWD":/w -w /w openscad/openscad:2021.0
 
 The parts are `body`, `deck`, `lid`, `test` and `assembly` (all three in place, for viewing only).
 
+## Firmware
+
+`firmware/` is the RP2040-Zero program (C, pico-sdk). It shows up on USB as a serial port named
+"YubiKey touch".
+
+| RP2040 pin | Goes to |
+|---|---|
+| GP0 | YubiKey 4 pogo pin (touch) |
+| GP1 | YubiKey 5 pogo pin (touch) |
+| GP2 | YubiKey 4 power switch (2N7002 gate) |
+| GP3 | YubiKey 5 power switch (2N7002 gate) |
+| GND | Hub ground (shared with the keys) |
+
+A touch drives the pin low, which grounds the pad like a finger. Released, the pin floats; it is never
+driven high. Both keys power up at boot with the touch released, because a key calibrates its touch
+sensor at power-up. The on-board LED is dim green when ready and blue while touching.
+
+Build and install:
+
+```bash
+firmware/build.sh            # builds firmware/build/yktouch.uf2 in Docker
+```
+
+Hold BOOT while plugging the board in (or, once it runs this firmware, open its port at 1200 baud) and
+copy `yktouch.uf2` onto the `RPI-RP2` drive. To let your user open the serial port without the
+`dialout` group:
+
+```bash
+sudo cp 70-yktouch.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+```
+
+Commands (one line each, every reply starts with `ok` or `err`):
+
+```bash
+./yktouch touch 5            # touch the YubiKey 5 for 500 ms
+./yktouch touch 4 1500       # touch the YubiKey 4 for 1.5 s
+./yktouch hold 5             # touch until released
+./yktouch release 5
+./yktouch power 4 off        # also: power 4 on
+./yktouch cycle 5 [ms]       # power off for ms (default 1000), then on
+./yktouch status
+```
+
 ## Assembly order
 
 1. Press each pogo pin up through the hole in the drawer floor and the bore until it stops at the chamber ceiling.
