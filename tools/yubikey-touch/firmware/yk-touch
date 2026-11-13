@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Sends one command to the YubiKey touch fixture over USB serial and prints its reply.
+set -euo pipefail
+
+readonly reply_timeout=2
+
+usage() {
+    cat <<'EOF'
+Usage: yk-touch [-d DEVICE] <command...>
+
+Send one command to the YubiKey touch fixture (RP2040-Zero firmware) and print its reply.
+
+WARNING: the fixture removes the user-presence check of the keys in it.
+Use it only with test keys.
+
+Commands (keys: yk4, yk5):
+  touch <key> <ms>         touch the key for 1 to 10000 ms (returns at once)
+  hold <key>               touch the key until released
+  release <key|all>        release the touch
+  power <key|all> on|off   switch the key's power (the touch is released first)
+  status                   show power and touch of each key
+  version                  show the firmware version
+  help                     list the commands, from the firmware
+  bootsel                  reboot the board into its USB bootloader (RPI-RP2 drive)
+
+Options:
+  -d DEVICE   serial device. Default: $YK_TOUCH_DEV, else the single match of
+              /dev/serial/by-id/*YubiKey_touch_fixture* (Linux). On macOS pass
+              the /dev/cu.usbmodem* device.
+  -h, --help  show this help
+
+Exit status: 0 on OK, 1 on ERR, 2 on timeout, no device or usage error.
+
+Examples:
+  yk-touch status
+  yk-touch touch yk5 500
+  yk-touch -d /dev/cu.usbmodem1101 power all off
+EOF
+}
+
+die() {
+    echo "yk-touch: $1" >&2
+    exit 2
+}
+
+dev="${YK_TOUCH_DEV:-}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h|--help) usage; exit 0 ;;
+        -d) [ $# -ge 2 ] || die "-d needs a device"; dev="$2"; shift 2 ;;
+        --) shift; break ;;
+        -*) die "unknown option: $1 (see yk-touch --help)" ;;
+        *) break ;;
+    esac
+done
+[ $# -gt 0 ] || die "no command given (see yk-touch --help)"
+
+if [ -z "$dev" ]; then
+    shopt -s nullglob
+    matches=(/dev/serial/by-id/*YubiKey_touch_fixture*)
+    shopt -u nullglob
+    case ${#matches[@]} in
+        0) die "no fixture found under /dev/serial/by-id/; is it plugged in? (or pass -d DEVICE)" ;;
+        1) dev="${matches[0]}" ;;
+        *) die "several fixtures found, pick one with -d: ${matches[*]}" ;;
+    esac
+fi
+[ -c "$dev" ] || die "not a serial device: $dev"
+
+# Raw mode, no local echo. Never set the speed to 1200: that reboots the board into BOOTSEL.
+if [ "$(uname -s)" = Darwin ]; then
+    stty -f "$dev" raw -echo || die "cannot configure $dev"
+else
+    stty -F "$dev" raw -echo || die "cannot configure $dev"
+fi
+
+exec 3<>"$dev" || die "cannot open $dev"
+
+# Drop a late reply left over from an earlier timeout (needs bash 4 for the short timeout).
+if [ "${BASH_VERSINFO[0]}" -ge 4 ]; then
+    while IFS= read -r -t 0.1 -u 3 _; do :; done
+fi
+
+printf '%s\n' "$*" >&3
+IFS= read -r -t "$reply_timeout" -u 3 reply || die "no reply from $dev within ${reply_timeout}s"
+reply="${reply%$'\r'}"
+printf '%s\n' "$reply"
+
+case "$reply" in
+    OK*) exit 0 ;;
+    ERR*) exit 1 ;;
+    *) exit 2 ;;
+esac
