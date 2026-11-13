@@ -169,6 +169,12 @@ for (x = concat(SOCKS_N, SOCKS_S))
 assert(notch_x0 <= uturn_x - uturn_w / 2 - 0.3 && notch_x1 >= uturn_x + uturn_w / 2 + 0.3, "deck notch hits the U-turn adapter");
 for (b = LID_RIBS) assert(b[3] <= rp_t0 || b[2] >= rp_t1 || b[1] <= rp_x0 - 0.3 || b[0] >= rp_x1 + 0.3,
                           "lid rib hits the RP2040");
+for (p = RP_POSTS) {
+    assert(p[0] >= rp_x0 && p[1] <= rp_x1 && p[2] >= rp_t0 && p[3] <= rp_t1, "RP2040 cradle post not under the RP2040");
+    for (c = concat(WIRE_SLOTS, [for (b = BOARDS) [b[0] - 0.15, b[0] + 7.15, b[1] - 0.15, b[1] + 9.15]]))
+        assert(p[1] <= c[0] - 0.3 || p[0] >= c[1] + 0.3 || p[3] <= c[2] - 0.3 || p[2] >= c[3] + 0.3,
+               "RP2040 cradle post on a switch-board pocket or wire slot");
+}
 for (e = [[exit_x, n_in + 0.6, exit_z], [exit_x, s_in - 0.6, exit_z]])
     assert(e[0] - channel_d / 2 > wall_t && e[0] + channel_d / 2 < box_w - wall_t && e[1] >= n_in && e[1] <= s_in
            && e[2] - channel_d / 2 > deck_z1 && e[2] + channel_d / 2 < lid_z0, "wire channel exit outside the box interior");
@@ -176,7 +182,8 @@ for (e = [[exit_x, n_in + 0.6, exit_z], [exit_x, s_in - 0.6, exit_z]])
 echo(str("pin_ty_yk4 = ", pin_ty_yk4, ", pin_ty_yk5 = ", pin_ty_yk5, ", pin_x = ", pin_x));
 echo(str("hub_z = ", hub_z, ", socket centre = ", sock_c, ", U-turn ", uturn_z0, "..", uturn_z1,
          ", RP2040 top = ", rp_top, ", lid underside = ", lid_z0, ", box height = ", box_h));
-echo(str("U-turn x = ", uturn_x, ", deck notch x = ", notch_x0, "..", notch_x1, ", RP2040 x = ", rp_x0, "..", rp_x1));
+echo(str("U-turn x = ", uturn_x, ", deck notch x = ", notch_x0, "..", notch_x1, ", RP2040 x = ", rp_x0, "..", rp_x1,
+         ", cradle posts x = ", [for (i = [0 : 2 : len(RP_POSTS) - 1]) [RP_POSTS[i][0], RP_POSTS[i][1]]]));
 echo(str("tower top = ", tower_top(yk4_kc), ", knob_h = ", knob_h, ", bar = ", bar_len, " x ", bar_h, " x ", bar_t,
          ", filament length = ", fil_len));
 
@@ -284,6 +291,9 @@ LID_RIBS = [for (b = [[3.5, 6, 0], [11.5, 6, 0], [3.5, 28, 1], [11.5, 28, 1]])
     let(rt = b[2] == 0 ? [b[1] + 0.4, b[1] + 2.4] : [b[1] + 6.6, b[1] + 8.6],
         x1 = rt[1] > rp_t0 && rt[0] < rp_t1 ? min(b[0] + 6.4, rp_x0 - 0.5) : b[0] + 6.4)
     [b[0] + 0.6, x1, rt[0], rt[1]]];
+WIRE_SLOTS = [[4, 18.5, 15.5, 17.9], [4, 18.5, 24.3, 27.5]];   // x0 x1 ty0 ty1 through the deck
+// RP2040 cradle posts, x0 x1 ty0 ty1; the west pair sits east of the switch-board pockets and wire slots
+RP_POSTS = [for (x = [uturn_x - 5.2, uturn_x + 6.5]) for (t = [rp_t0 + 1.2, rp_t0 + 18.2]) [x - 1, x + 1, t - 1, t + 1]];
 
 module deck() {
     c0 = deck_z0 - 1; c1 = deck_z1 + 1.3;
@@ -292,11 +302,10 @@ module deck() {
         bx(notch_x0, notch_x1, sock_s - 1.4, sock_s + 8.5, c0, c1); // open notch round the U-turn adapter (A5)
         bx(2.0, 13.4, s_in - 7.4, s_in, c0, c1);                    // west insert block
         bx(32.6, 40, s_in - 7.4, s_in, c0, c1);                     // east insert block
-        bx(4, 18.5, 15.5, 17.9, c0, c1);                            // wire slots
-        bx(4, 18.5, 24.3, 27.5, c0, c1);
+        for (s = WIRE_SLOTS) bx(s[0], s[1], s[2], s[3], c0, c1);   // wire slots
         for (b = BOARDS) bx(b[0] - 0.15, b[0] + 7.15, b[1] - 0.15, b[1] + 9.15, deck_z0 + 0.6, deck_z1 + 0.4);   // board pockets
     }
-    for (x = [uturn_x - 6.5, uturn_x + 6.5]) for (t = [rp_t0 + 1.2, rp_t0 + 18.2]) bx(x - 1, x + 1, t - 1, t + 1, deck_z1 - 0.01, rp_z);   // RP2040 cradle
+    for (p = RP_POSTS) bx(p[0], p[1], p[2], p[3], deck_z1 - 0.01, rp_z);   // RP2040 cradle
 }
 
 // ---------------------------------------------------------------- lid (drops in 1 mm south, slides north)
