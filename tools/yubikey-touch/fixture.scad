@@ -1,8 +1,14 @@
-// YubiKey touch fixture, rev E: three printed parts (body, deck, lid), no glue.
+// YubiKey touch fixture, rev F: body, deck, lid, plus a knob and a slide bar per pin. No glue.
 //
 // Render one part:  openscad -D 'part="body"' -o body.stl fixture.scad
-// Parts: "body", "deck", "lid" (flipped for printing), "test" (north drawer + tower only),
-//        "assembly" (all three in place, for looking at).
+// Parts: "body", "deck", "lid" (flipped for printing), "knob", "bar" (print one of each per pin),
+//        "test" (north drawer + tower only), "assembly" (everything in place, for looking at).
+//
+// Pin lift (rev F): the pogo pin is pressed into a square knob that slides straight up and down in a
+// square hole in the tower, so it can't turn and twist the wire. A 1.75 mm filament piece crosses the
+// knob and runs in a slanted slot in a slide bar held in a sleeve on the tower's west face. Bar pushed
+// south: pin pressed onto the touch disk. Bar pushed north: pin lifted pin_lift mm so the key slides
+// freely. The flat ends of the slot hold the bar where it is left.
 //
 // Coordinates (mm): x runs west -> east, ty runs north -> south (the YubiKey 4 drawer is north,
 // the YubiKey 5 drawer south), z is up from the bed. Everything is built in (x, ty, z) and
@@ -12,6 +18,7 @@
 // not from the parts in hand. Check them with calipers before printing the full body.
 
 part = "body";
+lift_up = false;   // for "test_assembly": show the pin lifted
 
 $fn = 48;
 
@@ -21,11 +28,30 @@ pin_x       = 11.9;    // drawer centre line, also the key centre line
 pin_ty_yk4  = -22;     // 21 mm north of the box wall
 pin_ty_yk5  = 85;      // 23 mm south of the box wall
 
-// pogo pin P75 (barrel 1.02 mm): printed holes come out ~0.1 mm small; ream with the pin vise if tight
-bore_d      = 1.2;
-chamber_d   = 2.6;     // wider pocket at the top of the tower; the barrel stops on its ceiling
-access_d    = 2.0;     // hole in the drawer floor the pin is pushed up through
+// pogo pin P75 (barrel 1.02 mm)
+pin_len     = 16.5;    // barrel top to tip, plunger fully out (measured)
+pad_z       = 7.6;     // height of the touch disk in the tunnel: key on the floor, 3.3 thick, 0.3 dip (MEASURE)
+pin_press   = 1.0;     // how far the plunger is pushed in when the pin is down on the disk
+pin_lift    = 2.5;     // how far the bar lifts the pin; the tip then clears the key by ~1.2 mm
 channel_d   = 1.6;     // touch-wire channel (30 AWG)
+
+// knob and slide bar
+knob_w      = 3.6;     // square knob, in a knob_w + 0.3 square hole
+knob_h      = 18.2;    // sticks out about 1.5 mm above the tower when down, 4 mm when up
+knob_bore_d = 1.4;     // loose on the 1.02 barrel, so the tip passes; the solder joint rests on the slot floor
+fil_d       = 1.75;    // filament cross pin
+tower_w     = 7;       // square tower
+barrel_top  = pad_z - pin_press + pin_len;   // 23.1 with the values above
+fil_z       = barrel_top + fil_d / 2 + 0.03;   // the filament sits right on top of the barrel
+bar_t       = 1.6;     // slide bar: 11 long x 6.9 tall x 1.6 thick
+bar_len     = 11;
+bar_h       = 6.9;
+bar_v_low   = 2.2;     // slot height in the bar, from its bottom edge, for pin down / pin up
+bar_u_down  = 1.5;     // slot positions along the bar where the filament rests (flat ends)
+bar_u_up    = 9.5;
+slot_w      = 1.95;
+knob_z0     = barrel_top - 10.15;   // knob bottom when the pin is down
+tower_top   = fil_z - bar_v_low + bar_h + 0.95;   // 0.8 mm roof over the bar sleeve
 
 // M2 heat-set insert 3.5 OD x 3: hole 3.2, pressed in with the Pinecil at ~220 C (PLA)
 insert_hole_d = 3.2;
@@ -60,7 +86,14 @@ module drawer(d) {
     bx(0.75, tunnel_x0, t0, t1, tunnel_z0, tunnel_z1);          // rails
     bx(tunnel_x1, 23.05, t0, t1, tunnel_z0, tunnel_z1);
     bx(0.75, 23.05, t0, t1, tunnel_z1, 11.8);                   // roof
-    cy(pin_x, pty, 11.8, 25.6, 6.0, 64);                        // pin tower
+    tw = tower_w / 2; xf = pin_x - tw;                          // xf: west face of the tower
+    bx(pin_x - tw, pin_x + tw, pty - tw, pty + tw, 11.8, tower_top);   // square pin tower
+    bz = fil_z - bar_v_low;                                     // bar bottom edge
+    bx(xf - bar_t - 1.05, xf, pty - tw, pty + tw, bz - 0.95, tower_top);   // sleeve for the slide bar
+    hull() {                                                    // 45 degrees under the sleeve
+        bx(xf - bar_t - 1.05, xf, pty - tw, pty + tw, bz - 0.96, bz - 0.95);
+        bx(xf - 0.01, xf, pty - tw, pty + tw, bz - 0.95 - (bar_t + 1.05), bz - 0.95);
+    }
     hull() {                                                    // sloped rib, carries the wire channel
         bx(9.9, 13.9, rb[0], rb[1], 11.8, 24.8);
         bx(18, 22, d[3], d[4], 11.8, 16.6);
@@ -69,12 +102,17 @@ module drawer(d) {
 
 module drawer_cuts(d) {
     pty = d[2]; s = d[5];
-    cy(pin_x, pty, -1, 4.9, access_d);                          // hole in the drawer floor
-    cy(pin_x, pty, 9.0, 22.5, bore_d, 24);                      // bore
-    cy(pin_x, pty, 22.4, 24.4, chamber_d, 32);                  // chamber; the barrel stops on its ceiling
-    w = s > 0 ? [pty - 3.3, pty - 0.7] : [pty + 0.7, pty + 3.3];
-    bx(10.6, 13.2, w[0], w[1], 22.4, 25.0);                     // solder window, outer side of the tower
-    rod([pin_x, pty, 23.5], d[6], channel_d);                   // wire channel to the box
+    tw = tower_w / 2; xf = pin_x - tw; kh = knob_w / 2 + 0.15;
+    bz = fil_z - bar_v_low;
+    fz0 = fil_z - slot_w / 2 - 0.1; fz1 = fil_z + pin_lift + slot_w / 2 + 0.1;
+    cy(pin_x, pty, 9.0, 12.1, 2.2, 24);                         // hole in the tunnel roof for the plunger
+    bx(pin_x - kh, pin_x + kh, pty - kh, pty + kh, 12.0, tower_top + 1);   // square hole for the knob
+    w = s > 0 ? [pty + kh - 0.1, pty + tw + 0.1] : [pty - tw - 0.1, pty - kh + 0.1];
+    bx(pin_x - 0.8, pin_x + 0.8, w[0], w[1], barrel_top - 1.6, barrel_top + pin_lift + 1.05);   // wire slot, box side
+    rod([pin_x, pty + s * 2.9, barrel_top - 0.4], d[6], channel_d);   // wire channel to the box
+    bx(xf - 0.1, pin_x - kh + 0.1, pty - 1, pty + 1, fz0, fz1);   // filament slot, west wall
+    bx(xf - bar_t - 0.25, xf + 0.01, pty - tw - 1, pty + tw + 1, bz - 0.15, bz + bar_h + 0.15);   // inside of the sleeve
+    bx(xf - bar_t - 1.1, xf - bar_t - 0.2, pty - 1, pty + 1, fz0, fz1);   // window: push the filament in here
 }
 
 // 45 degree support under an overhanging block that hangs off the south wall (ty = 60)
@@ -141,9 +179,42 @@ module lid() {
     }
 }
 
+// ---------------------------------------------------------------- knob and slide bar (print orientation)
+module knob() {   // bottom on the bed; the wire slot faces +y
+    k = knob_w / 2;
+    difference() {
+        bx(-k, k, -k, k, 0, knob_h);
+        cy(0, 0, -1, knob_h + 1, knob_bore_d, 24);                          // the barrel is pressed in from the top
+        bx(-0.7, 0.7, 0, k + 1, barrel_top - knob_z0 - 1.3, knob_h + 1);    // wire slot, open at the top; its floor
+                                                                            // catches the solder joint
+        translate([0, 0, fil_z - knob_z0]) rotate([0, 90, 0]) cylinder(d = fil_d, h = knob_w + 2, center = true, $fn = 24);
+    }
+}
+
+module bar() {   // flat on the bed; u runs along x, v along y
+    pts = [[bar_u_down, bar_v_low], [bar_u_down + 1.5, bar_v_low],
+           [bar_u_up - 1.5, bar_v_low + pin_lift], [bar_u_up, bar_v_low + pin_lift]];
+    difference() {
+        bx(0, bar_len, 0, bar_h, 0, bar_t);
+        for (i = [0 : 2]) hull() for (p = [pts[i], pts[i + 1]]) cy(p[0], p[1], -1, bar_t + 1, slot_w, 24);
+    }
+}
+
+// knob, filament and bar in place for one drawer; up = true shows the pin lifted
+module lift_in_place(d, up = false) {
+    pty = d[2]; s = d[5]; xf = pin_x - tower_w / 2; lz = up ? pin_lift : 0;
+    translate([pin_x, pty, knob_z0 + lz]) mirror([0, s > 0 ? 0 : 1, 0]) knob();
+    color("white") translate([xf - bar_t, pty, fil_z + lz]) rotate([0, 90, 0]) cylinder(d = fil_d, h = pin_x + knob_w / 2 - xf + bar_t, $fn = 16);
+    u = up ? bar_u_up : bar_u_down;
+    multmatrix([[0, 0, 1, xf - bar_t - 0.05], [1, 0, 0, pty - u], [0, 1, 0, fil_z - bar_v_low], [0, 0, 0, 1]]) bar();
+}
+
 // ---------------------------------------------------------------- output
 if (part == "body") out() body();
-if (part == "test") out() intersection() { body(); bx(-1, 24, -29, 2, -1, 30); }
+if (part == "test") out() intersection() { body(); bx(-1, 24, -29, 2, -1, tower_top + 1); }
+if (part == "knob") knob();
+if (part == "bar")  bar();
+if (part == "test_assembly") out() { intersection() { body(); bx(-1, 24, -29, 2, -1, tower_top + 1); } lift_in_place(DRAWERS[0], up = lift_up); }
 if (part == "deck") out() translate([0, 0, -10]) deck();
 if (part == "lid")  out() translate([0, 0, 19]) mirror([0, 0, 1]) lid();   // top face on the bed
-if (part == "assembly") out() { body(); deck(); lid(); }
+if (part == "assembly") out() { body(); deck(); lid(); for (d = DRAWERS) lift_in_place(d); }
