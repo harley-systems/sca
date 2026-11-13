@@ -49,17 +49,22 @@ top of `fixture.scad`, so a correction is one line. These are still assumed, not
 - **A3** "RP2040 15.4 above the board" is the RP2040-Zero's PCB underside above the hub board top (`rp_above`).
   Its total height to the top of its USB-C socket is taken as 4.4 mm (`rp_h`).
 - **A4** "Reaches 2.5 below its plug" is measured from the underside of the U-turn's A plug (`uturn_below`).
-- **A5** The U-turn's socket position in x and its depth in ty aren't measured. The deck notch keeps its rev F
-  x (23.6 to 35.6) and is 8.5 mm deep from the south socket face.
+- **A5** The U-turn is taken as 12 mm wide (`uturn_w`), centred on the far south socket (`uturn_x`, x 25.4).
+  Its depth in ty isn't measured: the deck notch (x 18.9 to 31.9) runs 8.5 mm south of the south socket face,
+  and the RP2040's north edge is at ty 16.8 (`rp_t0`). The RP2040, its cradle posts and the lid's hold-down
+  are centred on the U-turn; the lid rib over the south-west switch board stops 0.5 mm short of the RP2040.
 - **A6** The north edge has one A socket (the YubiKey 4's) and the south edge two, the far one mirrored
   (`sock_x2`); shells 13.1 mm wide (`sock_w`). The corner pads must stay clear of them.
-- **Board thickness:** `hub_t` (1.6 mm).
+- **Board thickness:** `hub_t` (1.6 mm). RP2040-Zero PCB thickness: `rp_pcb_t` (1.0 mm).
+- **Hub USB-C input:** taken as centred on the board's west edge (`usbc_ty`) and on the board's mid-plane
+  (`usbc_z`). They place the plug opening in the west wall and the gap in the west lid ledge.
 - **Key height in the tunnel:** `yk4_dz` and `yk5_dz`, the key body centre above its connector centre (0).
   With `pin_len` and `pin_press` they set how hard the pin presses.
 
 The test piece checks A1, A2 and the key height before the full body is printed. Rendering fails with an
 `assert` message if a change puts the U-turn or the RP2040 within 1 mm of the lid, the U-turn within 0.5 mm
-of the floor, a pad over a socket, a wire channel outside the box, or a bar wall under 1.8 mm.
+of the floor, a pad over a socket, a socket off the board, the deck notch on the U-turn, a lid rib on the
+RP2040, a wire channel outside the box, or a bar wall under 1.8 mm.
 
 ## Render
 

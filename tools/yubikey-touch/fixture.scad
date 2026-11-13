@@ -43,9 +43,13 @@ btn_d       = 10;      // touch button across (measured)
 yk5_face    = 63.0;    // YubiKey 5 adapter face from the north socket face (measured)
 uturn_h     = 25.1;    // U-turn adapter height (measured)
 uturn_below = 2.5;     // U-turn reaches this far below its A plug (measured; A4)
-uturn_plug  = 4.5;     // USB-A plug height
+uturn_plug  = 4.5;     // USB-A plug height (standard)
+uturn_w     = 12;      // U-turn adapter width in x, centred on its socket (MEASURE; A5)
 rp_above    = 15.4;    // RP2040-Zero PCB underside above the hub board top (measured; A3)
-rp_pcb_t    = 1.0;     // RP2040-Zero PCB
+rp_pcb_t    = 1.0;     // RP2040-Zero PCB thickness (MEASURE)
+rp_w        = 18;      // RP2040-Zero PCB in x (standard, 18 x 23.5)
+rp_l        = 23.5;    // in ty, its USB-C at the south end in the U-turn
+rp_t0       = 16.8;    // RP2040 PCB north edge (MEASURE; A5: follows the U-turn's depth)
 rp_h        = 4.4;     // RP2040-Zero PCB underside to the top of its USB-C socket (MEASURE)
 key_t       = 3.3;     // key body thickness (YubiKey 4 and 5)
 yk4_dz      = 0;       // key body centre above its connector centre (MEASURE)
@@ -78,8 +82,14 @@ lid_z0      = max(uturn_z1, rp_top) + lid_clear;   // lid underside
 box_h       = lid_z0 + lid_t;
 deck_z0     = hub_z + sock_above;   // the deck sits on the socket tops
 deck_z1     = deck_z0 + 1.2;
-usbc_ty     = hub_t0 + hub_l / 2;   // hub USB-C input, mid-board
-usbc_z      = hub_z - hub_t / 2;
+usbc_ty     = hub_t0 + hub_l / 2;   // hub USB-C input centre: mid-board (MEASURE)
+usbc_z      = hub_z - hub_t / 2;    // on the board mid-plane (MEASURE)
+uturn_x     = hub_x0 + sock_x2;     // U-turn adapter and RP2040 centre line
+rp_x0       = uturn_x - rp_w / 2;
+rp_x1       = uturn_x + rp_w / 2;
+rp_t1       = rp_t0 + rp_l;
+notch_x0    = uturn_x - uturn_w / 2 - 0.5;   // deck notch round the U-turn
+notch_x1    = uturn_x + uturn_w / 2 + 0.5;
 
 // YubiKey touch pads: pins over the button centres
 pin_x       = hub_x0 + sock_x;      // drawer centre line, also the key centre line
@@ -154,6 +164,11 @@ assert(bar_u_down - slot_w / 2 >= 1.8 - eps && bar_len - bar_u_up - slot_w / 2 >
 assert(bar_v_low - slot_w / 2 >= 1.8 - eps && bar_h - bar_v_low - pin_lift - slot_w / 2 >= 1.8 - eps, "bar edge under 1.8");
 for (p = PADS) for (x = (p[1] < hub_t0 + hub_l / 2 ? SOCKS_N : SOCKS_S))
     assert(p[0] + pad_w <= hub_x0 + x - sock_w / 2 || p[0] >= hub_x0 + x + sock_w / 2, "hub pad overlaps a socket");
+for (x = concat(SOCKS_N, SOCKS_S))
+    assert(x - sock_w / 2 >= 0 && x + sock_w / 2 <= hub_w, "A socket hangs off the hub board");
+assert(notch_x0 <= uturn_x - uturn_w / 2 - 0.3 && notch_x1 >= uturn_x + uturn_w / 2 + 0.3, "deck notch hits the U-turn adapter");
+for (b = LID_RIBS) assert(b[3] <= rp_t0 || b[2] >= rp_t1 || b[1] <= rp_x0 - 0.3 || b[0] >= rp_x1 + 0.3,
+                          "lid rib hits the RP2040");
 for (e = [[exit_x, n_in + 0.6, exit_z], [exit_x, s_in - 0.6, exit_z]])
     assert(e[0] - channel_d / 2 > wall_t && e[0] + channel_d / 2 < box_w - wall_t && e[1] >= n_in && e[1] <= s_in
            && e[2] - channel_d / 2 > deck_z1 && e[2] + channel_d / 2 < lid_z0, "wire channel exit outside the box interior");
@@ -161,6 +176,7 @@ for (e = [[exit_x, n_in + 0.6, exit_z], [exit_x, s_in - 0.6, exit_z]])
 echo(str("pin_ty_yk4 = ", pin_ty_yk4, ", pin_ty_yk5 = ", pin_ty_yk5, ", pin_x = ", pin_x));
 echo(str("hub_z = ", hub_z, ", socket centre = ", sock_c, ", U-turn ", uturn_z0, "..", uturn_z1,
          ", RP2040 top = ", rp_top, ", lid underside = ", lid_z0, ", box height = ", box_h));
+echo(str("U-turn x = ", uturn_x, ", deck notch x = ", notch_x0, "..", notch_x1, ", RP2040 x = ", rp_x0, "..", rp_x1));
 echo(str("tower top = ", tower_top(yk4_kc), ", knob_h = ", knob_h, ", bar = ", bar_len, " x ", bar_h, " x ", bar_t,
          ", filament length = ", fil_len));
 
@@ -263,19 +279,24 @@ module body() {
 // ---------------------------------------------------------------- deck (sits on the hub sockets)
 BOARDS = [[3.5, 6], [11.5, 6], [3.5, 28], [11.5, 28]];   // AO3401 / 2N7002 boards, 7 x 9
 brd_top = deck_z1 + 0.6;                                 // board top face in its pocket
+// lid ribs holding the boards down, x0 x1 ty0 ty1; the south-west one stops 0.5 short of the RP2040
+LID_RIBS = [for (b = [[3.5, 6, 0], [11.5, 6, 0], [3.5, 28, 1], [11.5, 28, 1]])
+    let(rt = b[2] == 0 ? [b[1] + 0.4, b[1] + 2.4] : [b[1] + 6.6, b[1] + 8.6],
+        x1 = rt[1] > rp_t0 && rt[0] < rp_t1 ? min(b[0] + 6.4, rp_x0 - 0.5) : b[0] + 6.4)
+    [b[0] + 0.6, x1, rt[0], rt[1]]];
 
 module deck() {
     c0 = deck_z0 - 1; c1 = deck_z1 + 1.3;
     difference() {
-        bx(3.4, 38.6, n_in + 0.5, s_in - 0.5, deck_z0, deck_z1);   // 0.4 mm clear of the lid ledges
-        bx(23.6, 35.6, sock_s - 1.4, sock_s + 8.5, c0, c1);         // open notch round the U-turn adapter (A5)
+        bx(3.4, 38.6, n_in + 0.5, s_in - 0.5, deck_z0, deck_z1);   // clear of the walls
+        bx(notch_x0, notch_x1, sock_s - 1.4, sock_s + 8.5, c0, c1); // open notch round the U-turn adapter (A5)
         bx(2.0, 13.4, s_in - 7.4, s_in, c0, c1);                    // west insert block
         bx(32.6, 40, s_in - 7.4, s_in, c0, c1);                     // east insert block
         bx(4, 18.5, 15.5, 17.9, c0, c1);                            // wire slots
         bx(4, 18.5, 24.3, 27.5, c0, c1);
         for (b = BOARDS) bx(b[0] - 0.15, b[0] + 7.15, b[1] - 0.15, b[1] + 9.15, deck_z0 + 0.6, deck_z1 + 0.4);   // board pockets
     }
-    for (p = [[23, 18], [36, 18], [23, 35], [36, 35]]) bx(p[0] - 1, p[0] + 1, p[1] - 1, p[1] + 1, deck_z1 - 0.01, rp_z);   // RP2040 cradle
+    for (x = [uturn_x - 6.5, uturn_x + 6.5]) for (t = [rp_t0 + 1.2, rp_t0 + 18.2]) bx(x - 1, x + 1, t - 1, t + 1, deck_z1 - 0.01, rp_z);   // RP2040 cradle
 }
 
 // ---------------------------------------------------------------- lid (drops in 1 mm south, slides north)
@@ -285,11 +306,8 @@ module lid() {
         union() {
             bx(2.3, 39.7, 2.3, s_in - 1, lz, box_h);      // 0.3 mm clear of the walls
             bx(12, 30, 1.3, 2.4, lz + 0.3, lz + 1.1);                            // tab into the north wall slot
-            for (b = [[3.5, 6, 0], [11.5, 6, 0], [3.5, 28, 1], [11.5, 28, 1]]) {   // ribs holding the boards down
-                rt = b[2] == 0 ? [b[1] + 0.4, b[1] + 2.4] : [b[1] + 6.6, b[1] + 8.6];
-                bx(b[0] + 0.6, b[0] + 6.4, rt[0], rt[1], brd_top, lz + 0.01);
-            }
-            for (x = [24, 33]) bx(x, x + 2, 16.8, 18.8, rp_z + rp_pcb_t, lz + 0.01);   // RP2040 hold-down
+            for (b = LID_RIBS) bx(b[0], b[1], b[2], b[3], brd_top, lz + 0.01);   // ribs holding the boards down
+            for (x = [uturn_x - 5.5, uturn_x + 3.5]) bx(x, x + 2, rp_t0, rp_t0 + 2, rp_z + rp_pcb_t, lz + 0.01);   // RP2040 hold-down
             bx(3.3, 5.3, 20, 22, deck_z1, lz + 0.01);  bx(3.3, 5.3, 45, 47, deck_z1, lz + 0.01);   // deck hold-down
             bx(36.7, 38.7, 45, 47, deck_z1, lz + 0.01);
         }
