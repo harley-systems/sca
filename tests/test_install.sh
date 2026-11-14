@@ -2,7 +2,7 @@
 # install: a package that fails to install, a missing .deb, or a system without
 # apt must make sca install fail and say which packages are affected.
 #
-# apt-get, dpkg-query and sudo are stubbed as exported shell functions (see
+# apt-get, dpkg-query, sudo and uname are stubbed as exported shell functions (see
 # test_security_key_init.sh for why functions rather than scripts on PATH).
 # shellcheck source=tests/lib.sh
 . "$(dirname "$0")/lib.sh"
@@ -31,7 +31,12 @@ sudo() {
   echo "sudo: $*" >&2
   "$@"
 }
-export -f dpkg-query apt-get apt-add-repository sudo
+# uname -m reports FAKE_ARCH, x86_64 unless a case sets it, so the usb stick
+# builder tools are installed whatever the architecture of the test host
+uname() {
+  if [ "$1" = -m ]; then echo "${FAKE_ARCH:-x86_64}"; else command uname "$@"; fi
+}
+export -f dpkg-query apt-get apt-add-repository sudo uname
 
 # sca refuses most commands, install with options included, until a config
 # exists, so each case starts from a fresh home with the default config
@@ -144,6 +149,40 @@ output="$(sca install 2>&1)"
 [[ "${output}" == *"  openssl: not installed, installing (sudo apt-get install -y openssl)"$'\n'"sudo: apt-get install -y openssl"* ]] \
   || fail "the package is named before sudo runs: ${output}"
 
+# the usb stick builder tools are installed on x86_64, with no skip line
+iso_image_tools="squashfs-tools xorriso qemu-system-x86 qemu-utils apt-mirror"
+reset_home
+output="$(FAKE_ARCH=x86_64 sca install 2>&1)" || fail "install on x86_64: ${output}"
+for package in ${iso_image_tools}; do
+  grep -q "install -y ${package}\$" "$HOME/apt-get.log" 2>/dev/null \
+    || fail "${package} is installed on x86_64"
+done
+[[ "${output}" != *"skipping the usb stick builder tools"* ]] \
+  || fail "no skip line on x86_64: ${output}"
+
+# on any other architecture they are skipped, with one line naming it
+reset_home
+output="$(FAKE_ARCH=aarch64 sca install 2>&1)" || fail "install on aarch64: ${output}"
+for package in ${iso_image_tools}; do
+  grep -q "install -y ${package}\$" "$HOME/apt-get.log" 2>/dev/null \
+    && fail "${package} is not installed on aarch64"
+done
+assert_eq 1 "$(grep -c 'skipping the usb stick builder tools' <<< "${output}")" \
+  "one skip line on aarch64"
+[[ "${output}" == *"skipping the usb stick builder tools"*"this host is aarch64."* ]] \
+  || fail "the skip line names the architecture: ${output}"
+
+# a dry run on aarch64 prints the same skip line and no would-install for them
+reset_home
+output="$(FAKE_ARCH=aarch64 sca install --dry-run 2>&1)" \
+  || fail "dry run on aarch64: ${output}"
+[[ "${output}" == *"skipping the usb stick builder tools"*"this host is aarch64."* ]] \
+  || fail "dry run prints the skip line: ${output}"
+for package in ${iso_image_tools}; do
+  [[ "${output}" != *"${package}: not installed, would install"* ]] \
+    || fail "dry run on aarch64 would not install ${package}: ${output}"
+done
+
 # sca already installed and every package present: the packages are listed as
 # skipped, the message says the checks go on, and sudo is never run
 reset_home
@@ -228,5 +267,15 @@ status=$?
 [[ "${output}" == *"docs/ssh-yubikey-options.md"* ]] \
   || fail "platform docs are referenced: ${output}"
 [ ! -e "$HOME/apt-get.log" ] || fail "nothing is installed without apt-get"
+# the builder tools are listed on x86_64 only, as only there are they installed
+output="$(unset -f apt-get dpkg-query; FAKE_ARCH=x86_64 PATH="${no_apt_bin}" sca install 2>&1)"
+for package in ${iso_image_tools}; do
+  [[ "${output}" == *" ${package}"* ]] || fail "${package} is listed on x86_64: ${output}"
+done
+output="$(unset -f apt-get dpkg-query; FAKE_ARCH=aarch64 PATH="${no_apt_bin}" sca install 2>&1)"
+[[ "${output}" == *"datefudge"* ]] || fail "core packages are listed on aarch64: ${output}"
+for package in ${iso_image_tools}; do
+  [[ "${output}" != *" ${package}"* ]] || fail "${package} is not listed on aarch64: ${output}"
+done
 
 test_done

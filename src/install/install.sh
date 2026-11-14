@@ -142,7 +142,8 @@ install_check_package_manager() {
     { [ "$openpgp_support" = true ] || [ "$fido2_support" = true ]; }; then
     packages+=" $(install_package_list yubikey_manager)"
   fi
-  [ "$mode" != offline ] && packages+=" $(install_package_list iso_image_tools)"
+  [ "$mode" != offline ] && is_usb_stick_build_host && \
+    packages+=" $(install_package_list iso_image_tools)"
   >&2 echo "sca install: apt-get and dpkg-query are required for automatic installs,"
   >&2 echo "and only apt-based systems (Ubuntu, Debian) are supported."
   >&2 echo "install these packages (or your platform's equivalents) yourself:"
@@ -191,7 +192,8 @@ install_offline() {
 ################################################################################
 # installs sca in online mode
 #
-# when online, we will need image related tooling
+# when online on an x86_64 host, we will need image related tooling. other
+# architectures cannot build the amd64 sca usb stick, so it is skipped there.
 install_online() {
   local force=$1
   local sca_script_file_name=$2
@@ -207,7 +209,11 @@ install_online() {
   install_core_online
   [ $exclude_pkcs11_support != true ] && install_pkcs11_packages_online
   [ $yubikey_support == true ] && install_yubico_piv_tool
-  install_iso_image_tools
+  if is_usb_stick_build_host; then
+    install_iso_image_tools
+  else
+    install_iso_image_tools_skipped
+  fi
   log_detailed "install_online: finish (force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
@@ -217,7 +223,8 @@ install_online() {
 # we use xorriso for creating the hybrid bios and uefi sca iso image,
 # squashfs-tools for reading and packing ubuntu live filesystem layers
 # (unsquashfs and mksquashfs), apt-mirror for mirroring apt repositories and
-# qemu for running the sca usb stick image in sca test
+# qemu for running the sca usb stick image in sca test. they are installed on
+# x86_64 hosts only, the only ones that build the sca usb stick.
 #
 install_iso_image_tools() {
   log_detailed "install_iso_image_tools: start"
@@ -226,6 +233,12 @@ install_iso_image_tools() {
     install_package_from_repos $package_name
   done
   log_detailed "install_iso_image_tools: finish"
+}
+################################################################################
+# says why the usb stick builder tools are not installed on this host. printed
+# the same way in a dry run and a real one.
+install_iso_image_tools_skipped() {
+  echo "  skipping the usb stick builder tools (xorriso, squashfs-tools, qemu, apt-mirror): they build the amd64 sca usb stick and this host is $(build_host_architecture)."
 }
 ################################################################################
 # in online mode, sca install is used to initialize the sca configuration.

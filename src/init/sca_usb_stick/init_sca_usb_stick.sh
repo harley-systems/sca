@@ -248,12 +248,17 @@ get_test_results_disk_label() {
   echo "sca-test-results"
 }
 ################################################################################
-# fails unless the tools used for building the sca usb stick image are present
+# fails unless this host can build the sca usb stick image, an x86_64 host,
+# and the tools used for building it are present
 #
 # parameters
 #   include_apt_mirror - whether apt-mirror is needed as well
 check_iso_image_tools() {
   local include_apt_mirror=$1
+
+  if ! is_usb_stick_build_host; then
+    error "init sca_usb_stick: this host is $(build_host_architecture). the sca usb stick is amd64 and can only be built on an ${sca_usb_stick_build_architecture} host." 1
+  fi
 
   local tools=(wget gpgv base64 sha256sum md5sum xorriso mksquashfs unsquashfs apt-get)
   [ "$include_apt_mirror" = true ] && tools+=(apt-mirror)
