@@ -340,6 +340,9 @@ Touch policies:
 - `always` - Touch for every operation
 - `cached` - Touch once, cached for 15 seconds
 
+To test with a touch policy without someone at the desk, the [YubiKey touch fixture](../tools/yubikey-touch/README.md)
+touches a test key on command. Never use it with a key that protects anything real.
+
 ## References
 
 - [Yubico PIV Introduction](https://developers.yubico.com/yubico-piv-tool/YubiKey_PIV_introduction.html)
@@ -355,3 +358,4 @@ Touch policies:
 - [SSH Integration](ssh-integration.md) - Use YubiKey for SSH
 - [SSH with a YubiKey: Choosing a Method](ssh-yubikey-options.md) - PIV vs OpenPGP vs FIDO2 for SSH
 - [GPG with a YubiKey](gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet
+- [YubiKey touch fixture](../tools/yubikey-touch/README.md) - Touch test keys on command, for unattended tests

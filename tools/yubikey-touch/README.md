@@ -1,8 +1,94 @@
-# YubiKey touch fixture (rev H)
+# YubiKey touch fixture
 
-A printed holder that presses a pogo pin onto the touch pad of a YubiKey 4 (USB-A) and a
-YubiKey 5 NFC (USB-C), so an RP2040-Zero can "touch" each key by grounding its pin. It also
-switches each key's power. Use it only with test keys: it removes the user-presence check.
+A small printed box that lets a computer touch two YubiKeys. A pogo pin rests on each key's touch disk,
+and an RP2040-Zero grounds it on command, which the key reads as a finger. That lets the YubiKey
+operations that wait for a touch run in tests with nobody at the desk: a PIV key with a touch policy
+(see [Enable Touch Policy](../../docs/yubikey.md#enable-touch-policy)), FIDO, and OTP. It holds a
+YubiKey 4 (USB-A) and a YubiKey 5C NFC (USB-C), and can also switch each key's power, so a test can
+unplug and replug a key without anyone touching it.
+
+> **Test keys only.** The touch is how a YubiKey knows a person is present. This fixture fakes it, so
+> never put a key that protects anything real in it.
+
+![Plan and cut of the fixture, with the measurements](layout.svg)
+
+![Assembly animation](yubikey-touch-fixture.gif)
+
+The animation is also in full size as [yubikey-touch-fixture.mp4](yubikey-touch-fixture.mp4).
+
+## Status (rev H, November 2026)
+
+| Part | State |
+|---|---|
+| Touch | **Works.** With the YubiKey 4 in the rev G test piece and its pin wired to GP0, `yktouch touch 4 500` was accepted 6 times out of 6: a FIDO registration that waits for a touch went through about 0.4 s after the touch began, and nothing registered in the 3 s before each touch. A finger on the bare wire works too. |
+| Printed parts | Rev G was printed and assembled. Rev H fixes what that showed (a tight fit for the hub, nothing holding the YubiKey 5 adapter up) and is being printed. |
+| YubiKey 5 touch | Same design as the YubiKey 4 side; its pin is not wired yet. |
+| Power switching | Designed (see [Wiring](#wiring)), not built or tested yet. |
+
+## How it works
+
+- **Touch.** A pogo pin is held on each key's touch disk and wired to a GPIO of the RP2040-Zero. To touch,
+  the GPIO goes low and grounds the disk; to let go, it becomes a floating input. It is never driven high.
+- **Pin lift.** A pin resting on the disk would jam the key on its way in or out, so a slide bar lifts the
+  pin 2.5 mm first. See [Pin lift](#pin-lift).
+- **Power.** Each key's 5 V goes through a switch (an AO3401 driven by a 2N7002) that the RP2040 opens and
+  closes. A key calibrates its touch sensor when it powers up, so the touch is always released first.
+- **Host side.** The RP2040 shows up as a serial port named "YubiKey touch"; the `yktouch` script sends it
+  commands such as `touch 4 500`. See [Firmware](#firmware).
+
+## Wiring
+
+![Wiring: laptop, hub, adapters, keys, RP2040 and the power switches](wiring.svg)
+
+Everything hangs off one 4-port USB 2.0 hub board. The RP2040-Zero plugs into one of its ports through
+the U-turn adapter, so it shares the keys' ground and needs no ground wire for the touch. Its GP0 and
+GP1 go straight to the two pogo pins.
+
+For power switching, the hub's 5 V trace to each key's socket has to be cut, and an AO3401 put across
+the cut: source on the hub side, drain on the socket side, with 10k from gate to source so it stays off on
+its own. A 2N7002 pulls the gate to ground when the RP2040 drives GP2 or GP3 high. Each transistor sits
+on a small SOT-23 board whose pads are numbered 1 (gate), 2 (source) and 3 (drain). This part is not
+built yet.
+
+## Parts
+
+Prices as paid on AliExpress in October and November 2026, in ILS. Most parts come in packs, so a second
+fixture costs little more. Listings change and disappear; the description says what to look for.
+
+| Part | For | Used | Bought | ILS |
+|---|---|---|---|---|
+| [RP2040-Zero](https://www.aliexpress.com/item/1005010768723373.html) (Waveshare layout) | Runs the firmware | 1 | 4 | 19.75 |
+| [USB 2.0 hub board, 4 x USB-A, USB-C in](https://www.aliexpress.com/item/1005009184792924.html) | Everything plugs into it | 1 | 1 | 7.19 |
+| [Pogo pins P75-D2](https://www.aliexpress.com/item/1005010463299946.html) | Rest on the touch disks | 2 | 100 | 25.59 |
+| [USB adapters, Xinrongbao](https://www.aliexpress.com/item/1005006733624983.html), one listing, three versions | "A-C U Forward" (U-turn): hub to the RP2040; plugged into the hub it bends up over the board ("A-C U Reverse" bends down, into the board). "C-A Forward": YubiKey 5 to the hub. "A-C Forward": the laptop's USB-A port to the hub's USB-C input | 3 | 3 | 24.01 |
+| [AO3401A P-channel MOSFET, SOT-23](https://www.aliexpress.com/item/4001278105988.html) | Power switches | 2 | 100 | 5.79 |
+| [2N7002 N-channel MOSFET, SOT-23](https://www.aliexpress.com/item/1005006127106855.html) | Drive the AO3401 gates | 2 | 100 | 5.19 |
+| [SOT-23 to SIP3 boards](https://www.aliexpress.com/item/1005006626188055.html) | Carry the transistors; 7.5 x 10 x 1.4 mm | 4 | 20 | 5.19 |
+| [Resistor kit, 1/4 W, 30 values](https://www.aliexpress.com/item/1005006186890215.html) | 10k gate resistors | 2 | 600 | 7.79 |
+| [Wire, 30 AWG, UL1423 PTFE, silver-plated](https://www.aliexpress.com/item/1005005321856209.html) | Touch and power wiring | about 1 m | 3 x 5 m | 15.87 |
+| [Heat-shrink tube set](https://www.aliexpress.com/item/1005012934091641.html) | Insulating joints | | 8 m | 8.09 |
+| [M2 brass heat-set inserts, 3 mm long](https://www.aliexpress.com/item/1005008897571758.html) | Lid screws | 2 | 100 | 9.19 |
+| [M2 x 6 socket head screws](https://www.aliexpress.com/item/1005004531602992.html) | Lid | 2 | 50 | 4.01 |
+| PLA, 1.75 mm | The printed parts (43 g) and two 7.5 mm pieces as cross pins | | | |
+| [NNBILI USB-C male to male adapter](https://www.aliexpress.com/item/1005012016929409.html) | Optional: for a laptop with only USB-C ports, instead of "A-C Forward" | 0 or 1 | 1 | 4.99 |
+| YubiKey 4, YubiKey 5C NFC | Test keys | 2 | | |
+
+The parts above came to about ILS 140. Tools used for this build:
+
+| Tool | For | ILS |
+|---|---|---|
+| [Pinecil V2](https://www.aliexpress.com/item/1005012505708387.html) soldering iron | Soldering | 172.32 |
+| [Heat-set insert tips for the Pinecil (TS100 fit)](https://www.aliexpress.com/item/1005012157318263.html) | Pressing in the inserts | 23.39 |
+| [Solder, 0.6 mm rosin core](https://www.aliexpress.com/item/1005006280566767.html), [flux NC-559](https://www.aliexpress.com/item/1005011861136037.html), [desoldering wick](https://www.aliexpress.com/item/1005007514789306.html) | Soldering | 29.48 |
+| [Wire stripper, Pro'sKit 8PK-3001D](https://www.aliexpress.com/item/1005007370026286.html) | 30 AWG wire | 44.39 |
+| [Digital calipers, 150 mm](https://www.aliexpress.com/item/1005011855690153.html) | Measuring the parts | 12.29 |
+| [Anti-static tweezers](https://www.aliexpress.com/item/1005013152490978.html) | Small parts, pulling the wire through the tower | 8.39 |
+| [7 inch digital microscope](https://www.aliexpress.com/item/1005009301431172.html), [helping hands](https://www.aliexpress.com/item/4001365281239.html), [iron stand](https://www.aliexpress.com/item/1005002842145055.html) | SOT-23 soldering | 181.01 |
+| [Hand drill (pin vise), 0.2 to 3.4 mm](https://www.aliexpress.com/item/1005007092447606.html) | Clearing small holes | 10.21 |
+| [Hex keys](https://www.aliexpress.com/item/1005002688809650.html) | The M2 screws | 11.19 |
+| 3D printer (Prusa MK3S, smooth PEI sheet) | The printed parts | |
+
+## Files
 
 `fixture.scad` is the source. The `stl/` files are rendered from it, already turned the right way up for printing:
 
@@ -15,7 +101,13 @@ switches each key's power. Use it only with test keys: it removes the user-prese
 | `stl/yubikey-touch-knob.stl` | Square knob that holds the pogo pin | Standing up, one per pin. Use a brim: it is tall and thin |
 | `stl/yubikey-touch-bar.stl` | Slide bar that lifts the knob | Flat, one per pin. No glue on a smooth PEI sheet: let it cool and flex the sheet |
 
-`yubikey-touch-fixture.mp4` is an animation of the rev E assembly (before the pin lift and the measured layout).
+| Other files | What |
+|---|---|
+| `layout.svg`, `wiring.svg` | The drawings above, made by `drawings/make.sh` (see [Render](#render)) |
+| `yubikey-touch-fixture.mp4`, `.gif` | The assembly animation, made by `drawings/animate.sh` |
+| `firmware/` | The RP2040-Zero program |
+| `yktouch` | Host script that sends commands to the RP2040 |
+| `70-yktouch.rules` | udev rule so your user can open the serial port |
 
 ## Print settings (Prusa, PLA)
 
@@ -87,6 +179,13 @@ docker run --rm -u $(id -u):$(id -g) -v "$PWD":/w -w /w openscad/openscad:2021.0
 
 The parts are `body`, `deck`, `lid`, `knob`, `bar`, `test`, `assembly` (everything in place, for viewing only) and `test_assembly` (the test piece with its knob and bar; add `-D lift_up=true` to see the pin lifted).
 
+After changing `fixture.scad`, regenerate the drawings, so their measurements follow:
+
+```bash
+drawings/make.sh      # layout.svg and wiring.svg (needs docker and python3)
+drawings/animate.sh   # yubikey-touch-fixture.mp4 and .gif (also needs blender and ffmpeg; a few minutes)
+```
+
 ## Firmware
 
 `firmware/` is the RP2040-Zero program (C, pico-sdk). It shows up on USB as a serial port named
@@ -134,7 +233,7 @@ Commands (one line each, every reply starts with `ok` or `err`):
 
 1. Press in the M2 heat-set inserts with the Pinecil insert tip at about 220 °C. The plastic melts into the knurls and holds them.
 2. Plug both adapters (the YubiKey 5 adapter and the U-turn) into the hub, then lower the hub onto its corner pads between the fences, north sockets toward the north wall. The YubiKey 5 adapter's USB-C end drops into the cradle at the south wall.
-3. Fit the deck, the switch boards and the RP2040-Zero, which slides onto the U-turn plug. Then wire the power.
+3. Fit the deck, the switch boards and the RP2040-Zero, which slides onto the U-turn plug. Then wire the power, as in [Wiring](#wiring).
    Each switch board lies in its pocket with the transistor end toward the end wall and the three pads (2, 3, 1)
    toward the wire slots in the middle: the lid ribs press on the bare strip beyond the transistor. Solder the
    wires to the pads from the top and trim them flush underneath, so the board lies flat.

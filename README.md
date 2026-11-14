@@ -164,6 +164,7 @@ Run `sca <command> --help` for detailed usage.
 - [GPG with a YubiKey](docs/gpg-yubikey.md) - Signing, encryption and Git commit signing with the OpenPGP applet
 - [Air-Gapped Operations](docs/air-gapped-operations.md) - Secure offline CA environment
 - [The Air-Gapped CA Appliance](docs/air-gapped-appliance.md) - Hardware design, bill of materials and prices for the offline CA
+- [YubiKey Touch Fixture](tools/yubikey-touch/README.md) - A printed box and RP2040 firmware that touch test YubiKeys on command, for unattended tests
 - [USB Boot on ARM](docs/usb-boot-on-arm.md) - Booting a ROCK64 from USB by writing U-Boot to SPI flash
 - [Configuration Reference](docs/configuration.md) - Config files and customization
 - [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
