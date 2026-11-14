@@ -1,4 +1,4 @@
-# YubiKey touch fixture (rev G)
+# YubiKey touch fixture (rev H)
 
 A printed holder that presses a pogo pin onto the touch pad of a YubiKey 4 (USB-A) and a
 YubiKey 5 NFC (USB-C), so an RP2040-Zero can "touch" each key by grounding its pin. It also
@@ -42,7 +42,19 @@ or out:
   iron would melt it). It leaves the knob through a side slot facing the box, runs down a slot in the tower's
   box-side wall that is open at the top, and goes through a channel in the sloped rib into the box.
 
-## Layout (rev G, measured)
+## Rev H, from the printed rev G body
+
+- The hub with its adapters was a hard push into the box: the inside was exactly as long as they are, and the
+  fences were 0.15 mm from the board. Now the inside is 1 mm longer (`slack`) and 1 mm wider, and the fences
+  are 0.5 mm from the board (`fit`). Each pin sits over the middle of its button with the hub in the middle
+  of its 1 mm of travel. The end walls have 1 mm pockets around the key openings, so each key still plugs all
+  the way in when the hub rests against the other wall.
+- The YubiKey 5 adapter hung from its socket at no set height, so the key had to find it blind. A cradle at
+  the south wall (`yk5_cradle`) now holds the adapter's USB-C end where the key, lying on its floor, plugs in
+  straight.
+- The deck pockets and lid ribs fit the switch boards as they came (7.5 × 10 × 1.4, rev G guessed 7 × 9).
+
+## Layout (rev G and H, measured)
 
 The hub, the adapters and the keys were measured with calipers. `fixture.scad` places everything from these
 numbers:
@@ -51,7 +63,9 @@ numbers:
 |---|---|---|
 | Hub board | 32.3 (along the USB-C edge) × 35.5, no mounting holes | Corner pads and fences (`hub_seat`) |
 | A sockets | Stick out 2.85 past the board edge, top 3.6 above the board, near ones centred 9.2 from the USB-C edge | Hub position: the north socket faces touch the inside of the north wall |
-| YubiKey 5 adapter | Its USB-C face is 63.0 from the north socket face | Inside of the south wall; the adapter face bears on it |
+| YubiKey 5 adapter | Its USB-C face is 63.0 from the north socket face | Inside of the south wall (plus `slack`); the adapter face bears on it |
+| YubiKey 5 adapter body | 14.5 wide × 7.0 tall; in the rev G body, with the key flat, its top was 19.8 below the wall top | Cradle seat at 3.95 above the bed, 0.4 clear each side |
+| Switch boards (AO3401, 2N7002) | 7.5 × 10.0, 1.4 thick, SOT-23 transistor 2.9 × 1.4 | Deck pockets, lid ribs (`brd`, `BOARDS`) |
 | U-turn adapter | 25.1 tall, reaches 2.5 below its plug | Box height (lid 0.8 above it) |
 | RP2040 | Board bottom 15.4 above the hub board, lined up with the hub's east edge | Deck posts and lid hold-downs |
 | YubiKey 4 in the hub | Socket face to button start 12.8, button 10 across | `pin_ty_yk4` (button centre 17.8 out from the socket face) |
@@ -119,8 +133,11 @@ Commands (one line each, every reply starts with `ok` or `err`):
 ## Assembly order
 
 1. Press in the M2 heat-set inserts with the Pinecil insert tip at about 220 °C. The plastic melts into the knurls and holds them.
-2. Plug both adapters (the YubiKey 5 adapter and the U-turn) into the hub, then lower the hub onto its corner pads, north sockets against the north wall and the YubiKey 5 adapter face against the south wall.
+2. Plug both adapters (the YubiKey 5 adapter and the U-turn) into the hub, then lower the hub onto its corner pads between the fences, north sockets toward the north wall. The YubiKey 5 adapter's USB-C end drops into the cradle at the south wall.
 3. Fit the deck, the switch boards and the RP2040-Zero, which slides onto the U-turn plug. Then wire the power.
+   Each switch board lies in its pocket with the transistor end toward the end wall and the three pads (2, 3, 1)
+   toward the wire slots in the middle: the lid ribs press on the bare strip beyond the transistor. Solder the
+   wires to the pads from the top and trim them flush underneath, so the board lies flat.
 4. Fit each pin lift. Solder before the pin goes in: once it is in the tower you can't reach it.
    1. Slide the bar into the sleeve on the tower's west face, pushed south.
    2. Push the touch wire through its channel from the box until it comes out in the tower, then pull it up out of the top of the tower, a few centimetres (tweezers help).

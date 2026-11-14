@@ -1,4 +1,4 @@
-// YubiKey touch fixture, rev G: body, deck, lid, plus a knob and a slide bar per pin. No glue.
+// YubiKey touch fixture, rev H: body, deck, lid, plus a knob and a slide bar per pin. No glue.
 //
 // Render one part:  openscad -D 'part="body"' -o body.stl fixture.scad
 // Parts: "body", "deck", "lid" (flipped for printing), "knob", "bar" (print one of each per pin),
@@ -8,6 +8,12 @@
 // adapters, keys). Both pins sit over the buttons, the hub (it has no mounting holes) rests on corner
 // pads between fences, the box is tall enough for the U-turn adapter and the RP2040 above the hub,
 // and the slide bar is thicker (the rev F bar broke coming off the plate).
+//
+// Rev H, from the printed rev G body: the hub with its adapters had no room to drop in (the box was
+// exactly as long as they are, and the fences 0.15 mm from the board), so the box is 1 mm longer and
+// 1 mm wider, the fences are 0.5 mm away, and the end walls have shallow pockets so each key still
+// plugs all the way in. The YubiKey 5 adapter hung from its socket at no set height, so the key had
+// to find it blind: a cradle at the south wall now holds its USB-C end where the key plugs in straight.
 //
 // Pin lift: the pogo pin sits in a square knob that slides straight up and down in a square hole in
 // the tower, so it can't turn and twist the wire. A 1.75 mm filament piece crosses the knob, rests on
@@ -49,6 +55,9 @@ btn_d       = 10;
 yk4_plug_gap = 0.45;  // YubiKey 4 lying flat, button up: gap under its plug (MEASURE)
 yk5_plug_gap = -0.6;  // YubiKey 5 + adapter lying flat: adapter's A plug bottom above the key's bottom (MEASURE)
 yk5_neck    = [11.0, 3.7];   // hole in the south wall for the YubiKey 5's plug neck, width x height (MEASURE)
+yk5_ad      = [14.5, 7.0];   // YubiKey 5 adapter body, width x height
+yk5_ad_drop = 1.4;    // its bottom below the bottom of its A plug: in the rev G body, with the key flat on its
+                      // floor, its top was 19.8 below the wall top (30.75), so its bottom sat at 3.95
 
 // ---------------------------------------------------------------- key drawers and pins
 pin_x       = 11.9;    // drawer centre line, also the key centre line and the near sockets' middle
@@ -82,16 +91,20 @@ knob_h      = tower_top - knob_z0 + 1.5;          // sticks out 1.5 mm above the
 
 // ---------------------------------------------------------------- box layout (derived)
 wall    = 2;
-box_w   = 42;
+box_w   = 43;     // rev G: 42
+slack   = 1.0;    // room along the box for the hub with its adapters (rev G: none, a hard push)
+fit     = 0.5;    // gap between the hub board and its fences (rev G: 0.15)
 hub_x0  = pin_x - sock_near;      // board west edge, the USB-C side (2.7)
 hub_x1  = hub_x0 + hub_we;        // board east edge (38.2); the RP2040 lines up with it
 far_x   = hub_x1 - sock_near;     // middle of the far A sockets (29.0): the U-turn goes south here
-n_face  = wall;                   // north socket faces touch the inside of the north wall
-hub_t0  = n_face + sock_out;      // board north edge (4.85)
-hub_t1  = hub_t0 + hub_ns;        // board south edge (37.15)
-s_face  = hub_t1 + sock_out;      // south socket faces (40.0)
-a_face  = s_face + adapter_out;   // YubiKey 5 adapter face = inside of the south wall (65.0)
-box_l   = a_face + wall;          // 67.0
+n_in    = wall;                   // inside of the north wall
+n_face  = n_in + slack / 2;       // north socket faces, in the middle of their travel (2.5)
+hub_t0  = n_face + sock_out;      // board north edge (5.35)
+hub_t1  = hub_t0 + hub_ns;        // board south edge (37.65)
+s_face  = hub_t1 + sock_out;      // south socket faces (40.5)
+yk5_face = s_face + adapter_out;  // YubiKey 5 adapter face, in the middle of its travel (65.5)
+a_face  = yk5_face + slack / 2;   // inside of the south wall (66.0)
+box_l   = a_face + wall;          // 68.0
 usbc_t  = hub_t0 + usbc_from_n;
 
 sock_floor = sock_h - sock_top - 0.3;                  // socket opening floor below the board top (1.8)
@@ -105,13 +118,15 @@ box_h      = lid_z + 2;
 deck_z0    = hub_top + sock_top;                       // the deck rests on the A sockets
 deck_z1    = deck_z0 + 1.2;
 
-pin_ty_yk4 = n_face - (yk4_btn + btn_d / 2);   // -15.8: over the YubiKey 4 button
-pin_ty_yk5 = a_face + yk5_btn + btn_d / 2;     //  84.7: over the YubiKey 5 button
+// the pins sit over the middle of each button with the hub in the middle of its travel, so they are at
+// most slack / 2 off whichever end it rests against
+pin_ty_yk4 = n_face - (yk4_btn + btn_d / 2);   // -15.3: over the YubiKey 4 button
+pin_ty_yk5 = yk5_face + yk5_btn + btn_d / 2;   //  85.2: over the YubiKey 5 button
 
 // M2 heat-set insert 3.5 OD x 3: hole 3.2, pressed in with the Pinecil at ~220 C (PLA)
 insert_hole_d = 3.2;
 screw_clear_d = 2.3;
-INS = [[4.2, a_face - 2.8], [36.5, a_face - 3.5]];
+INS = [[4.2, a_face - 2.8], [box_w - 5.5, a_face - 3.5]];
 
 // ---------------------------------------------------------------- helpers
 module bx(x0, x1, t0, t1, z0, z1) { translate([x0, t0, z0]) cube([x1 - x0, t1 - t0, z1 - z0]); }
@@ -121,7 +136,7 @@ module out() { mirror([0, 1, 0]) children(); }
 
 // ---------------------------------------------------------------- body
 DRAWERS = [  // t0, t1, pin ty, rib wall end ty0..ty1, s (+1 north drawer, -1 south), channel exit, dz
-    [-28, 0, pin_ty_yk4, -1.0, 0.0, 1, [20, n_face + 0.6, 14.0], 0],
+    [-28, 0, pin_ty_yk4, -1.0, 0.0, 1, [20, n_in + 0.6, 14.0], 0],
     [box_l, box_l + 28, pin_ty_yk5, box_l, box_l + 1, -1, [20, a_face - 0.6, 14.0], yk5_dz]];
 
 module drawer(d) {
@@ -172,18 +187,32 @@ module south_chamfer(x0, x1, t0, zb) {
     hull() { bx(x0, x1, t0, a_face, zb - 0.01, zb); bx(x0, x1, a_face - 0.01, a_face, zb - (a_face - t0), zb); }
 }
 
-// the hub has no mounting holes: it sits on four corner pads between low fences, with its north
-// socket faces against the north wall; the deck on top of the sockets holds it down
+// the hub has no mounting holes: it sits on four corner pads between low fences. Along the box it is
+// held between the north wall (far north socket) and the south wall (YubiKey 5 adapter face), with
+// slack mm to spare; the deck on top of the sockets holds it down
 module hub_seat() {
     hb = hub_top - hub_t;      // board underside
     ft = hub_top + 1;          // fences reach 1 mm above the board top
     for (x = [hub_x0 + 0.2, hub_x1 - 2.4]) for (t = [hub_t0 + 0.2, hub_t1 - 2.4]) bx(x, x + 2.2, t, t + 2.2, 1, hb);
     for (t = [hub_t0 + 0.5, hub_t1 - 3.5]) {
-        bx(1, hub_x0 - 0.15, t, t + 3, 1, ft);                     // west, clear of the USB-C hole
-        bx(hub_x1 + 0.15, box_w - 1, t, t + 3, 1, ft);             // east
+        bx(1, hub_x0 - fit, t, t + 3, 1, ft);                      // west, clear of the USB-C hole
+        bx(hub_x1 + fit, box_w - 1, t, t + 3, 1, ft);              // east
     }
+    sf = hub_t1 + slack / 2 + fit;                                 // clear of the board at the south end of its travel
     for (x = [[hub_x0, hub_x0 + 2.4], [pin_x + 7.0, far_x - 7.0], [hub_x1 - 2.4, hub_x1]])
-        bx(x[0], x[1], hub_t1 + 0.15, hub_t1 + 1.5, 1, ft);       // south, between the sockets
+        bx(x[0], x[1], sf, sf + 1.35, 1, ft);                      // south, between the sockets
+}
+
+// the YubiKey 5 adapter's USB-C end rests on a seat between two guides, at the height and place where
+// the key, lying on its drawer floor, plugs in straight. The guides have 45 degree lead-ins at the top.
+module yk5_cradle() {
+    ab = plug_bot - yk5_ad_drop;                                   // adapter bottom (3.95)
+    x0 = pin_x - yk5_ad[0] / 2 - 0.4; x1 = pin_x + yk5_ad[0] / 2 + 0.4;   // 0.4 mm clear each side
+    t0 = a_face - 9;  t1 = a_face + 0.01;
+    gz = ab + 2.5;                                                 // guide tops
+    bx(wall - 0.01, x1 + 1.8, t0, t1, 1, ab - 0.1);                // seat
+    hull() { bx(wall - 0.01, x0, t0, t1, 1, gz - 1);  bx(wall - 0.01, x0 - 1, t0, t1, gz - 0.01, gz); }   // west guide
+    hull() { bx(x1, x1 + 1.8, t0, t1, 1, gz - 1);     bx(x1 + 1, x1 + 1.8, t0, t1, gz - 0.01, gz); }      // east guide
 }
 
 module body() {
@@ -202,6 +231,7 @@ module body() {
             bx(wall, 6.3, a_face - 7, a_face, ib, lid_z);  south_chamfer(wall, 6.3, a_face - 7, ib);
             bx(wall, 13, a_face - 3.7, a_face, ib, lid_z); south_chamfer(wall, 13, a_face - 3.7, ib);
             hub_seat();
+            yk5_cradle();
             for (d = DRAWERS) drawer(d);
         }
         // YubiKey 4 plug into the north socket (the hole is a little bigger than the socket)
@@ -209,6 +239,10 @@ module body() {
         // YubiKey 5 plug neck through the south wall; the adapter face bears on the wall
         k5 = tunnel_z0 + yk5_dz;
         bx(pin_x - yk5_neck[0] / 2, pin_x + yk5_neck[0] / 2, a_face - 1, box_l + 1, k5 - 0.2, k5 - 0.2 + yk5_neck[1]);
+        // pockets, slack deep, in the outside of the end walls around the key openings: the hub can sit
+        // slack mm away from either wall, and each key body then goes that far into its wall
+        bx(tunnel_x0, tunnel_x1, -1, slack, tunnel_z0, tunnel_z1);
+        bx(tunnel_x0, tunnel_x1, box_l - slack, box_l + 1, k5, tunnel_z1 + yk5_dz);
         // the laptop's USB-C plug into the hub (wide, so the plug's body fits too)
         bx(-1, wall + 1, usbc_t - 7.5, usbc_t + 7.5, hub_top - 2.5, hub_top + 5.5);
         bx(11.6, 30.4, 1.1, 2.2, lid_z + 0.1, lid_z + 1.3);                     // slot for the lid's tab
@@ -218,15 +252,18 @@ module body() {
 }
 
 // ---------------------------------------------------------------- deck (sits on the hub sockets)
-BOARDS = [[3.5, 6], [11.5, 6], [3.5, 28], [11.5, 28]];   // AO3401 / 2N7002 boards, 7 x 9
+brd    = [7.5, 10.0, 1.4];                                  // AO3401 / 2N7002 boards: across, along the box, thick
+BOARDS = [[3.8, 5], [12.3, 5], [3.8, 28], [12.3, 28]];    // their north-west corners; north pair, south pair
 MCU_POSTS = [[22, 18.5], [37, 18.5]];                     // under the RP2040's far end
 
 module deck() {
     difference() {
-        bx(3.4, 38.6, 2.5, s_face - 0.3, deck_z0, deck_z1);   // ends before the U-turn and the adapter
+        bx(2.4, 38.6, 2.5, s_face - slack / 2 - 0.3, deck_z0, deck_z1);   // ends before the U-turn and the adapter,
+                                                                        // wherever the hub sits
+        bx(2.3, 3.5, usbc_t - 6.5, usbc_t + 6.5, deck_z0 - 1, deck_z1 + 1);   // notch for the laptop's USB plug adapter
         bx(4, 18.5, 15.5, 17.9, deck_z0 - 1, deck_z1 + 1);    // wire slots
         bx(4, 18.5, 24.3, 27.5, deck_z0 - 1, deck_z1 + 1);
-        for (b = BOARDS) bx(b[0] - 0.15, b[0] + 7.15, b[1] - 0.15, b[1] + 9.15, deck_z1 - 0.6, deck_z1 + 0.4);   // board pockets
+        for (b = BOARDS) bx(b[0] - 0.2, b[0] + brd[0] + 0.2, b[1] - 0.2, b[1] + brd[1] + 0.2, deck_z1 - 0.6, deck_z1 + 0.4);   // board pockets
     }
     for (p = MCU_POSTS) bx(p[0] - 1, p[0] + 1, p[1] - 1, p[1] + 1, deck_z1, mcu_bot - 0.1);   // RP2040 rests on these
 }
@@ -237,14 +274,17 @@ module lid() {
         union() {
             bx(2.3, box_w - 2.3, 2.3, a_face - 1, lid_z, lid_z + 2);   // 0.3 mm clear of the walls
             bx(12, 30, 1.3, 2.4, lid_z + 0.3, lid_z + 1.1);                // tab into the north wall slot
-            for (b = [[3.5, 6, 0], [11.5, 6, 0], [3.5, 28, 1], [11.5, 28, 1]]) {   // ribs holding the boards down
-                rt = b[2] == 0 ? [b[1] + 0.4, b[1] + 2.0] : [b[1] + 7.0, b[1] + 8.6];
-                bx(b[0] + 0.6, b[0] + 6.4, rt[0], rt[1], deck_z1 + 0.6, lid_z);
+            // ribs holding the boards down, and through them the deck. Each board lies with its transistor end
+            // toward the end wall and its three pads toward the wire slots; the rib presses on the bare strip
+            // (about 1.9 mm) between the transistor and the board's outer edge
+            for (i = [0 : 3]) {
+                b = BOARDS[i];
+                rt = i < 2 ? [b[1] + 0.3, b[1] + 1.5] : [b[1] + brd[1] - 1.5, b[1] + brd[1] - 0.3];
+                bx(b[0] + 0.6, b[0] + brd[0] - 0.6, rt[0], rt[1], deck_z1 - 0.6 + brd[2], lid_z);
             }
             for (x = [24, 33]) bx(x, x + 2, 17.0, 18.5, mcu_bot + 1.1, lid_z);   // RP2040 hold-down
-            bx(3.3, 5.3, 20, 22, deck_z1, lid_z);                                // deck hold-down
-            bx(36.7, 38.7, 5, 7, deck_z1, lid_z);
-            bx(19.0, 20.4, 33, 35, deck_z1, lid_z);
+            bx(3.6, 5.6, 20, 22, deck_z1, lid_z);                                // deck hold-down
+            bx(36.7, 38.7, 5, 7, deck_z1, lid_z);   // (rev G had a third at x 19, now under the wider boards)
         }
         for (p = INS) cy(p[0], p[1], lid_z - 0.5, lid_z + 2.5, screw_clear_d);
     }
