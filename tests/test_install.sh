@@ -4,6 +4,8 @@
 #
 # apt-get, dpkg-query and sudo are stubbed as exported shell functions (see
 # test_security_key_init.sh for why functions rather than scripts on PATH).
+# the network probe reads /proc/net under SCA_INSTALL_ROOT, a fake root in
+# $HOME/root, and its tcp connect goes through the timeout stub.
 # shellcheck source=tests/lib.sh
 . "$(dirname "$0")/lib.sh"
 
@@ -31,13 +33,37 @@ sudo() {
   echo "sudo: $*" >&2
   "$@"
 }
-export -f dpkg-query apt-get apt-add-repository sudo
+# the probe's tcp connect: recorded in ~/probe.log, fails when PROBE_FAIL is set
+timeout() {
+  echo "$*" >> "$HOME/probe.log"
+  [ -z "${PROBE_FAIL:-}" ]
+}
+export -f dpkg-query apt-get apt-add-repository sudo timeout
+export SCA_INSTALL_ROOT="$HOME/root"
 
 # sca refuses most commands, install with options included, until a config
-# exists, so each case starts from a fresh home with the default config
+# exists, so each case starts from a fresh home with the default config, and
+# a fake root with an ipv4 default route and no /opt/sca
 reset_home() {
   rm -rf "${HOME:?}"/* "${HOME}"/.[!.]*
   sca config create all > /dev/null 2>&1 || fail "config create all"
+  mkdir -p "$SCA_INSTALL_ROOT/proc/net"
+  no_route
+  printf 'eth0\t00000000\t010011AC\t0003\t0\t0\t0\t00000000\t0\t0\t0\n' \
+    >> "$SCA_INSTALL_ROOT/proc/net/route"
+  # the unreachable ::/0 route the kernel keeps on lo is not a way out
+  echo '00000000000000000000000000000000 00 00000000000000000000000000000000 00 00000000000000000000000000000000 ffffffff 00000001 00000000 00200200       lo' \
+    > "$SCA_INSTALL_ROOT/proc/net/ipv6_route"
+}
+# no_route - leaves the fake root without a default route
+no_route() {
+  printf 'Iface\tDestination\tGateway\tFlags\tRefCnt\tUse\tMetric\tMask\tMTU\tWindow\tIRTT\n' \
+    > "$SCA_INSTALL_ROOT/proc/net/route"
+}
+# sca_image - adds the /opt/sca layout of a booted sca image to the fake root
+sca_image() {
+  mkdir -p "$SCA_INSTALL_ROOT/opt/sca/bin" "$SCA_INSTALL_ROOT/opt/sca/packages"
+  touch "$SCA_INSTALL_ROOT/opt/sca/bin/sca"
 }
 
 # a successful run installs sca and exits 0, as before
@@ -172,40 +198,132 @@ assert_eq 0 "${status}" "dry run exits 0"
 [ ! -e "$HOME/bin" ] || fail "dry run does not touch ~/bin"
 [ ! -e "$HOME/.bashrc" ] || fail "dry run does not edit ~/.bashrc"
 
-# -n works offline too, and a missing .deb does not fail the dry run
+# -n works offline too: a host without the sca image layout and a missing .deb
+# do not fail the dry run
 reset_home
 output="$(sca install -n --air-gapped 2>&1)"
 status=$?
 assert_eq 0 "${status}" "offline dry run exits 0: ${output}"
+[[ "${output}" == *"would fail: sca install: this host was not booted from an sca image"* ]] \
+  || fail "offline dry run reports the missing layout: ${output}"
 [ ! -e "$HOME/sudo.log" ] || fail "offline dry run runs no sudo: $(cat "$HOME/sudo.log")"
 [ ! -e "$HOME/bin" ] || fail "offline dry run does not touch ~/bin"
 
+# online with no default route: one message naming --air-gapped, no tcp probe,
+# no package attempts, and ~/bin and ~/.bashrc are left alone
+online_no_network="no network is reachable, so packages can't be installed \
+from the repositories. on an air-gapped sca image, run 'sca install \
+--air-gapped' instead. nothing was installed."
+reset_home
+no_route
+output="$(sca install 2>&1)"
+status=$?
+[ "${status}" -ne 0 ] || fail "online install without a route exits non-zero"
+[[ "${output}" == *"${online_no_network}"* ]] \
+  || fail "no network names --air-gapped: ${output}"
+[[ "${output}" != *"checking prerequisite packages"* ]] \
+  || fail "no package is attempted without a network: ${output}"
+[ ! -e "$HOME/probe.log" ] || fail "no tcp probe without a default route"
+[ ! -e "$HOME/sudo.log" ] || fail "no sudo without a network: $(cat "$HOME/sudo.log")"
+[ ! -e "$HOME/bin" ] || fail "nothing is written to ~/bin without a network"
+[ ! -e "$HOME/.bashrc" ] || fail "nothing is written to ~/.bashrc without a network"
+# an ipv6 default route on a real interface counts as a route
+reset_home
+no_route
+echo '00000000000000000000000000000000 00 00000000000000000000000000000000 00 fe800000000000000000000000000001 00000400 00000001 00000000 00450003     eth0' \
+  >> "$SCA_INSTALL_ROOT/proc/net/ipv6_route"
+assert_succeeds sca install
+assert_file_exists "$HOME/probe.log" "an ipv6 default route is probed"
+
+# online with a route but a failed tcp connect: the same, after a capped probe
+reset_home
+output="$(PROBE_FAIL=1 sca install 2>&1)"
+status=$?
+[ "${status}" -ne 0 ] || fail "online install with a failed probe exits non-zero"
+[[ "${output}" == *"${online_no_network}"* ]] \
+  || fail "failed probe names --air-gapped: ${output}"
+grep -q '^3 bash -c : > /dev/tcp/archive.ubuntu.com/80$' "$HOME/probe.log" 2>/dev/null \
+  || fail "the tcp probe is capped at 3 seconds: $(cat "$HOME/probe.log" 2>/dev/null)"
+[ ! -e "$HOME/sudo.log" ] || fail "no sudo after a failed probe: $(cat "$HOME/sudo.log")"
+[ ! -e "$HOME/bin" ] || fail "nothing is written to ~/bin after a failed probe"
+
+# dry runs of both report would fail and exit 0
+reset_home
+no_route
+output="$(sca install -n 2>&1)"
+status=$?
+assert_eq 0 "${status}" "online dry run without a route exits 0: ${output}"
+[[ "${output}" == *"would fail: sca install: ${online_no_network}"* ]] \
+  || fail "online dry run without a route says would fail: ${output}"
+reset_home
+output="$(PROBE_FAIL=1 sca install -n 2>&1)"
+status=$?
+assert_eq 0 "${status}" "online dry run with a failed probe exits 0: ${output}"
+[[ "${output}" == *"would fail: sca install: ${online_no_network}"* ]] \
+  || fail "online dry run with a failed probe says would fail: ${output}"
+[ ! -e "$HOME/sudo.log" ] || fail "online dry run runs no sudo: $(cat "$HOME/sudo.log")"
+
+# offline on a host that was not booted from an sca image: fails, naming the
+# missing paths, before sudo runs
+reset_home
+output="$(sca install --air-gapped 2>&1)"
+status=$?
+[ "${status}" -ne 0 ] || fail "offline install without /opt/sca exits non-zero"
+[[ "${output}" == *"this host was not booted from an sca image"*"${SCA_INSTALL_ROOT}/opt/sca/bin/sca"*"${SCA_INSTALL_ROOT}/opt/sca/packages/"*"nothing was installed."* ]] \
+  || fail "missing sca image layout is named: ${output}"
+[ ! -e "$HOME/sudo.log" ] || fail "no sudo without the sca image: $(cat "$HOME/sudo.log")"
+[ ! -e "$HOME/bin" ] || fail "nothing is written to ~/bin without the sca image"
+
+# offline on an sca image that can reach the network: warns on stderr, and the
+# install goes on and succeeds
+reset_home
+sca_image
+touch "$SCA_INSTALL_ROOT/opt/sca/packages/openssl.deb"
+output="$(sca install --air-gapped 2>&1 > /dev/null)"
+status=$?
+assert_eq 0 "${status}" "offline install with a network exits 0: ${output}"
+[[ "${output}" == *"sca install: warning: this host can reach the network. an air-gapped sca appliance should not."* ]] \
+  || fail "a reachable network is warned about on stderr: ${output}"
+grep -q 'openssl.deb' "$HOME/apt-get.log" 2>/dev/null \
+  || fail "the install goes on after the warning"
+# offline on an sca image with no network: no warning
+reset_home
+sca_image
+touch "$SCA_INSTALL_ROOT/opt/sca/packages/openssl.deb"
+no_route
+output="$(sca install --air-gapped 2>&1)"
+status=$?
+assert_eq 0 "${status}" "offline install without a network exits 0: ${output}"
+[[ "${output}" != *"warning"* ]] || fail "no warning without a network: ${output}"
+
 # offline: a sca usb stick without its packages is an error
-if [ ! -d /opt/sca/packages ]; then
-  reset_home
-  output="$(sca install --air-gapped 2>&1)"
-  status=$?
-  [ "${status}" -ne 0 ] || fail "offline install exits non-zero when the .deb files are missing"
-  [[ "${output}" == *"no .deb files in /opt/sca/packages/"* ]] \
-    || fail "missing .deb files are reported: ${output}"
-  # the openpgp and fido2 sets must be installed after the stick's .deb files
-  reset_home
-  output="$(sca install --air-gapped --openpgp 2>&1)"
-  [[ "${output}" == *"scdaemon - not installed and not among the .deb files in /opt/sca/packages/"* \
-    && "${output}" == *"yubikey-manager - not installed"* ]] \
-    || fail "missing openpgp packages are named: ${output}"
-  # a package the live image already ships is not a failure
-  reset_home
-  output="$(dpkg-query() {
-      [ "${*: -1}" = openssh-client ] && echo 'install ok installed' && return 0
-      return 1
-    }
-    export -f dpkg-query; sca install --air-gapped --fido2 2>&1)"
-  [[ "${output}" == *"libfido2-1 - not installed"* ]] \
-    || fail "missing fido2 package is named: ${output}"
-  [[ "${output}" != *"openssh-client - not installed"* ]] \
-    || fail "an installed package is not reported missing offline: ${output}"
-fi
+offline_packages="${SCA_INSTALL_ROOT}/opt/sca/packages/"
+reset_home
+sca_image
+output="$(sca install --air-gapped 2>&1)"
+status=$?
+[ "${status}" -ne 0 ] || fail "offline install exits non-zero when the .deb files are missing"
+[[ "${output}" == *"no .deb files in ${offline_packages}"* ]] \
+  || fail "missing .deb files are reported: ${output}"
+# the openpgp and fido2 sets must be installed after the stick's .deb files
+reset_home
+sca_image
+output="$(sca install --air-gapped --openpgp 2>&1)"
+[[ "${output}" == *"scdaemon - not installed and not among the .deb files in ${offline_packages}"* \
+  && "${output}" == *"yubikey-manager - not installed"* ]] \
+  || fail "missing openpgp packages are named: ${output}"
+# a package the live image already ships is not a failure
+reset_home
+sca_image
+output="$(dpkg-query() {
+    [ "${*: -1}" = openssh-client ] && echo 'install ok installed' && return 0
+    return 1
+  }
+  export -f dpkg-query; sca install --air-gapped --fido2 2>&1)"
+[[ "${output}" == *"libfido2-1 - not installed"* ]] \
+  || fail "missing fido2 package is named: ${output}"
+[[ "${output}" != *"openssh-client - not installed"* ]] \
+  || fail "an installed package is not reported missing offline: ${output}"
 
 # no apt-get / dpkg-query: fail before touching ~/bin, listing the packages.
 # PATH is a folder linking every tool except those two.

@@ -5,6 +5,19 @@ own package manager (see the platform tables in
 [SSH with a YubiKey](../ssh-yubikey-options.md#packages) and
 [YubiKey Setup](../yubikey.md#prerequisites)).
 
+Before installing anything, `sca install` checks that its mode fits the host:
+
+- Online (the default) needs a network. With no default route, or when a TCP
+  connection to `archive.ubuntu.com:80` fails within 3 seconds, it stops with
+  one message suggesting `sca install --air-gapped`, without running `apt-get`.
+- `-a` needs a booted SCA image. Without `/opt/sca/bin/sca` and
+  `/opt/sca/packages/` it stops and says the host was not booted from one.
+- `-a` on a host that can reach the network prints a warning and goes on: an
+  air-gapped appliance should not reach one.
+
+With `-n`, a failing check is printed as `would fail: ...` and the dry run goes
+on.
+
 Every package is attempted. If any fails to install, `sca install` lists each
 failed package with the command to retry and exits non-zero. With `-a`, the
 `.deb` files on the USB stick are installed together, and a failure (or a stick
