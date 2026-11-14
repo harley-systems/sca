@@ -1,0 +1,1 @@
+So I built one. This small printed box holds two YubiKeys. A pogo pin rests on each touch disk. A microcontroller grounds the pin on command, and the key reads it like a finger. From a test, it is one line.

@@ -1,0 +1,139 @@
+1
+00:00:00,630 --> 00:00:03,920
+A YubiKey has one feature that no script can fake.
+
+2
+00:00:04,220 --> 00:00:05,040
+Touch.
+
+3
+00:00:05,190 --> 00:00:08,540
+The key waits for a finger, to prove a human is there.
+
+4
+00:00:08,890 --> 00:00:10,270
+That is great for security.
+
+5
+00:00:10,410 --> 00:00:12,300
+And terrible for automated testing.
+
+6
+00:00:13,120 --> 00:00:17,680
+I am building SCA, a simple certificate authority, in bash.
+
+7
+00:00:18,440 --> 00:00:21,250
+Its signing key lives on a YubiKey,
+
+8
+00:00:21,250 --> 00:00:25,700
+and I want every release tested automatically on real hardware.
+
+9
+00:00:25,940 --> 00:00:28,860
+That includes the cases that wait for a person:
+
+10
+00:00:29,080 --> 00:00:32,740
+touch policies, FIDO logins, and one time passwords.
+
+11
+00:00:33,000 --> 00:00:35,190
+So the test suite needed a finger.
+
+12
+00:00:35,990 --> 00:00:36,870
+So I built one.
+
+13
+00:00:36,990 --> 00:00:39,960
+This small printed box holds two YubiKeys.
+
+14
+00:00:39,990 --> 00:00:42,610
+A pogo pin rests on each touch disk.
+
+15
+00:00:42,990 --> 00:00:45,960
+A microcontroller grounds the pin on command,
+
+16
+00:00:46,150 --> 00:00:48,380
+and the key reads it like a finger.
+
+17
+00:00:48,990 --> 00:00:50,670
+From a test, it is one line.
+
+18
+00:00:51,560 --> 00:00:56,320
+I built it in a loop: measure, model, print, fix.
+
+19
+00:00:56,640 --> 00:00:59,740
+Every part was measured with calipers,
+
+20
+00:00:59,910 --> 00:01:03,060
+and the whole box is one OpenSCAD file.
+
+21
+00:01:03,080 --> 00:01:07,220
+One lesson: a pin resting on the key jams it,
+
+22
+00:01:07,380 --> 00:01:11,610
+so a small slide bar lifts the pin before the key moves.
+
+23
+00:01:12,000 --> 00:01:15,100
+The firmware is under two hundred lines of C.
+
+24
+00:01:15,440 --> 00:01:18,570
+And it works: six touches out of six were accepted.
+
+25
+00:01:19,380 --> 00:01:24,460
+And it is cheap: the parts came to about forty three dollars.
+
+26
+00:01:25,070 --> 00:01:26,480
+Most come in packs,
+
+27
+00:01:26,810 --> 00:01:30,850
+so after one build you still have ninety eight pogo pins,
+
+28
+00:01:31,150 --> 00:01:35,590
+three spare microcontrollers, and hundreds of resistors.
+
+29
+00:01:35,860 --> 00:01:38,370
+The second fixture is almost free.
+
+30
+00:01:38,940 --> 00:01:41,630
+One rule: use test keys only.
+
+31
+00:01:41,940 --> 00:01:45,660
+This box fakes human presence, and that is the whole point,
+
+32
+00:01:45,860 --> 00:01:48,210
+so never put a real key in it.
+
+33
+00:01:48,240 --> 00:01:52,200
+The model, the firmware and the parts list are all open,
+
+34
+00:01:52,200 --> 00:01:53,690
+in the SCA repository.
+
+35
+00:01:54,080 --> 00:01:57,590
+Real hardware, real touch, and no human required.

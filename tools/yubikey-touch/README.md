@@ -16,6 +16,10 @@ unplug and replug a key without anyone touching it.
 
 The animation is also in full size as [yubikey-touch-fixture.mp4](yubikey-touch-fixture.mp4).
 
+**Explainer video:** [yubikey-touch-explainer.mp4](yubikey-touch-explainer.mp4) tells in two minutes why the
+fixture exists, how it works, how it was built and what it costs
+([subtitles](yubikey-touch-explainer.srt)).
+
 ## Status (rev H, November 2026)
 
 | Part | State |
@@ -105,6 +109,8 @@ The parts above came to about $43. Tools used for this build:
 |---|---|
 | `layout.svg`, `wiring.svg` | The drawings above, made by `drawings/make.sh` (see [Render](#render)) |
 | `yubikey-touch-fixture.mp4`, `.gif` | The assembly animation, made by `drawings/animate.sh` |
+| `yubikey-touch-explainer.mp4`, `.srt` | The explainer video and its subtitles |
+| `explainer/` | What the explainer video is built from, see [Explainer video](#explainer-video) |
 | `firmware/` | The RP2040-Zero program |
 | `yktouch` | Host script that sends commands to the RP2040 |
 | `70-yktouch.rules` | udev rule so your user can open the serial port |
@@ -185,6 +191,29 @@ After changing `fixture.scad`, regenerate the drawings, so their measurements fo
 drawings/make.sh      # layout.svg and wiring.svg (needs docker and python3)
 drawings/animate.sh   # yubikey-touch-fixture.mp4 and .gif (also needs blender and ffmpeg; a few minutes)
 ```
+
+## Explainer video
+
+`explainer/build.sh` builds `yubikey-touch-explainer.mp4`. It needs docker, blender, node, google-chrome and
+ffmpeg, and takes about 15 minutes.
+
+| File | What |
+|---|---|
+| `explainer/film.html` | The video as a page: `window.setTime(t)` draws second `t`. All the text, layout and timing is here |
+| `explainer/render.js` | Takes a picture of every frame with headless Chrome. `node render.js stills 12,50` makes single pictures, to check a change |
+| `explainer/narration/s1.txt` to `s6.txt` | What is said, one file per scene. Words are spelled the way they should sound ("S C A") |
+| `explainer/narrate.sh` | Speaks the narration with `spark-tts` in a cloned voice and fits it into two minutes |
+| `explainer/build.sh` | Renders the assembly frames from `fixture.scad`, then the pictures, and adds the sound |
+
+```bash
+explainer/build.sh             # new pictures, the narration as it is
+explainer/build.sh --narrate   # speak the narration again first (needs spark-tts and the voice)
+```
+
+The pictures follow `fixture.scad` and the numbers in `film.html`, so after the fixture or its prices change,
+update `film.html` and run `build.sh`. The picture timing follows the speech: after `narrate.sh` makes new
+speech, set the scene starts it prints in `film.html` (`SC`), move the `data-in` times to the new words, and
+update the subtitles by hand.
 
 ## Firmware
 

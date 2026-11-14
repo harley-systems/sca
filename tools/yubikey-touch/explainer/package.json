@@ -1,0 +1,10 @@
+{
+  "name": "yubikey-touch-explainer",
+  "private": true,
+  "description": "Renders the YubiKey touch fixture explainer video",
+  "dependencies": {
+    "@fontsource/inter-tight": "^5",
+    "@fontsource/jetbrains-mono": "^5",
+    "puppeteer-core": "^24"
+  }
+}

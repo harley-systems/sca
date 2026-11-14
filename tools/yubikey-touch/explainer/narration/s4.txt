@@ -1,0 +1,1 @@
+I built it in a loop: measure, model, print, fix. Every part was measured with calipers, and the whole box is one Open S CAD file. One lesson: a pin resting on the key jams it, so a small slide bar lifts the pin before the key moves. The firmware is under two hundred lines of C. And it works: six touches out of six were accepted.
