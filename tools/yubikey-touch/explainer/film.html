@@ -1,0 +1,326 @@
+<!doctype html>
+<!-- The explainer video as a page: window.setTime(t) draws second t of it, and render.js takes a picture of every frame.
+     SC below holds the second each scene's narration starts; an element's data-in is seconds after its scene starts.
+     Both follow the narration, so after narrate.sh makes new speech, update SC and the data-in times to its words. -->
+<html><head><meta charset="utf-8"><title>YubiKey touch fixture</title>
+<style>
+@font-face{font-family:Grotesk;font-weight:400;src:url(node_modules/@fontsource/inter-tight/files/inter-tight-latin-400-normal.woff2)}
+@font-face{font-family:Grotesk;font-weight:500;src:url(node_modules/@fontsource/inter-tight/files/inter-tight-latin-500-normal.woff2)}
+@font-face{font-family:Grotesk;font-weight:700;src:url(node_modules/@fontsource/inter-tight/files/inter-tight-latin-700-normal.woff2)}
+@font-face{font-family:Mono;font-weight:400;src:url(node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2)}
+@font-face{font-family:Mono;font-weight:500;src:url(node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2)}
+@font-face{font-family:Mono;font-weight:700;src:url(node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-700-normal.woff2)}
+:root{--paper:#f3f1ec;--ink:#151515;--mute:#8b877f;--line:#d6d2c9;--acc:#e8451e;--ok:#1c8a4b;--gold:#c9a13a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:var(--paper);color:var(--ink);font-family:Grotesk,sans-serif}
+#stage{position:relative;width:1920px;height:1080px}
+.abs{position:absolute}
+.mono{font-family:Mono,monospace}
+.mute{color:var(--mute)} .acc{color:var(--acc)} .ok{color:var(--ok)}
+.scene{position:absolute;inset:0;display:none}
+.kicker{position:absolute;left:120px;top:150px;font-family:Mono;font-size:26px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.h1{position:absolute;left:120px;top:196px;font-size:76px;font-weight:700;letter-spacing:-.01em;line-height:1.05}
+/* chrome */
+#crumb{left:120px;top:64px;font-family:Mono;font-size:24px;color:var(--mute)}
+#crumb b{color:var(--ink);font-weight:500}
+#count{right:120px;top:64px;font-family:Mono;font-size:24px;color:var(--mute);text-align:right}
+#bar{left:120px;right:120px;bottom:64px;height:2px;background:var(--line)}
+#barfill{height:2px;background:var(--ink);width:0}
+/* s1 */
+#s1 .big{left:820px;top:330px;font-size:250px;font-weight:700;letter-spacing:-.04em;line-height:1;color:var(--acc)}
+#s1 .lead{left:828px;top:250px;font-size:54px;font-weight:500}
+#s1 .sub{left:832px;top:610px;font-size:34px;font-family:Mono;color:var(--mute)}
+#s1 .pair{left:832px;top:740px;font-size:46px;font-weight:500;line-height:1.5}
+#s1 .pair span.tag{display:inline-block;width:560px}
+/* s2 */
+.panel{border:2px solid var(--ink);border-radius:14px;background:#faf9f6}
+#s2 .tree{left:120px;top:400px;font-family:Mono;font-size:32px;line-height:1.75}
+#s2 .run{left:900px;top:300px;width:900px;padding:34px 40px 30px;font-family:Mono;font-size:30px;line-height:1.8}
+#s2 .run .hd{color:var(--mute);font-size:24px;letter-spacing:.08em;text-transform:uppercase;border-bottom:2px solid var(--line);padding-bottom:12px;margin-bottom:14px;display:flex;justify-content:space-between}
+#s2 .row{display:flex;justify-content:space-between}
+#s2 .punch{left:120px;top:880px;font-size:64px;font-weight:700;letter-spacing:-.02em}
+/* s3 */
+#s3 .shot{left:50px;top:300px;width:1010px;height:568px}
+#s3 .shot img{position:absolute;width:1010px;left:0;top:0}
+#s3 .shot svg{position:absolute;left:0;top:0}
+.tagl{position:absolute;font-family:Mono;font-size:24px;background:var(--paper);padding:2px 10px;border:2px solid var(--ink);border-radius:8px;white-space:nowrap}
+#sch{left:1090px;top:300px}
+#s3 .note{left:1100px;top:760px;font-family:Mono;font-size:26px;color:var(--mute);line-height:1.5}
+#s3 .cmd{left:1090px;top:870px;width:740px;padding:22px 30px;font-family:Mono;font-size:36px;font-weight:500}
+/* s4 */
+#s4 .shot{left:0;top:225px;width:1150px;height:647px}
+#s4 .shot img{position:absolute;width:1150px;left:0;top:0}
+#s4 .steps{left:1160px;top:270px;font-family:Mono;font-size:29px;display:flex;gap:10px;align-items:center}
+#s4 .steps span.s{padding:8px 16px;border:2px solid var(--line);border-radius:10px;color:var(--mute)}
+#s4 .steps span.s.on{border-color:var(--ink);color:var(--paper);background:var(--ink)}
+#s4 .steps span.ar{color:var(--mute);font-size:24px}
+#s4 .facts{left:1160px;top:372px;width:660px}
+#s4 .fact{position:relative;border-top:2px solid var(--line);padding:13px 0 12px;display:flex;align-items:center;gap:0}
+#s4 .fact .n{font-size:46px;font-weight:700;letter-spacing:-.02em;width:236px;flex:none}
+#s4 .fact .d{font-family:Mono;font-size:24px;color:var(--mute);line-height:1.35}
+#s4 .dots{display:inline-flex;gap:10px;margin-top:8px}
+#s4 .dots i{width:22px;height:22px;border-radius:50%;border:2px solid var(--ink);display:inline-block}
+#s4 .dots i.on{background:var(--ok);border-color:var(--ok)}
+/* s5 */
+#s5 .price{left:112px;top:330px;font-size:330px;font-weight:700;letter-spacing:-.05em;line-height:1}
+#s5 .plabel{left:124px;top:690px;font-family:Mono;font-size:30px;color:var(--mute);line-height:1.5}
+#s5 .packs{left:760px;top:316px;width:1060px}
+#s5 .pack{margin-bottom:34px}
+#s5 .pack .t{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+#s5 .pack .t b{font-size:38px;font-weight:700}
+#s5 .pack .t span{font-family:Mono;font-size:27px;color:var(--mute)}
+.grid{display:grid;grid-template-columns:repeat(60,12px);gap:5.7px}
+.grid i{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.grid i.u{background:var(--acc)}
+.grid.big{grid-template-columns:repeat(4,56px);gap:14px}
+.grid.big i{width:56px;height:36px;border-radius:7px}
+#s5 .punch{left:120px;top:880px;font-size:64px;font-weight:700;letter-spacing:-.02em}
+/* s6 */
+#s6 .warn{left:50%;top:300px;width:1360px;margin-left:-680px;border:4px solid var(--acc);border-radius:18px;padding:54px 70px 56px;text-align:center}
+#s6 .warn .w1{font-size:128px;font-weight:700;letter-spacing:-.01em;color:var(--acc);line-height:1}
+#s6 .warn .w2{font-size:42px;font-weight:500;margin-top:36px}
+#s6 .warn .w3{font-family:Mono;font-size:32px;color:var(--mute);margin-top:22px}
+#s6 .open{left:120px;top:236px;font-family:Mono;font-size:34px;display:flex;gap:18px}
+#s6 .open span{padding:10px 22px;border:2px solid var(--ink);border-radius:10px}
+#s6 .url{left:120px;top:334px;font-family:Mono;font-size:38px;font-weight:500}
+#s6 .fin{left:116px;top:470px;font-size:132px;font-weight:700;letter-spacing:-.035em;line-height:1.08}
+#s6 .badge{right:120px;top:232px;font-family:Mono;font-size:24px;color:var(--acc);border:2px solid var(--acc);border-radius:8px;padding:6px 14px;letter-spacing:.06em}
+</style></head>
+<body><div id="stage">
+
+<div id="crumb" class="abs">sca / tools / <b>yubikey-touch</b></div>
+<div id="count" class="abs"></div>
+<div id="bar" class="abs"><div id="barfill"></div></div>
+
+<!-- 1 hook -->
+<section class="scene" id="s1">
+  <svg class="abs" style="left:250px;top:210px" width="420" height="700" viewBox="0 0 420 700" fill="none" stroke="#151515" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="70" y="20" width="280" height="500" rx="40"/>
+    <circle cx="210" cy="88" r="26"/>
+    <rect x="110" y="520" width="200" height="150" rx="6"/>
+    <path d="M140 560v70M187 560v70M233 560v70M280 560v70" stroke-width="12" stroke="#d6d2c9"/>
+    <g id="rings" stroke="#e8451e" stroke-width="4"></g>
+    <circle cx="210" cy="300" r="74" fill="#c9a13a" stroke="#151515"/>
+    <circle cx="210" cy="300" r="52" stroke="#151515" stroke-width="3" opacity=".35"/>
+  </svg>
+  <div class="abs mono" id="wait1" style="left:250px;top:930px;width:420px;text-align:center;font-size:28px;color:#8b877f">waiting for touch<span id="cur1">_</span></div>
+  <div class="abs lead" data-in="0.1">One feature no script can fake:</div>
+  <div class="abs big" data-in="3.5" data-dy="40">touch.</div>
+  <div class="abs sub" data-in="4.7">a finger on the pad = a human is there</div>
+  <div class="abs pair" data-in="8.6"><span class="tag">for security</span><span class="ok">great</span></div>
+  <div class="abs pair" style="top:812px" data-in="9.9"><span class="tag">for automated testing</span><span class="acc">terrible</span></div>
+</section>
+
+<!-- 2 motivation -->
+<section class="scene" id="s2">
+  <div class="kicker" data-in="0">why</div>
+  <div class="h1" data-in="1.4">SCA <span class="mute" style="font-weight:400;font-size:44px;letter-spacing:0">&nbsp;simple certificate authority, in bash</span></div>
+  <div class="abs tree" data-in="5.2">
+    <div class="mute">root CA &nbsp;<span style="font-size:24px">offline</span></div>
+    <div>└─ sub-CA &nbsp;<span class="acc" style="font-size:24px">key lives on a YubiKey</span></div>
+    <div class="mute">&nbsp;&nbsp;&nbsp;├─ services</div>
+    <div class="mute">&nbsp;&nbsp;&nbsp;├─ hosts</div>
+    <div class="mute">&nbsp;&nbsp;&nbsp;└─ users</div>
+  </div>
+  <div class="abs panel run" data-in="8.5">
+    <div class="hd"><span>qa run · every release</span><span>real hardware</span></div>
+    <div class="row" data-t="9.3"><span>sca create key</span><span class="st"></span></div>
+    <div class="row" data-t="9.9"><span>sca create csr</span><span class="st"></span></div>
+    <div class="row" data-t="10.5"><span>sca approve</span><span class="st"></span></div>
+    <div class="row" data-t="11.1"><span>sca export p12</span><span class="st"></span></div>
+    <div class="row" data-w="15.9"><span>piv sign, touch policy</span><span class="st"></span></div>
+    <div class="row" data-w="17.1"><span>fido register</span><span class="st"></span></div>
+    <div class="row" data-w="18.2"><span>one-time password</span><span class="st"></span></div>
+  </div>
+  <div class="abs punch" data-in="19.8">The test suite needed <span class="acc">a finger.</span></div>
+</section>
+
+<!-- 3 device -->
+<section class="scene" id="s3">
+  <div class="kicker" data-in="0">what</div>
+  <div class="h1" data-in="0.1">So I built one.</div>
+  <div class="abs shot" data-in="1.0" data-dy="0"><img id="img3" src="build/anim/f_0690.png">
+    <svg width="1010" height="568" stroke="#151515" stroke-width="2.5" fill="none">
+      <path d="M96 100L128 132" data-in="2.9" data-dy="0"/><path d="M822 508L792 456" data-in="3.3" data-dy="0"/>
+      <path d="M130 300L212 196" data-in="4.2" data-dy="0"/><path d="M640 78L520 168" data-in="7.0" data-dy="0"/>
+    </svg>
+    <div class="tagl" style="left:14px;top:62px" data-in="2.9">YubiKey 4</div>
+    <div class="tagl" style="left:770px;top:506px" data-in="3.3">YubiKey 5C NFC</div>
+    <div class="tagl" style="left:60px;top:298px" data-in="4.2">pogo pin</div>
+    <div class="tagl" style="left:610px;top:42px" data-in="7.0">RP2040-Zero</div>
+  </div>
+  <svg class="abs" id="sch" data-in="4.0" width="760" height="440" viewBox="0 0 760 440" fill="none" stroke="#151515" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" font-family="Mono" font-size="24">
+    <!-- key, side view -->
+    <rect x="30" y="350" width="470" height="56" rx="10" fill="#faf9f6"/>
+    <text x="46" y="387" fill="#151515" stroke="none">YubiKey</text>
+    <g id="rip" stroke="#e8451e" stroke-width="3"></g>
+    <rect x="236" y="338" width="108" height="12" rx="4" fill="#c9a13a"/>
+    <text x="400" y="330" fill="#8b877f" stroke="none">touch disk</text>
+    <!-- pogo pin -->
+    <g id="pin">
+      <rect x="278" y="170" width="24" height="120" rx="4" fill="#faf9f6"/>
+      <path d="M290 290V330" stroke-width="9"/>
+      <path d="M284 330h12l-6 8z" fill="#151515"/>
+    </g>
+    <text x="150" y="238" fill="#8b877f" stroke="none">pogo pin</text>
+    <!-- wire -->
+    <path id="wire" d="M290 170V96H520"/>
+    <!-- mcu -->
+    <rect x="520" y="46" width="210" height="100" rx="10" fill="#faf9f6"/>
+    <text x="540" y="88" fill="#151515" stroke="none">RP2040</text>
+    <text x="540" y="122" fill="#8b877f" stroke="none" id="gp">GP0 floating</text>
+    <!-- ground -->
+    <path id="gndw" d="M625 146V214"/>
+    <path d="M595 214h60M606 228h38M617 242h16"/>
+    <text x="668" y="236" fill="#8b877f" stroke="none">GND</text>
+    <text x="30" y="436" stroke="none" id="read" fill="#1c8a4b" font-size="28" font-weight="700"></text>
+  </svg>
+  <div class="abs note" data-in="9.6">grounded, or left floating.<br>never driven high.</div>
+  <div class="abs panel cmd" data-in="12.8"><span class="mute">$ </span><span id="typed"></span><span id="cur3">▍</span><span id="okk" class="ok" style="float:right"></span></div>
+</section>
+
+<!-- 4 build -->
+<section class="scene" id="s4">
+  <div class="kicker" data-in="0">how</div>
+  <div class="abs shot"><img id="img4" src="build/anim/f_0001.png"></div>
+  <div class="abs steps" data-in="0.6">
+    <span class="s" data-on="1.6">measure</span><span class="ar">→</span><span class="s" data-on="2.6">model</span><span class="ar">→</span><span class="s" data-on="3.4">print</span><span class="ar">→</span><span class="s" data-on="4.3">fix</span><span class="ar">↺</span>
+  </div>
+  <div class="abs facts">
+    <div class="fact" data-in="6.0"><span class="n">calipers</span><span class="d">every part measured,<br>the model follows them</span></div>
+    <div class="fact" data-in="9.8"><span class="n">1 file</span><span class="d">fixture.scad, OpenSCAD<br>43 g of PLA, no supports</span></div>
+    <div class="fact" data-in="15.7"><span class="n">2.5 mm</span><span class="d">slide bar lifts the pin,<br>so the key never jams</span></div>
+    <div class="fact" data-in="20.4"><span class="n">192</span><span class="d">lines of C: all the firmware<br>touch, hold, release</span></div>
+    <div class="fact" data-in="23.8"><span class="n">6 / 6</span><span class="d">touches accepted<br><span class="dots" id="six"><i></i><i></i><i></i><i></i><i></i><i></i></span></span></div>
+  </div>
+</section>
+
+<!-- 5 cost -->
+<section class="scene" id="s5">
+  <div class="kicker" data-in="0">cost</div>
+  <div class="abs price" data-in="3.7" data-dy="0">$<span id="usd">0</span></div>
+  <div class="abs plabel" data-in="4.4">all the parts for one fixture<br>without the keys and the printer</div>
+  <div class="abs packs">
+    <div class="pack" data-in="9.5"><div class="t"><b>pogo pins</b><span>2 used · <span style="color:#151515">98 left</span></span></div><div class="grid" id="g1"></div></div>
+    <div class="pack" data-in="11.6"><div class="t"><b>RP2040-Zero</b><span>1 used · <span style="color:#151515">3 left</span></span></div><div class="grid big" id="g2"></div></div>
+    <div class="pack" data-in="14.2"><div class="t"><b>resistors</b><span>2 used · <span style="color:#151515">598 left</span></span></div><div class="grid" id="g3"></div></div>
+  </div>
+  <div class="abs punch" data-in="16.4">Fixture number two is <span class="acc">almost free.</span></div>
+</section>
+
+<!-- 6 close -->
+<section class="scene" id="s6">
+  <div class="abs warn" data-in="0.2" data-out="9.0">
+    <div class="w1" data-in="1.0" data-dy="0">TEST KEYS ONLY</div>
+    <div class="w2" data-in="3.0">This box fakes human presence. That is the whole point.</div>
+    <div class="w3" data-in="7.0">never put a real key in it</div>
+  </div>
+  <div class="kicker" data-in="9.3">open</div>
+  <div class="abs badge" data-in="9.3">TEST KEYS ONLY</div>
+  <div class="abs open"><span data-in="9.5">model</span><span data-in="10.3">firmware</span><span data-in="11.6">parts list</span></div>
+  <div class="abs url" data-in="13.2">github.com/harley-systems/sca <span class="mute">→ tools/yubikey-touch</span></div>
+  <div class="abs fin">
+    <div data-in="15.1">Real hardware.</div>
+    <div data-in="16.2">Real touch.</div>
+    <div data-in="17.4" class="acc">No human required.</div>
+  </div>
+</section>
+</div>
+
+<script>
+const END=120, FPS=30;
+const SC=[['s1',0.6,'the problem'],['s2',13.08,'the motivation'],['s3',35.96,'the device'],['s4',51.54,'the build'],['s5',79.35,'the cost'],['s6',98.91,'the rule']];
+const $=s=>document.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const cl=x=>Math.max(0,Math.min(1,x)), sm=x=>{x=cl(x);return x*x*x*(x*(6*x-15)+10)}, out3=x=>1-Math.pow(1-cl(x),3);
+
+// build dot grids
+function grid(id,n,u){const g=$(id);for(let i=0;i<n;i++){const d=document.createElement('i');if(i<u)d.className='u';g.appendChild(d)}}
+grid('#g1',100,2);grid('#g2',4,1);grid('#g3',600,2);
+
+const frameCache={};
+async function setImg(img,n){
+  n=Math.max(1,Math.min(900,Math.round(n)));
+  const src='build/anim/f_'+String(n).padStart(4,'0')+'.png';
+  if(img.dataset.n==n)return; img.dataset.n=n; img.src=src; try{await img.decode()}catch(e){}
+}
+
+function rings(g,cx,cy,r0,r1,l,period,n,on){
+  let h='';
+  if(on)for(let i=0;i<n;i++){const p=((l/period)+i/n)%1;h+=`<circle cx="${cx}" cy="${cy}" r="${r0+(r1-r0)*p}" opacity="${(1-p)*.9}"/>`}
+  g.innerHTML=h;
+}
+
+const custom={
+ s1(l){
+   rings($('#rings'),210,300,78,150,l,2.2,3,true);
+   $('#cur1').style.opacity=Math.floor(l*2)%2?1:0;
+ },
+ s2(l){
+   $$('#s2 .row').forEach(r=>{
+     const st=r.querySelector('.st');
+     if(r.dataset.t){const t=+r.dataset.t; r.style.opacity=cl((l-t+0.5)/0.3);
+       if(l<t){st.textContent='running';st.style.color='#8b877f'}else{st.textContent='ok';st.style.color='#1c8a4b'}}
+     else{const t=+r.dataset.w; r.style.opacity=cl((l-t)/0.3);
+       st.textContent='waiting for touch'+'.'.repeat(1+Math.floor(l*2.5)%3)+' '.repeat(2-Math.floor(l*2.5)%3);st.style.color='#e8451e'}
+   });
+ },
+ s3(l){
+   const on=(l>=8.5&&l<12.7)||(l>=14.5);
+   const c=on?'#e8451e':'#151515';
+   $('#wire').setAttribute('stroke',c);$('#gndw').setAttribute('stroke',c);
+   $('#pin').setAttribute('stroke',c);
+   $('#gp').textContent=on?'GP0 low':'GP0 floating';$('#gp').setAttribute('fill',on?'#e8451e':'#8b877f');
+   const ll=l>=14.5?l-14.5:l-8.5;
+   let h='';if(on)for(let i=0;i<3;i++){const p=((ll/1.3)+i/3)%1;h+=`<ellipse cx="290" cy="344" rx="${54+48*p}" ry="${8+18*p}" opacity="${(1-p)*.9}"/>`}
+   $('#rip').innerHTML=h;
+   $('#read').textContent=(l>=10.4&&l<12.7)||l>=14.7?'✓ the key reads a finger':'';
+   const cmd='yktouch touch 4 500';
+   $('#typed').textContent=cmd.slice(0,Math.floor(cl((l-13.1)/1.1)*cmd.length));
+   $('#cur3').style.opacity=(l<14.4&&Math.floor(l*2.5)%2)?1:0;
+   $('#okk').textContent=l>=14.6?'ok':'';
+   
+ },
+ async s4(l){
+   // map narration to the assembly animation
+   const K=[[0,1],[15.3,625],[19.9,690],[23.6,800],[27.4,870]];
+   let f=870;for(let i=0;i<K.length-1;i++){if(l<K[i+1][0]){const p=(l-K[i][0])/(K[i+1][0]-K[i][0]);f=K[i][1]+(K[i+1][1]-K[i][1])*cl(p);break}}
+   await setImg($('#img4'),f);
+   const steps=$$('#s4 .steps .s');
+   let cur=-1;steps.forEach((s,i)=>{if(l>=+s.dataset.on)cur=i});
+   steps.forEach((s,i)=>s.classList.toggle('on',i===cur&&l<5.6));
+   $$('#six i').forEach((d,i)=>d.classList.toggle('on',l>=24.8+i*0.22));
+ },
+ s5(l){
+   $('#usd').textContent=Math.round(43*out3((l-3.8)/1.1));
+   [['#g1',9.6,0.9],['#g2',11.7,0.4],['#g3',14.3,1.3]].forEach(([id,t,d])=>{
+     $(id).style.clipPath=`inset(0 ${100-100*out3((l-t)/d)}% 0 0)`});
+ },
+ s6(l){}
+};
+
+window.setTime=async function(t){
+  // chrome
+  let idx=0;SC.forEach((s,i)=>{if(t>=s[1]-0.2)idx=i});
+  $('#count').innerHTML='0'+(idx+1)+' / 06 &nbsp; '+SC[idx][2];
+  $('#barfill').style.width=(100*cl(t/END))+'%';
+  const fadeAll=1-sm((t-(END-0.7))/0.6);
+  $('#stage').style.opacity=sm(t/0.5)*fadeAll;
+  for(let i=0;i<SC.length;i++){
+    const [id,st]=SC[i], en=i+1<SC.length?SC[i+1][1]:END+1, el=$('#'+id);
+    const a=sm((t-(st-0.2))/0.4)*(1-sm((t-(en-0.5))/0.3));
+    if(a<=0){el.style.display='none';continue}
+    el.style.display='block';el.style.opacity=a;
+    const l=t-st;
+    $$('[data-in]',el).forEach(e=>{
+      const p=out3((l-(+e.dataset.in))/0.55);
+      const q=e.dataset.out?1-sm((l-(+e.dataset.out))/0.35):1;
+      const dy=e.dataset.dy!==undefined?+e.dataset.dy:18;
+      e.style.opacity=cl((l-(+e.dataset.in))/0.3)*q;
+      e.style.transform=dy?`translateY(${(1-p)*dy}px)`:'';
+    });
+    await custom[id](l);
+  }
+};
+window.ready=document.fonts.ready.then(()=>setTime(0));
+</script>
+</body></html>

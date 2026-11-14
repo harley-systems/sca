@@ -1,0 +1,1 @@
+A YubiKey has one feature that no script can fake. Touch. The key waits for a finger, to prove a human is there. That is great for security. And terrible for automated testing.

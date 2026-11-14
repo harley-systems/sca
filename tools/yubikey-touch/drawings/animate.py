@@ -1,4 +1,7 @@
-"""Blender script for the assembly animation: blender -b -P animate.py -- <stl dir> <frames dir>
+"""Blender script for the assembly animation: blender -b -P animate.py -- <stl dir> <frames dir> [WxH] [transparent]
+
+The frames are 1280x720 on white unless a size is given; "transparent" leaves the background out (the explainer
+video puts the frames on its own background).
 
 Each STL is already in its assembled place (drawings/anim.scad), so a part's location is its offset from
 there. Parts arrive in the README's build order along paths that keep them clear of the parts already in.
@@ -8,7 +11,10 @@ import sys
 import bpy
 from mathutils import Vector
 
-stl_dir, frames_dir = sys.argv[sys.argv.index("--") + 1:][:2]
+args = sys.argv[sys.argv.index("--") + 1:]
+stl_dir, frames_dir = args[:2]
+size = next((a for a in args[2:] if "x" in a), "1280x720")
+transparent = "transparent" in args[2:]
 FPS, END = 30, 900
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -92,7 +98,10 @@ sh = sc.display.shading
 sh.light, sh.color_type, sh.show_cavity, sh.show_shadows = "STUDIO", "MATERIAL", True, True
 sh.background_type = "WORLD"
 sc.view_settings.view_transform = "Standard"   # so the white background stays white
-sc.render.resolution_x, sc.render.resolution_y = 1280, 720
+sc.render.resolution_x, sc.render.resolution_y = (int(n) for n in size.split("x"))
+if transparent:
+    sc.render.film_transparent = True
+    sc.render.image_settings.color_mode = "RGBA"
 w = bpy.data.worlds.new("w"); sc.world = w; w.color = (1, 1, 1)
 bpy.ops.object.camera_add()
 cam = bpy.context.object
