@@ -7,7 +7,7 @@ top=$(dirname "$here")
 b="$here/build/anim"
 rm -rf "$b" && mkdir -p "$b/stl" "$b/frames" "$b/captions"
 
-items="body deck lid hub sockets adapter uturn usbin rp2040 boards yk4 yk5 disk4 disk5
+items="body deck lid hub sockets adapter uturn usbin rp2040 boards_n boards_s yk4 yk5 disk4 disk5
        knob4 knob5 bar4 bar5 fil4 fil5 pogo4 pogo5"
 for i in $items; do
     docker run --rm -u "$(id -u):$(id -g)" -v "$top:/o" -w /o/drawings openscad/openscad:2021.01 \
@@ -29,18 +29,18 @@ while IFS='|' read -r t0 t1 caption; do
     filters+="drawtext=fontfile=$font:textfile=$b/captions/$n.txt:fontsize=30:fontcolor=0x1f2328:"
     filters+="box=1:boxcolor=white@0.85:boxborderw=12:x=(w-text_w)/2:y=h-64:enable='between(t,$t0,$t1)',"
 done <<'CAPTIONS'
-0.0|1.0|Rev H: the printed body
+0.0|1.0|Rev I: the printed body
 1.0|3.9|1. The hub, with the YubiKey 5 adapter and the U-turn, onto its pads
 3.9|5.7|The plug for the laptop goes in through the west wall
 5.8|7.9|2. The deck
-7.9|9.7|3. The switch boards, into their pockets
+7.9|9.7|3. The switch boards slide into their drawers
 9.8|12.6|4. The RP2040-Zero slides onto the U-turn
 12.6|16.4|5. Slide bars, then the pin holders with their pogo pins, lifted
 16.4|17.9|6. Filament cross pins, from the west
 18.0|21.0|7. The keys slide in under the lifted pins
 21.3|23.0|8. Bars pushed south: the pins come down on the buttons
 23.3|26.4|9. The lid drops in and slides north under the wall
-26.4|30.0|YubiKey touch fixture, rev H
+26.4|30.0|YubiKey touch fixture, rev I
 CAPTIONS
 filters=${filters%,}
 

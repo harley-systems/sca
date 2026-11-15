@@ -13,13 +13,19 @@ module sockets() { for (xc = [pin_x, far_x]) { bx(xc - 6.5, xc + 6.5, n_face, n_
 module yk5_adapter() { ab = plug_bot - yk5_ad_drop;
                    bx(pin_x - yk5_ad[0] / 2, pin_x + yk5_ad[0] / 2, s_face, yk5_face, ab, ab + yk5_ad[1]); }
 module uturn()   { bx(far_x - 7, far_x + 7, s_face, s_face + 12.1, plug_bot - uturn_below, uturn_top); }
-module rp2040()  { bx(hub_x1 - 17.5, hub_x1, s_face - 23.5, s_face, mcu_bot, mcu_bot + 1); }
+module rp2040()  { x0 = hub_x1 - 18; t0 = s_face - 23.5; zt = mcu_bot + mcu_t;    // board 18 x 23.5, lined up with the hub's east edge
+                   bx(x0, hub_x1, t0, s_face, mcu_bot, zt);
+                   bx(far_x - 4.5, far_x + 4.5, s_face - 7.4, s_face, zt, zt + 3.2);                  // its USB-C socket
+                   for (x = [x0 + 2.8, x0 + 12.0]) bx(x, x + 3.2, t0 + 5.2, t0 + 9.4, zt, zt + 2.0); }   // RESET and BOOT buttons
 module usb_in()  { bx(-12, hub_x0, usbc_t - 6, usbc_t + 6, hub_top + 1.6 - 3, hub_top + 1.6 + 3); }
 module yk4()     { k = tunnel_z0; bx(pin_x - 8.9, pin_x + 8.9, n_face - 3.1 - 33, n_face - 3.1, k + 0.01, k + 3.3);
                    bx(pin_x - 6, pin_x + 6, n_face - 3.1, n_face + 8.8, k + yk4_plug_gap, k + yk4_plug_gap + 2.3); }
 module yk5()     { k = tunnel_z0 + yk5_dz; bx(pin_x - 8.9, pin_x + 8.9, yk5_face + 4.8, yk5_face + 37.8, k + 0.01, k + 3.3);
                    bx(pin_x - 5, pin_x + 5, yk5_face + 0.01, yk5_face + 4.8, k + 0.3, k + 3.0); }
-module boards()  { for (b = BOARDS) bx(b[0], b[0] + brd[0], b[1], b[1] + brd[1], deck_z1 - 0.6, deck_z1 - 0.6 + brd[2]); }
+module board(b)  { bx(b[0], b[0] + brd[0], b[1], b[1] + brd[1], deck_z1, deck_z1 + brd[2]); }   // in its drawer on the deck
+module boards_n() { board(BOARDS[0]); board(BOARDS[1]); }
+module boards_s() { board(BOARDS[2]); board(BOARDS[3]); }
+module boards()  { boards_n(); boards_s(); }
 module bought()  { hub(); sockets(); yk5_adapter(); uturn(); rp2040(); usb_in(); boards(); }
 module keys()    { yk4(); yk5(); }
 module pogo(d)   { translate([0, 0, d[7]]) {                    // barrel, plunger pressed onto the button

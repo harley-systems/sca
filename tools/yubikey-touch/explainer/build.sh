@@ -12,7 +12,7 @@ cd "$here"
 rm -rf "$b/stl" "$b/anim" "$b/frames" && mkdir -p "$b/stl" "$b/anim"
 
 # 1. the assembly animation, as in drawings/animate.sh, but larger and with no background or captions
-items="body deck lid hub sockets adapter uturn usbin rp2040 boards yk4 yk5 disk4 disk5
+items="body deck lid hub sockets adapter uturn usbin rp2040 boards_n boards_s yk4 yk5 disk4 disk5
        knob4 knob5 bar4 bar5 fil4 fil5 pogo4 pogo5"
 for i in $items; do
     docker run --rm -u "$(id -u):$(id -g)" -v "$top:/o" -w /o/drawings openscad/openscad:2021.01 \

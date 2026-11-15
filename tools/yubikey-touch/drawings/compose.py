@@ -78,7 +78,7 @@ def callout(ax, ay, tx, ty, label, anchor="start"):
     text(tx + (4 if anchor == "start" else -4), ty + 4, label, anchor=anchor)
 
 # ---------------------------------------------------------------- titles
-text(20, 34, "YubiKey touch fixture, rev H: layout (mm)", size=20, weight="700")
+text(20, 34, "YubiKey touch fixture, rev I: layout (mm)", size=20, weight="700")
 text(20, 56, "Generated from fixture.scad by drawings/make.sh. North, the YubiKey 4 end, is on the left.", color=GREY)
 top = plan_y(D["box_w"])
 text(20, top - 72, "Plan: lid off, seen from above, east up", size=14, weight="700")
@@ -165,7 +165,7 @@ for name, label in [("body", "printed body"), ("cover", "deck and lid"), ("bough
     lx += 40 + 6.6 * len(label)
 
 svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{W:.0f}" height="{H:.0f}" viewBox="0 0 {W:.0f} {H:.0f}" font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
-<title>YubiKey touch fixture, rev H: layout</title>
+<title>YubiKey touch fixture, rev I: layout</title>
 <defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 2 L 5 5 L 0 8" fill="none" stroke="{RED}" stroke-width="1.5"/></marker></defs>
 <rect width="100%" height="100%" fill="#ffffff"/>
 {chr(10).join(e for e in el if e)}
