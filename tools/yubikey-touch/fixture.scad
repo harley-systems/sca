@@ -1,7 +1,7 @@
-// YubiKey touch fixture, rev H: body, deck, lid, plus a knob and a slide bar per pin. No glue.
+// YubiKey touch fixture, rev I2: body, deck, lid, plus a knob and a slide bar per pin. No glue.
 //
 // Render one part:  openscad -D 'part="body"' -o body.stl fixture.scad
-// Parts: "body", "deck", "lid" (flipped for printing), "knob", "bar" (print one of each per pin),
+// Parts: "body", "deck", "lid" (turned over for printing), "knob", "bar" (print one of each per pin),
 //        "test" (north end: wall, hub seat, YubiKey 4 drawer and tower), "assembly" (for looking at).
 //
 // Rev G: the layout comes from the parts in hand, measured with calipers (hub board, sockets,
@@ -14,6 +14,26 @@
 // 1 mm wider, the fences are 0.5 mm away, and the end walls have shallow pockets so each key still
 // plugs all the way in. The YubiKey 5 adapter hung from its socket at no set height, so the key had
 // to find it blind: a cradle at the south wall now holds its USB-C end where the key plugs in straight.
+//
+// Rev I, from the printed rev H parts:
+//  - The lid came out as a mirror image, because it was turned over for printing with a mirror. It is
+//    now turned over with a rotation.
+//  - The slide bar was as big as the sleeve it runs in. The bar is smaller; the sleeve opening is the
+//    same, so the new bar also fits a rev H body.
+//  - Thin places on the towers broke. The tower and sleeve walls are thicker, and the sloped rib is
+//    built around the wire channel, which had almost no plastic around it.
+//  - The switch boards lay loose in shallow pockets. They now slide into drawers on the deck, and the
+//    lid's board ribs are gone.
+//  - The RP2040 supports were several mm too high. mcu_z has to be measured again; until then the
+//    deck has no supports and the lid no hold-down for it (mcu_support).
+//
+// Rev I2 (lid and deck only), from the first rev I print: the lid's two deck hold-downs were 2 mm square
+// posts, 17 mm tall. Each layer of them took under 2 s and the nozzle hopped between them, so they came
+// out lumpy with a curtain of strings between them, and more strings crossed the deck's drawers.
+//  - The lid has one hold-down, a cross-shaped column over the hub socket that nothing plugs into.
+//  - The deck's centre rail runs through and joins the two drawer blocks.
+//  - Rule for these two parts: above its plate a part is one closed outline, so the nozzle never has to
+//    cross open air, and nothing tall is thinner than a wall of four lines.
 //
 // Pin lift: the pogo pin sits in a square knob that slides straight up and down in a square hole in
 // the tower, so it can't turn and twist the wire. A 1.75 mm filament piece crosses the knob, rests on
@@ -46,7 +66,11 @@ sock_h      = 5.7;    // A socket shell height (USB standard)
 adapter_out = 25.0;   // YubiKey 5 adapter: its USB-C face is this far past the south socket face (63.0 - 38.0)
 uturn_h     = 25.1;   // U-turn adapter (RP2040): body height
 uturn_below = 2.5;    // ... and how far it reaches below the bottom of its A plug
-mcu_z       = 15.4;   // RP2040 board bottom above the hub board top
+mcu_z       = 15.4;   // RP2040 board bottom above the hub board top (MEASURE again: the rev H supports,
+                      // built to this, held the board several mm too high)
+mcu_t       = 1.6;    // RP2040 board thickness (MEASURE; the lid's hold-down clears a board this thick)
+mcu_support = false;  // supports under the RP2040 on the deck and a hold-down over it on the lid: true once
+                      // mcu_z and mcu_t are measured
 usbc_from_n = 17.0;   // middle of the hub's USB-C input from the board's north edge (MEASURE: from a photo; the wall hole is wide)
 // keys: YubiKey 4 (USB-A) and YubiKey 5C NFC, button 10 mm across
 yk4_btn     = 12.8;   // YubiKey 4 plugged into the hub: socket face -> start of the button
@@ -68,25 +92,45 @@ tunnel_z0 = 4.6;   tunnel_z1 = 9.8;     // 5.2 tall, YubiKey body 3.3 (in the dr
 pin_len     = 16.5;    // barrel top to tip, plunger fully out (measured)
 pad_z       = 7.6;     // height of the touch disk in the tunnel: key on the floor, 3.3 thick, 0.3 dip
 pin_press   = 1.0;     // how far the plunger is pushed in when the pin is down on the disk
-pin_lift    = 2.5;     // how far the bar lifts the pin; the tip then clears the key by ~1.5 mm
-channel_d   = 1.6;     // touch-wire channel (30 AWG)
+pin_lift    = 2.5;     // how far the bar lifts the pin; the tip then clears the key by ~1.2 mm
+channel_d   = 2.0;     // touch-wire channel (30 AWG). Rev H: 1.6, which had to be drilled clear
+channel_wall = 1.2;    // plastic around the channel, at least (rev H: under 0.4 for most of its length)
 
-// knob and slide bar
+// knob
 knob_w      = 3.6;     // square knob, in a knob_w + 0.3 square hole
 knob_bore_d = 1.4;     // loose on the 1.02 barrel, so the tip passes; the solder joint rests on the slot floor
 fil_d       = 1.75;    // filament cross pin
-tower_w     = 7;       // square tower
+fil_len     = 9;       // ... and its length: from the far wall of the knob's hole to the sleeve's outer wall
+tower_w     = 9;       // square tower: walls 2.55 around the knob's hole (rev H: 7, walls 1.55)
 barrel_top  = pad_z - pin_press + pin_len;   // 23.1 with the values above
 fil_z       = barrel_top + fil_d / 2 + 0.03;   // the filament sits right on top of the barrel
-bar_t       = 2.4;     // slide bar: 13 long x 8.5 tall x 2.4 thick (rev F: 11 x 6.9 x 1.6 broke)
-bar_len     = 13;
-bar_h       = 8.5;
-bar_v_low   = 3.0;     // slot height in the bar, from its bottom edge, for pin down (pin up: + pin_lift)
-bar_u_down  = 2.5;     // slot positions along the bar where the filament rests (flat ends)
-bar_u_up    = 10.5;
+
+// Slide bar and the sleeve it runs in. The pin's spring pushes the filament up, so with the pin down the
+// bar's top edge presses on the sleeve roof; with the pin up the bar rests on the sleeve floor. The slot
+// is placed for those two positions, so the pin presses pin_press and lifts pin_lift whatever the play.
+// Rev H: the bar (13 x 8.5 x 2.4) left 0.3 and 0.25 mm in this opening, and its first printed layer
+// spreads by about that much.
+bar_t       = 2.0;     // slide bar: 15 long x 8.3 tall x 2.0 thick
+bar_len     = 15;
+bar_h       = 8.3;
+sleeve_w    = 2.65;    // sleeve opening across (as in rev G and H): the bar has 0.65 to spare
+sleeve_play = 0.5;     // room for the bar up and down in the sleeve
+bar_rise    = pin_lift + sleeve_play;      // how much the slot rises along the bar (3.0)
+bar_v0      = (bar_h - bar_rise) / 2;      // slot height from the bar's bottom edge at its low end (2.65);
+                                           // the bar is then the same turned end for end
+bar_trim    = 0;       // to press harder or softer, move the slot in the bar and reprint only the bar:
+                       // +0.3 presses 0.3 mm harder (and lifts 0.3 less). The sleeve does not change
+bar_v_low   = bar_v0 - bar_trim;
+bar_u_down  = 3.5;     // slot positions along the bar where the filament rests (flat ends)
+bar_u_up    = bar_len - bar_u_down;
 slot_w      = 1.95;
+sleeve_z1   = fil_z + bar_h - bar_v0;           // underside of the sleeve roof (as in rev H)
+sleeve_z0   = sleeve_z1 - bar_h - sleeve_play;  // sleeve floor (as in rev H)
+sleeve_wall = 1.6;     // sleeve outer wall and roof (rev H: 0.8)
+sleeve_floor = 1.2;    // (rev H: 0.8)
+fil_slot_w  = 2.4;     // width of the slots the filament moves in (rev H: 2.0, which had to be cleared)
 knob_z0     = barrel_top - 10.15;   // knob bottom when the pin is down
-tower_top   = fil_z - bar_v_low + bar_h + 0.95;   // 0.8 mm roof over the bar sleeve
+tower_top   = sleeve_z1 + sleeve_wall;
 knob_h      = tower_top - knob_z0 + 1.5;          // sticks out 1.5 mm above the tower when down, 4 mm when up
 
 // ---------------------------------------------------------------- box layout (derived)
@@ -117,6 +161,8 @@ lid_z      = uturn_top + 0.8;                          // underside of the lid
 box_h      = lid_z + 2;
 deck_z0    = hub_top + sock_top;                       // the deck rests on the A sockets
 deck_z1    = deck_z0 + 1.2;
+deck_t0    = 2.5;                                      // the deck's north and south edges: it ends before the
+deck_t1    = s_face - slack / 2 - 0.3;                 // U-turn and the adapter, wherever the hub sits
 
 // the pins sit over the middle of each button with the hub in the middle of its travel, so they are at
 // most slack / 2 off whichever end it rests against
@@ -135,39 +181,54 @@ module rod(p1, p2, d) { hull() { translate(p1) sphere(d = d, $fn = 16); translat
 module out() { mirror([0, 1, 0]) children(); }
 
 // ---------------------------------------------------------------- body
-DRAWERS = [  // t0, t1, pin ty, rib wall end ty0..ty1, s (+1 north drawer, -1 south), channel exit, dz
-    [-28, 0, pin_ty_yk4, -1.0, 0.0, 1, [20, n_in + 0.6, 14.0], 0],
-    [box_l, box_l + 28, pin_ty_yk5, box_l, box_l + 1, -1, [20, a_face - 0.6, 14.0], yk5_dz]];
+DRAWERS = [  // t0, t1, pin ty, thin slice at the end wall's outer face ty0..ty1 (the rib ends there),
+             // s (+1 north drawer, -1 south), channel exit in the box, dz
+    [-28, 0, pin_ty_yk4, -0.02, 0.0, 1, [20, n_in + 0.6, 16.5], 0],        // exit above the deck's drawers
+    [box_l, box_l + 28, pin_ty_yk5, box_l, box_l + 0.02, -1, [20, a_face - 0.6, 14.0], yk5_dz]];
+
+// the wire channel runs from the tower's box-side wall (inside the wire slot) to its exit in the box
+function chan_p1(d) = [pin_x, d[2] + d[5] * (knob_w / 2 + 1.1), barrel_top - 0.4];
+function chan_at(d, ty) = let(p1 = chan_p1(d)) p1 + (d[6] - p1) * (ty - p1[1]) / (d[6][1] - p1[1]);
+
+// sloped rib from the tower to the end wall, built around the wire channel: its sides and top are
+// channel_wall away from the channel all the way (rev H's rib ran beside the channel, not around it)
+module rib(d) {
+    s = d[5]; p1 = chan_p1(d); u = (d[6] - p1) / norm(d[6] - p1);
+    cover = channel_d / 2 + channel_wall;
+    hw = cover * norm([u[0], u[1]]) / abs(u[1]);    // half width
+    ht = cover * norm([u[1], u[2]]) / abs(u[1]);    // height above the channel's middle line
+    ta = d[2] + s * tower_w / 2;                    // the tower's box-side face
+    hull() for (e = [[ta - s * 0.02, ta, ta], [d[3], d[4], s > 0 ? d[4] : d[3]]]) {
+        c = chan_at(d, e[2]);
+        bx(c[0] - hw, c[0] + hw, min(e[0], e[1]), max(e[0], e[1]), 11.8, c[2] + ht);
+    }
+}
 
 module drawer(d) {
-    t0 = d[0]; t1 = d[1]; pty = d[2]; s = d[5];
+    t0 = d[0]; t1 = d[1]; pty = d[2];
     if (d[7] > 0) bx(0.75, 23.05, t0, t1, 0, d[7] + 0.01);     // raises the drawer
     translate([0, 0, d[7]]) {
-        rb = s > 0 ? [pty - 0.5, pty + 2] : [pty - 2, pty + 0.5];
         bx(0.75, 23.05, t0, t1, 0, tunnel_z0);                      // floor
         bx(0.75, tunnel_x0, t0, t1, tunnel_z0, tunnel_z1);          // rails
         bx(tunnel_x1, 23.05, t0, t1, tunnel_z0, tunnel_z1);
         bx(0.75, 23.05, t0, t1, tunnel_z1, 11.8);                   // roof
         tw = tower_w / 2; xf = pin_x - tw;                          // xf: west face of the tower
         bx(pin_x - tw, pin_x + tw, pty - tw, pty + tw, 11.8, tower_top);   // square pin tower
-        bz = fil_z - bar_v_low;                                     // bar bottom edge
-        bx(xf - bar_t - 1.05, xf, pty - tw, pty + tw, bz - 0.95, tower_top);   // sleeve for the slide bar
+        sx = xf - sleeve_w - sleeve_wall; sb = sleeve_z0 - sleeve_floor;   // sleeve: outer face, underside
+        bx(sx, xf, pty - tw, pty + tw, sb, tower_top);              // sleeve for the slide bar
         hull() {                                                    // 45 degrees under the sleeve
-            bx(xf - bar_t - 1.05, xf, pty - tw, pty + tw, bz - 0.96, bz - 0.95);
-            bx(xf - 0.01, xf, pty - tw, pty + tw, bz - 0.95 - (bar_t + 1.05), bz - 0.95);
+            bx(sx, xf, pty - tw, pty + tw, sb - 0.01, sb);
+            bx(xf - 0.01, xf, pty - tw, pty + tw, sb - (xf - sx), sb);
         }
-        hull() {                                                    // sloped rib, carries the wire channel
-            bx(9.9, 13.9, rb[0], rb[1], 11.8, 24.8);
-            bx(18, 22, d[3], d[4], 11.8, 16.6);
-        }
+        rib(d);
     }
 }
 
 module drawer_cuts(d) {
     pty = d[2]; s = d[5];
-    tw = tower_w / 2; xf = pin_x - tw; kh = knob_w / 2 + 0.15;
-    bz = fil_z - bar_v_low;
-    fz0 = fil_z - slot_w / 2 - 0.1; fz1 = fil_z + pin_lift + slot_w / 2 + 0.1;
+    tw = tower_w / 2; xf = pin_x - tw; kh = knob_w / 2 + 0.15; fw = fil_slot_w / 2;
+    // the filament's travel: from the pin pressed to the pin lifted with the bar still up against the roof
+    fz0 = fil_z - slot_w / 2 - 0.1; fz1 = fil_z + bar_rise + slot_w / 2 + 0.1;
     translate([0, 0, d[7]]) {
         cy(pin_x, pty, 9.0, 12.1, 2.2, 24);                         // hole in the tunnel roof for the plunger
         bx(pin_x - kh, pin_x + kh, pty - kh, pty + kh, 12.0, tower_top + 1);   // square hole for the knob
@@ -175,10 +236,10 @@ module drawer_cuts(d) {
         // wire slot on the box side, open at the top: the wire, soldered to the pin on the bench, slides down it
         // with the knob (a closed window pinched the wire between the knob and the wall above it)
         bx(pin_x - 0.8, pin_x + 0.8, w[0], w[1], barrel_top - 1.6, tower_top + 1);
-        rod([pin_x, pty + s * 2.9, barrel_top - 0.4], d[6], channel_d);   // wire channel to the box
-        bx(xf - 0.1, pin_x - kh + 0.1, pty - 1, pty + 1, fz0, fz1);   // filament slot, west wall
-        bx(xf - bar_t - 0.25, xf + 0.01, pty - tw - 1, pty + tw + 1, bz - 0.15, bz + bar_h + 0.15);   // inside of the sleeve
-        bx(xf - bar_t - 1.1, xf - bar_t - 0.2, pty - 1, pty + 1, fz0, fz1);   // window: push the filament in here
+        rod(chan_p1(d), d[6], channel_d);                           // wire channel to the box
+        bx(xf - 0.1, pin_x - kh + 0.1, pty - fw, pty + fw, fz0, fz1);   // filament slot, west wall
+        bx(xf - sleeve_w, xf + 0.01, pty - tw - 1, pty + tw + 1, sleeve_z0, sleeve_z1);   // inside of the sleeve
+        bx(xf - sleeve_w - sleeve_wall - 0.1, xf - sleeve_w + 0.1, pty - fw, pty + fw, fz0, fz1);   // window: push the filament in here
     }
 }
 
@@ -241,8 +302,8 @@ module body() {
         bx(pin_x - yk5_neck[0] / 2, pin_x + yk5_neck[0] / 2, a_face - 1, box_l + 1, k5 - 0.2, k5 - 0.2 + yk5_neck[1]);
         // pockets, slack deep, in the outside of the end walls around the key openings: the hub can sit
         // slack mm away from either wall, and each key body then goes that far into its wall
-        bx(tunnel_x0, tunnel_x1, -1, slack, tunnel_z0, tunnel_z1);
-        bx(tunnel_x0, tunnel_x1, box_l - slack, box_l + 1, k5, tunnel_z1 + yk5_dz);
+        bx(tunnel_x0, tunnel_x1, 0, slack, tunnel_z0, tunnel_z1);
+        bx(tunnel_x0, tunnel_x1, box_l - slack, box_l, k5, tunnel_z1 + yk5_dz);
         // the laptop's USB-C plug into the hub (wide, so the plug's body fits too)
         bx(-1, wall + 1, usbc_t - 7.5, usbc_t + 7.5, hub_top - 2.5, hub_top + 5.5);
         bx(11.6, 30.4, 1.1, 2.2, lid_z + 0.1, lid_z + 1.3);                     // slot for the lid's tab
@@ -253,38 +314,117 @@ module body() {
 
 // ---------------------------------------------------------------- deck (sits on the hub sockets)
 brd    = [7.5, 10.0, 1.4];                                  // AO3401 / 2N7002 boards: across, along the box, thick
-BOARDS = [[3.8, 5], [12.3, 5], [3.8, 28], [12.3, 28]];    // their north-west corners; north pair, south pair
+BOARDS = [[3.8, 5], [12.9, 5], [3.8, 28], [12.9, 28]];    // their north-west corners; north pair, south pair
 MCU_POSTS = [[22, 18.5], [37, 18.5]];                     // under the RP2040's far end
 
-module deck() {
-    difference() {
-        bx(2.4, 38.6, 2.5, s_face - slack / 2 - 0.3, deck_z0, deck_z1);   // ends before the U-turn and the adapter,
-                                                                        // wherever the hub sits
-        bx(2.3, 3.5, usbc_t - 6.5, usbc_t + 6.5, deck_z0 - 1, deck_z1 + 1);   // notch for the laptop's USB plug adapter
-        bx(4, 18.5, 15.5, 17.9, deck_z0 - 1, deck_z1 + 1);    // wire slots
-        bx(4, 18.5, 24.3, 27.5, deck_z0 - 1, deck_z1 + 1);
-        for (b = BOARDS) bx(b[0] - 0.2, b[0] + brd[0] + 0.2, b[1] - 0.2, b[1] + brd[1] + 0.2, deck_z1 - 0.6, deck_z1 + 0.4);   // board pockets
+// Each switch board slides into a drawer, transistor end first, from the middle of the deck. Two rails
+// guide its long edges. Over the first lip_len mm the rails lean in over the board, and so does the end
+// stop, so the board can't lift; the lips stop short of the three pads and their wires. At the mouth the
+// board's tail drops behind a low sill, which keeps it from sliding back out: lift the tail to remove it.
+// The floor is lower under the pads, for the solder joints, but stays closed over the hub's sockets.
+// All overhangs are 45 degrees.
+rail_w  = 1.2;    // rails, and the gap between the two boards of a pair
+rail_h  = 3.2;    // rail height where it carries a lip; brd[2] + 0.4 along the rest
+side_gap = 0.2;   // board to rail, each side
+end_gap = 0.15;   // board to end stop, and board to sill
+lip     = 1.0;    // how far a lip reaches in from its rail (0.8 over the board)
+lip_len = 6;      // lips run this far from the end stop
+lip_gap = 0.35;   // lip above the board's top edge
+sill_h  = 0.4;
+sill_l  = 1.0;
+drawer_l = brd[1] + 2 * end_gap + sill_l;   // end stop face to the sill's outer face (11.3)
+
+module board_drawer(b, north, cut = false) {
+    ts = north ? b[1] - end_gap : b[1] + brd[1] + end_gap;    // face of the end stop
+    dir = north ? 1 : -1;                                     // toward the mouth
+    xa = b[0] - side_gap; xb = b[0] + brd[0] + side_gap;      // inner faces of the rails
+    F = deck_z1; h0 = brd[2] + lip_gap - side_gap;            // floor; where the lips start to lean in
+    module vb(x0, x1, v0, v1, z0, z1) { bx(x0, x1, min(ts + dir * v0, ts + dir * v1), max(ts + dir * v0, ts + dir * v1), z0, z1); }
+    if (cut) {
+        vb(b[0] + 0.3, b[0] + brd[0] - 0.3, drawer_l - sill_l - 3, drawer_l - sill_l, F - 0.6, F + 0.01);   // relief under the pads
+    } else {
+        back = north ? ts - deck_t0 : deck_t1 - ts;           // the end stop reaches the deck's edge
+        vb(xa - rail_w, xb + rail_w, -back, 0, F, F + rail_h);                                     // end stop
+        hull() { vb(xa, xb, 0, 0.01, F + h0, F + rail_h); vb(xa, xb, lip - 0.01, lip, F + h0 + lip, F + rail_h); }
+        for (r = [[xa - rail_w, xa, 1], [xb, xb + rail_w, -1]]) {                                  // rails and their lips
+            vb(r[0], r[1], 0, lip_len, F, F + rail_h);
+            vb(r[0], r[1], lip_len, drawer_l, F, F + brd[2] + 0.4);
+            e = r[2] > 0 ? r[1] : r[0];                                                            // the rail's inner face
+            hull() { vb(min(e, e + r[2] * 0.01), max(e, e + r[2] * 0.01), 0, lip_len, F + h0, F + rail_h);
+                     vb(min(e + r[2] * (lip - 0.01), e + r[2] * lip), max(e + r[2] * (lip - 0.01), e + r[2] * lip),
+                        0, lip_len, F + h0 + lip, F + rail_h); }
+        }
+        vb(xa, xb, drawer_l - sill_l, drawer_l, F, F + sill_h);                                    // sill
     }
-    for (p = MCU_POSTS) bx(p[0] - 1, p[0] + 1, p[1] - 1, p[1] + 1, deck_z1, mcu_bot - 0.1);   // RP2040 rests on these
+}
+
+module deck() {
+    s1 = BOARDS[0][1] - end_gap + drawer_l;               // the north drawers' sills end here (16.15)
+    s2 = BOARDS[2][1] + brd[1] + end_gap - drawer_l;      // the south drawers' sills start here (26.85)
+    // The rail between the two boards of a pair runs on at full height across the middle of the deck and joins
+    // the north drawers to the south ones. Above its plate the deck is then one closed outline, so the nozzle
+    // can go from any rail to any other without crossing a drawer (rev I as first printed: two separate
+    // drawer blocks, and strings across the drawers). The wire slots lie either side of this rail.
+    sp0 = BOARDS[0][0] + brd[0] + side_gap; sp1 = sp0 + rail_w;       // 11.5 .. 12.7
+    difference() {
+        union() {
+            bx(2.4, 38.6, deck_t0, deck_t1, deck_z0, deck_z1);
+            for (i = [0 : 3]) board_drawer(BOARDS[i], i < 2);
+            bx(sp0, sp1, BOARDS[0][1] - end_gap + lip_len, BOARDS[2][1] + brd[1] + end_gap - lip_len, deck_z1, deck_z1 + rail_h);
+        }
+        bx(2.3, 3.5, usbc_t - 6.5, usbc_t + 6.5, deck_z0 - 1, deck_z1 + 1);   // notch for the laptop's USB plug adapter
+        bx(2.3, 3.6, usbc_t - 6.5, usbc_t + 6.5, deck_z1, deck_z1 + rail_h + 1);   // ... and no rail above it
+        for (x = [[4, sp0 - 0.4], [sp1 + 0.4, 18.5]]) {                       // wire slots, right behind the sills
+            bx(x[0], x[1], s1, s1 + 2.4, deck_z0 - 1, deck_z1 + 1);
+            bx(x[0], x[1], s2 - 3.2, s2, deck_z0 - 1, deck_z1 + 1);
+        }
+        for (i = [0 : 3]) board_drawer(BOARDS[i], i < 2, cut = true);
+    }
+    // the RP2040 rests on these. They are thin posts, like the ones that printed badly on the lid: before
+    // switching them on, build them as one wall joined to the drawers' east rail
+    if (mcu_support) for (p = MCU_POSTS) bx(p[0] - 1, p[0] + 1, p[1] - 1, p[1] + 1, deck_z1, mcu_bot - 0.2);
 }
 
 // ---------------------------------------------------------------- lid (drops in 1 mm south, slides north)
+// One hold-down keeps the deck on the hub's sockets: a cross-shaped column over the unused north-east
+// socket, which the deck rests on right there. It is the only thing that stands up from the lid, so above
+// the plate every layer is one closed outline and the nozzle never has to leave it. (Rev I as first
+// printed had two 2 mm square posts, 17 mm tall and 36 mm apart: each layer took under 2 s and the nozzle
+// hopped between them, which gave lumpy posts and a curtain of strings.) Pressing the deck down also keeps
+// the hub on its pads; nothing else holds either of them.
+hold_c    = [far_x + 0.5, n_face + 5.5];   // centre: over the north-east socket (29.5, 8.0)
+hold_arm  = [11, 9];                       // the cross's size, west-east and along the box
+hold_t    = 1.8;                           // its walls: four 0.45 mm lines
+hold_gap  = 0.3;                           // the deck can lift this far; the lid is then 18.8 mm high, 94 layers
+hold_root = 1.0;                           // the cross flares out this much where it meets the lid
+module hold_bar(x0, x1, t0, t1, z0) {      // one bar of the cross
+    bx(x0, x1, t0, t1, z0, lid_z);
+    hull() { bx(x0, x1, t0, t1, lid_z - hold_root, lid_z - hold_root + 0.01);
+             bx(x0 - hold_root, x1 + hold_root, t0 - hold_root, t1 + hold_root, lid_z - 0.01, lid_z); }
+}
+module hold_down() {
+    z0 = deck_z1 + hold_gap;
+    hold_bar(hold_c[0] - hold_arm[0] / 2, hold_c[0] + hold_arm[0] / 2, hold_c[1] - hold_t / 2, hold_c[1] + hold_t / 2, z0);
+    hold_bar(hold_c[0] - hold_t / 2, hold_c[0] + hold_t / 2, hold_c[1] - hold_arm[1] / 2, hold_c[1] + hold_arm[1] / 2, z0);
+    // with the RP2040 measured, the cross's south arm runs on over the RP2040's far end and holds it down
+    if (mcu_support) bx(hold_c[0] - hold_t / 2, hold_c[0] + hold_t / 2, hold_c[1] + hold_arm[1] / 2 - 0.01, 18.5,
+                        mcu_bot + mcu_t + 0.1, lid_z);
+}
+
 module lid() {
     difference() {
         union() {
-            bx(2.3, box_w - 2.3, 2.3, a_face - 1, lid_z, lid_z + 2);   // 0.3 mm clear of the walls
-            bx(12, 30, 1.3, 2.4, lid_z + 0.3, lid_z + 1.1);                // tab into the north wall slot
-            // ribs holding the boards down, and through them the deck. Each board lies with its transistor end
-            // toward the end wall and its three pads toward the wire slots; the rib presses on the bare strip
-            // (about 1.9 mm) between the transistor and the board's outer edge
-            for (i = [0 : 3]) {
-                b = BOARDS[i];
-                rt = i < 2 ? [b[1] + 0.3, b[1] + 1.5] : [b[1] + brd[1] - 1.5, b[1] + brd[1] - 0.3];
-                bx(b[0] + 0.6, b[0] + brd[0] - 0.6, rt[0], rt[1], deck_z1 - 0.6 + brd[2], lid_z);
+            hull() {                                                       // 0.3 mm clear of the walls; the top
+                bx(2.3, box_w - 2.3, 2.3, a_face - 1, lid_z, lid_z + 1.7);     // edge is chamfered, because it
+                bx(2.6, box_w - 2.6, 2.6, a_face - 1.3, lid_z + 1.99, lid_z + 2);   // prints on the bed and spreads
             }
-            for (x = [24, 33]) bx(x, x + 2, 17.0, 18.5, mcu_bot + 1.1, lid_z);   // RP2040 hold-down
-            bx(3.6, 5.6, 20, 22, deck_z1, lid_z);                                // deck hold-down
-            bx(36.7, 38.7, 5, 7, deck_z1, lid_z);   // (rev G had a third at x 19, now under the wider boards)
+            // two tabs into the north wall slot, near its ends, where the slot's bridged roof sags least. Their
+            // tops slope at 45 degrees, so they print without support when the lid lies top down
+            for (x = [12.2, 26.8]) hull() {
+                bx(x, x + 3, 2.29, 2.3, lid_z + 0.3, lid_z + 1.5);
+                bx(x, x + 3, 1.5, 1.51, lid_z + 0.3, lid_z + 0.7);
+            }
+            hold_down();
         }
         for (p = INS) cy(p[0], p[1], lid_z - 0.5, lid_z + 2.5, screw_clear_d);
     }
@@ -303,34 +443,52 @@ module knob() {   // bottom on the bed; the wire slot faces +y
 }
 
 module bar() {   // flat on the bed; u runs along x, v along y
+    c = 0.3;     // chamfer on every edge and around the slot: the first printed layer spreads
     pts = [[bar_u_down, bar_v_low], [bar_u_down + 1.5, bar_v_low],
-           [bar_u_up - 1.5, bar_v_low + pin_lift], [bar_u_up, bar_v_low + pin_lift]];
+           [bar_u_up - 1.5, bar_v_low + bar_rise], [bar_u_up, bar_v_low + bar_rise]];
+    outline = [[1, 0], [bar_len - 1, 0], [bar_len, 1], [bar_len, bar_h - 1],     // ends tapered 1 mm, so the bar
+               [bar_len - 1, bar_h], [1, bar_h], [0, bar_h - 1], [0, 1]];        // finds its way into the sleeve
     difference() {
-        bx(0, bar_len, 0, bar_h, 0, bar_t);
-        for (i = [0 : 2]) hull() for (p = [pts[i], pts[i + 1]]) cy(p[0], p[1], -1, bar_t + 1, slot_w, 24);
+        hull() {
+            translate([0, 0, c]) linear_extrude(bar_t - 2 * c) polygon(outline);
+            linear_extrude(bar_t) offset(delta = -c) polygon(outline);
+        }
+        for (i = [0 : 2]) {
+            hull() for (p = [pts[i], pts[i + 1]]) cy(p[0], p[1], -1, bar_t + 1, slot_w, 24);
+            hull() for (p = [pts[i], pts[i + 1]]) translate([p[0], p[1], -0.01]) cylinder(d1 = slot_w + 2 * c, d2 = slot_w, h = c, $fn = 24);
+            hull() for (p = [pts[i], pts[i + 1]]) translate([p[0], p[1], bar_t - c + 0.01]) cylinder(d1 = slot_w, d2 = slot_w + 2 * c, h = c, $fn = 24);
+        }
     }
 }
 
-// knob, filament and bar in place for one drawer; up = true shows the pin lifted
-module lift_in_place(d, up = false) {
+// one piece of the pin lift for a drawer, in its place: "knob", "fil" (the filament cross pin) or "bar";
+// up = true shows the pin lifted
+module lift_part(d, what, up = false) {
     pty = d[2]; s = d[5]; xf = pin_x - tower_w / 2; lz = up ? pin_lift : 0;
     translate([0, 0, d[7]]) {
-        translate([pin_x, pty, knob_z0 + lz]) mirror([0, s > 0 ? 0 : 1, 0]) knob();
-        color("white") translate([xf - bar_t, pty, fil_z + lz]) rotate([0, 90, 0]) cylinder(d = fil_d, h = pin_x + knob_w / 2 - xf + bar_t, $fn = 16);
-        u = up ? bar_u_up : bar_u_down;
-        multmatrix([[0, 0, 1, xf - bar_t - 0.05], [1, 0, 0, pty - u], [0, 1, 0, fil_z - bar_v_low], [0, 0, 0, 1]]) bar();
+        if (what == "knob") translate([pin_x, pty, knob_z0 + lz]) mirror([0, s > 0 ? 0 : 1, 0]) knob();
+        if (what == "fil") color("white") translate([pin_x + knob_w / 2 + 0.15 - fil_len, pty, fil_z + lz])
+            rotate([0, 90, 0]) cylinder(d = fil_d, h = fil_len, $fn = 16);
+        if (what == "bar") {
+            bz = up ? sleeve_z0 : sleeve_z1 - bar_h;     // on the sleeve floor when lifted, up against its roof when pressed
+            u = up ? bar_u_up : bar_u_down;
+            multmatrix([[0, 0, 1, xf - (sleeve_w + bar_t) / 2], [1, 0, 0, pty - u], [0, 1, 0, bz], [0, 0, 0, 1]]) bar();
+        }
     }
 }
+module lift_in_place(d, up = false) { for (w = ["knob", "fil", "bar"]) lift_part(d, w, up); }
 
 // ---------------------------------------------------------------- output
 TEST = [-1, box_w + 1, -29, 12, -1, max(tower_top, box_h) + 1];   // north end: wall, hub seat, drawer
 module test_piece() { intersection() { body(); bx(TEST[0], TEST[1], TEST[2], TEST[3], TEST[4], TEST[5]); } }
 
+// out() turns the model's (x, ty, z) into the real, right-handed part. After out(), only rotate() and
+// translate() may follow: a mirror() there prints the mirror image of the part (rev H's lid).
 if (part == "body") out() body();
 if (part == "test") out() test_piece();
 if (part == "knob") knob();
 if (part == "bar")  bar();
 if (part == "test_assembly") out() { test_piece(); lift_in_place(DRAWERS[0], up = lift_up); }
 if (part == "deck") out() translate([0, 0, -deck_z0]) deck();
-if (part == "lid")  out() translate([0, 0, lid_z + 2]) mirror([0, 0, 1]) lid();   // top face on the bed
+if (part == "lid")  translate([0, 0, lid_z + 2]) rotate([180, 0, 0]) out() lid();   // turned over: top face on the bed
 if (part == "assembly") out() { body(); deck(); lid(); for (d = DRAWERS) lift_in_place(d); }
