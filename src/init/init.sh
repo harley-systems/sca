@@ -32,10 +32,12 @@ init() {
 
   local system=$1
   log_detailed "init: start (system=${system})"
+  local rc=0
   case "$system" in
     yubikey|openssl_ca_db|sca_usb_stick|demo)
       shift
       eval init_$system "$@"
+      rc=$?
       ;;
     *)
     read -r -d '' message <<- ____EOM
@@ -46,7 +48,8 @@ ____EOM
     error "$message" 1
     ;;
   esac
-  log_detailed "init: finish (system=${system})"
+  log_detailed "init: finish (system=${system}, rc=${rc})"
+  return $rc
 }
 ################################################################################
 # help for initializing security related system - storage or device

@@ -12,9 +12,11 @@ appliance() {
   local appliance_command=$1
   shift
   log_detailed "appliance: start (appliance_command=${appliance_command})"
+  local rc=0
   case "$appliance_command" in
     info|verify )
       appliance_$appliance_command "$@"
+      rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
@@ -26,7 +28,8 @@ ____EOM
       ;;
   esac
 
-  log_detailed "appliance: finished (appliance_command=${appliance_command})"
+  log_detailed "appliance: finished (appliance_command=${appliance_command}, rc=${rc})"
+  return $rc
 }
 appliance_help() {
   cat <<'SCA_HELP'

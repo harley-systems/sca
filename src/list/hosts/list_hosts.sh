@@ -41,7 +41,7 @@ list_hosts() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_hosts: finished (host_files_folder=${host_files_folder})"

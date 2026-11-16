@@ -41,7 +41,7 @@ list_users() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_users: finished (user_files_folder=${user_files_folder})"
