@@ -159,7 +159,9 @@ create_ssh_crt() {
   trap "rm -rf '$work_folder'" EXIT
   cp "$pub_file" "$work_folder/key.pub"
 
-  local ssh_keygen_command=(ssh-keygen)
+  # -q: ssh-keygen's "Signed ... key" line names the temporary file; the real
+  # path is printed below. errors and the PIN prompt are still shown.
+  local ssh_keygen_command=(ssh-keygen -q)
   local ssh_keygen_env=()
   if [ $use_token = true ]; then
     local ykcs11_module_path

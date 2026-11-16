@@ -37,7 +37,7 @@ create() {
   case "$document_type" in
     key|csr|crt|crl|pub|pub_ssh|crt_pub_ssh|ssh_crt)
       shift
-      eval create_$document_type "$@"
+      create_"$document_type" "$@"
       ;;
     *)
       read -r -d '' message <<- ____EOM

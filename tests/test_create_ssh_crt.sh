@@ -96,6 +96,22 @@ for key in "$HOME/id_ed25519.pub" "$fixtures/sk-ssh-ed25519.pub" \
     "$(cert_field "$user_cert" "Public key" | awk '{ print $2 }')" "--pub $(basename "$key")"
 done
 
+# --- option values reach ssh-keygen as they were typed: not split on spaces,
+# and not run through the shell again
+cd "$HOME" || exit 2
+cp "$HOME/id_ed25519.pub" "$HOME/my key.pub"
+assert_succeeds sca create ssh_crt -f --pub "$HOME/my key.pub" user
+# shellcheck disable=SC2016 # the $(...) is meant to stay unexpanded
+assert_succeeds sca create ssh_crt -f --principals 'a b,x$(touch injected)' user
+[ -e "$HOME/injected" ] && fail "a principal was run as a command"
+assert_eq '"a b"' "$(ssh-keygen -L -f "$user_cert" | awk '/^ *Principals:/ { getline; sub(/^ */, ""); print "\"" $0 "\"" }')" \
+  "principal with a space"
+# shellcheck disable=SC2016
+case "$(ssh-keygen -L -f "$user_cert")" in
+  *'x$(touch injected)'* ) ;;
+  * ) fail "principal with \$(...) was not kept as typed" ;;
+esac
+
 # --- the ca can sign too, from its own key folder
 assert_succeeds env key_folder="$HOME/demo/ca-key/" bash "$SCA" create ssh_crt \
   --pub "$HOME/id_ed25519.pub" user ca
