@@ -41,3 +41,18 @@ check_build_host_ubuntu_version() {
     error "${command}: this host runs '${host_id:-unknown} ${host_version_number:-unknown}'. building the sca usb stick requires an ubuntu ${required_version_number} host." 1
   fi
 }
+################################################################################
+# the only host architecture, as reported by uname -m, that builds the sca usb
+# stick. the stick is amd64: its packages are downloaded with this host's apt
+# and sca test boots it under kvm, so both need an x86_64 host.
+sca_usb_stick_build_architecture=x86_64
+################################################################################
+# echoes the architecture of this host, as reported by uname -m
+build_host_architecture() {
+  uname -m
+}
+################################################################################
+# succeeds when this host can build the sca usb stick
+is_usb_stick_build_host() {
+  [ "$(build_host_architecture)" = "$sca_usb_stick_build_architecture" ]
+}
