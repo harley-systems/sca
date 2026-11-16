@@ -1,0 +1,11 @@
+[Unit]
+Description=SCA YubiKey fixture broker socket
+
+[Socket]
+# A socket unit keeps this file (and its inode) across broker restarts, so the
+# bind mounts of it in running sessions stay alive.
+ListenStream=%t/sca-yubikey-fixture.sock
+SocketMode=0600
+
+[Install]
+WantedBy=sockets.target

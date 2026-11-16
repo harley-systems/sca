@@ -217,7 +217,8 @@ make check
 
 This builds `build/sca.sh` and runs every `tests/test_*.sh`. It prints a
 summary and exits non-zero if any test fails. The tests run offline and need no
-YubiKey; YubiKey checks stay manual (see `docs/yubikey.md`).
+YubiKey; YubiKey checks run on a test key through the fixture broker
+(see [YubiKey tests](#yubikey-tests-through-the-fixture-broker) below).
 
 To run a single test file: `make && bash tests/test_smoke.sh`.
 
@@ -258,6 +259,41 @@ test_done
 
 A failed assertion is reported and the file keeps going, so one run shows every
 failure. Test files should pass `shellcheck`.
+
+### YubiKey tests through the fixture broker
+
+A test YubiKey is plugged into the owner's laptop, and the
+[fixture broker](tools/yubikey-touch/README.md#fixture-broker) lets a session
+without USB devices use it. In a developer or QA session the broker's socket
+is `/run/services/yubikey-fixture.sock`, and the client is
+`tools/yubikey-touch/yubikey-fixture`:
+
+```bash
+yubikey-fixture() { python3 tools/yubikey-touch/yubikey-fixture "$@"; }
+yubikey-fixture status                  # is the broker up, and is the slot 4 test key present?
+```
+
+A hardware test is a bash script in `tests/hw/` (see `tests/hw/lib.sh` and the
+existing tests). The broker runs it from a **pushed** commit, never from your
+working tree, in a container that sees only the test key:
+
+```bash
+git push                                # the commit must be on a branch on GitHub
+yubikey-fixture run tests/hw/piv_sign.sh "$(git rev-parse HEAD)" 4
+yubikey-fixture run tests/hw/steps_before.sh "$(git rev-parse HEAD)" 4 tests/hw/steps_after.sh
+```
+
+`run` prints the test's output and exits with its exit code; 125 means the
+broker refused the request (the message says why). The tests may reset the
+key or change its PIN: it is a test key. Nothing can touch the key, so use
+touch policy `never` (the touch fixture, which could, is out of service).
+`make check` does not run `tests/hw/`.
+
+When a check can run on the test key, write a `tests/hw/` test and run it
+through the broker rather than sending the ticket to `human-qa`, and give QA
+the command to rerun it. If `yubikey-fixture status` can't reach the broker,
+say so on the ticket. Checks that still need a person are listed in the
+fixture README under "What still needs a person".
 
 ## Code Style
 

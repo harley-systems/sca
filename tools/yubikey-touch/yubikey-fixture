@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+"""Talk to the YubiKey fixture broker (see tools/yubikey-touch/README.md, "Fixture broker").
+
+    yubikey-fixture status
+    yubikey-fixture run [--timeout S] TEST SHA SLOT [TEST]...
+
+run fetches the pushed commit SHA and runs each TEST (a path under tests/hw/) in a container
+that sees only the slot's test key.
+
+Only when the touch fixture is attached:
+
+    yubikey-fixture touch 4 [ms]        # touch the key in slot 4 (default 500 ms)
+    yubikey-fixture hold 4              # touch until released
+    yubikey-fixture release 4
+    yubikey-fixture power 4 on|off
+    yubikey-fixture cycle 4 [ms]        # power off for ms (default 1000), then on
+    yubikey-fixture run ... cycle[=MS] TEST   # a power cycle between two tests
+
+The socket is $YUBIKEY_FIXTURE_SOCK, else /run/services/yubikey-fixture.sock if it exists,
+else $XDG_RUNTIME_DIR/sca-yubikey-fixture.sock. A fixture command exits 0, or 1 if the fixture
+refused it; run exits with the first failing step's code; broker errors exit 125.
+"""
+import json
+import os
+import socket
+import sys
+
+SESSION_SOCK = "/run/services/yubikey-fixture.sock"
+
+
+def fail(msg):
+    print(f"yubikey-fixture: {msg}", file=sys.stderr)
+    sys.exit(125)
+
+
+def usage():
+    print(__doc__.strip(), file=sys.stderr)
+    sys.exit(125)
+
+
+def socket_path():
+    if os.environ.get("YUBIKEY_FIXTURE_SOCK"):
+        return os.environ["YUBIKEY_FIXTURE_SOCK"]
+    if os.path.exists(SESSION_SOCK):
+        return SESSION_SOCK
+    return os.path.join(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}"), "sca-yubikey-fixture.sock")
+
+
+def number(text, what):
+    if not text.isdigit():
+        fail(f"{what} must be a number, not {text!r}")
+    return int(text)
+
+
+def request(args):
+    """The JSON request for a command line."""
+    if not args:
+        usage()
+    op, rest = args[0], args[1:]
+    if op == "status" and not rest:
+        return {"op": "status"}
+    if op in ("touch", "cycle") and len(rest) in (1, 2):
+        req = {"op": op, "slot": number(rest[0], "slot")}
+        if len(rest) == 2:
+            req["ms"] = number(rest[1], "ms")
+        return req
+    if op in ("hold", "release") and len(rest) == 1:
+        return {"op": op, "slot": number(rest[0], "slot")}
+    if op == "power" and len(rest) == 2 and rest[1] in ("on", "off"):
+        return {"op": "power", "slot": number(rest[0], "slot"), "state": rest[1]}
+    if op == "run":
+        req = {"op": "run"}
+        if rest[:1] == ["--timeout"] and len(rest) >= 2:
+            req["timeout"] = number(rest[1], "timeout")
+            rest = rest[2:]
+        if len(rest) < 3:
+            usage()
+        steps = [{"test": test_path(rest[0])}]
+        req["sha"], req["slot"] = rest[1], number(rest[2], "slot")
+        for word in rest[3:]:
+            if word == "cycle" or word.startswith("cycle="):
+                steps.append({"cycle": number(word[6:], "cycle ms") if "=" in word else 1000})
+            else:
+                steps.append({"test": test_path(word)})
+        req["steps"] = steps
+        return req
+    usage()
+
+
+def test_path(path):
+    return path[2:] if path.startswith("./") else path
+
+
+def call(req):
+    path = socket_path()
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.connect(path)
+            sock.sendall((json.dumps(req) + "\n").encode())
+            line = sock.makefile("rb").readline()
+    except OSError as e:
+        fail(f"cannot reach the broker at {path}: {e.strerror or e}")
+    try:
+        resp = json.loads(line)
+    except ValueError:
+        fail("no valid reply from the broker")
+    return resp
+
+
+def main():
+    req = request(sys.argv[1:])
+    resp = call(req)
+    if not resp.get("ok"):
+        error = resp.get("error", "unknown error")
+        print(f"yubikey-fixture: {error}", file=sys.stderr)
+        sys.exit(1 if error.startswith("fixture: ") else 125)
+    if req["op"] == "run":
+        sys.stdout.write(resp["output"])
+        if resp.get("truncated"):
+            print("yubikey-fixture: output truncated", file=sys.stderr)
+        sys.exit(resp["exit"])
+    if req["op"] == "status":
+        print(f"fixture: {resp['fixture'] or 'none attached'}")
+        for slot, info in resp["slots"].items():
+            state = "present" if info["present"] else "not present"
+            print(f"slot {slot}: test key {info['serial']}, {state}" + (", busy" if info["busy"] else ""))
+        if resp.get("other_keys"):
+            print(f"other YubiKeys (never used): {resp['other_keys']}")
+        return
+    print(resp["reply"])
+
+
+if __name__ == "__main__":
+    main()
