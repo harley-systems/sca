@@ -33,12 +33,57 @@ sudo() {
 }
 export -f dpkg-query apt-get apt-add-repository sudo
 
-# sca refuses most commands, install with options included, until a config
-# exists, so each case starts from a fresh home with the default config
-reset_home() {
+# install needs no config, but most cases start from a home with the default
+# config, as on a machine that has run sca before
+fresh_home() {
   rm -rf "${HOME:?}"/* "${HOME}"/.[!.]*
+}
+reset_home() {
+  fresh_home
   sca config create all > /dev/null 2>&1 || fail "config create all"
 }
+
+# a home that has never run sca: install with options is not refused for the
+# missing config, installs sca and creates the config, like bare 'sca install'
+fresh_home
+output="$(sca install --yubikey-support 2>&1)" \
+  || fail "install --yubikey-support on a fresh home: ${output}"
+[[ "${output}" != *"configuration file"*"doesn't"* ]] \
+  || fail "install --yubikey-support asks for a config: ${output}"
+assert_file_exists "$HOME/bin/sca" "sca copied to ~/bin on a fresh home"
+assert_file_exists "$HOME/.sca/config/sca.config" "config created on a fresh home"
+grep -q 'install -y ykcs11' "$HOME/apt-get.log" 2>/dev/null \
+  || fail "ykcs11 was not installed with --yubikey-support on a fresh home"
+fresh_home
+output="$(sca install --force 2>&1)" || fail "install --force on a fresh home: ${output}"
+[[ "${output}" != *"configuration file"*"doesn't"* ]] \
+  || fail "install --force asks for a config: ${output}"
+assert_file_exists "$HOME/bin/sca" "sca copied to ~/bin by --force on a fresh home"
+# /opt/sca/packages is missing in CI, so only check the config is not asked for
+fresh_home
+output="$(sca install --air-gapped 2>&1)"
+[[ "${output}" != *"configuration file"*"doesn't"* ]] \
+  || fail "install --air-gapped asks for a config: ${output}"
+fresh_home
+output="$(sca install --air-gapped --dry-run 2>&1)" \
+  || fail "install --air-gapped --dry-run on a fresh home: ${output}"
+fresh_home
+output="$(sca install -h 2>&1)" || fail "install -h on a fresh home: ${output}"
+[[ "${output}" == *"--yubikey-support"* ]] || fail "install -h prints the help: ${output}"
+
+# a stray positional argument is refused, by name, before anything is installed
+fresh_home
+stderr="$(sca install foo 2>&1 >/dev/null)"
+status=$?
+[ "${status}" -ne 0 ] || fail "install foo exits non-zero"
+assert_eq "sca install: unexpected argument 'foo'. use sca install -h for help." \
+  "${stderr}" "install foo error"
+[ ! -e "$HOME/bin/sca" ] || fail "install foo does not copy sca to ~/bin"
+[ ! -e "$HOME/apt-get.log" ] || fail "install foo runs no apt-get"
+[ ! -e "$HOME/sudo.log" ] || fail "install foo runs no sudo"
+reset_home
+assert_fails sca install --yubikey-support prerequisites
+[ ! -e "$HOME/bin/sca" ] || fail "install --yubikey-support prerequisites installs nothing"
 
 # a successful run installs sca and exits 0, as before
 reset_home
