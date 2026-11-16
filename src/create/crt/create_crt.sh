@@ -98,6 +98,7 @@ create_crt() {
     # check if the signing entity (sign_by_entity) is configured to be stored in hw device
     if [ $sign_by_entity_use_security_key = true ]; then
       log_detailed "create_crt: signing with the security key configured for '$sign_by_entity'"
+      require_pkcs11_library opensc_pkcs11_module
       local sign_by_entity_security_key_type=$(eval echo \$${sign_by_entity}_security_key_type)
       local sign_by_entity_pkcs11_id=$(eval echo \${${sign_by_entity}_pkcs11_id})
       local security_key_opensc_reader_slot_number=$(security_key_wait_for $sign_by_entity)
