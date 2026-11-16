@@ -34,10 +34,12 @@ create() {
 
   local document_type=$1
   log_detailed "create: start (document_type=${document_type})"
+  local rc=0
   case "$document_type" in
     key|csr|crt|crl|pub|pub_ssh|crt_pub_ssh|ssh_crt)
       shift
       create_"$document_type" "$@"
+      rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
@@ -47,7 +49,8 @@ ____EOM
       error "$message" 1
       ;;
   esac
-  log_detailed "create: finish (document_type=${document_type})"
+  log_detailed "create: finish (document_type=${document_type}, rc=${rc})"
+  return $rc
 }
 create_help() {
   cat <<'SCA_HELP'

@@ -18,10 +18,12 @@ config() {
 
   local config_verb=$1
   log_detailed "config: start (config_verb=${config_verb})"
+  local rc=0
   case "$config_verb" in
     create|resolve|set|get|load|save|reset)
       shift
       eval config_$config_verb "$@"
+      rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
@@ -31,7 +33,8 @@ ____EOM
     error "$message" 1
     ;;
   esac
-  log_detailed "config: finish (config_verb=${config_verb})"
+  log_detailed "config: finish (config_verb=${config_verb}, rc=${rc})"
+  return $rc
 }
 config_help() {
   cat <<'SCA_HELP'
