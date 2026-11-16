@@ -1,0 +1,8 @@
+sca [<sca_options>] security_key [<security_key_options>] openpgp_ssh setup [<setup_options>]
+sca [<sca_options>] security_key [<security_key_options>] openpgp_ssh public_key [<public_key_options>]
+
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@

@@ -10,6 +10,7 @@ The security key command is one of the following:
   id        - retrieving ids of the currently inserted security key
   info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
+  openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
   verify    - test that an entity's private key on the security key can sign
