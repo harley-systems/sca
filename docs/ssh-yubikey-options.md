@@ -2,13 +2,13 @@
 
 [← Back to README](../README.md)
 
-A YubiKey can hold an SSH key in three different ways. SCA implements only the
-first one (PIV); this page explains all three so you can pick the right one.
+A YubiKey can hold an SSH key in three different ways. SCA covers two of them
+(PIV and OpenPGP); this page explains all three so you can pick the right one.
 
 | Method | YubiKey applet | Agent | Covered by SCA |
 |--------|----------------|-------|----------------|
 | **PIV via PKCS#11** | PIV | `ssh-agent` with `ykcs11`/OpenSC | Yes, see [SSH Integration](ssh-integration.md) |
-| **OpenPGP authentication subkey** | OpenPGP | `gpg-agent` | Key setup: no, manual steps below. SSH certificates: yes, `sca create ssh_crt --pub` |
+| **OpenPGP authentication subkey** | OpenPGP | `gpg-agent` | Key setup: yes, `sca security_key openpgp_ssh`, see [below](#openpgp-gpg-agent-ssh). SSH certificates: yes, `sca create ssh_crt --pub` |
 | **FIDO2 security key (`-sk`)** | FIDO2 / U2F | `ssh-agent` (OpenSSH built in) | Key setup: no, manual steps below. SSH certificates: yes, `sca create ssh_crt --pub` |
 
 > **Testing status.** The commands on this page were checked against the
@@ -24,7 +24,7 @@ first one (PIV); this page explains all three so you can pick the right one.
 | **YubiKey models** | YubiKey 4, 5 (incl. FIPS), NEO. **Not** the Security Key series | YubiKey 4, 5 (incl. FIPS), NEO. **Not** the Security Key series | `ecdsa-sk`: any FIDO U2F/FIDO2 key, including the Security Key series. `ed25519-sk`: firmware 5.2.3+. Resident keys need FIDO2 (YubiKey 5 or Security Key series) |
 | **Key algorithms on the device** | RSA 2048, ECC P-256/P-384 (more on firmware 5.7+) | RSA 2048/4096; ed25519/cv25519 on firmware 5.2.3+ | ECDSA P-256, Ed25519 |
 | **Private key stays on device** | Yes | Yes (if generated on card; `keytocard` moves it and removes the local copy on `save`) | Yes |
-| **Portable to a new machine** | Yes: the public key is read from the card | Yes, but the new machine needs your OpenPGP public key imported and `gpg --card-status` run once | Resident: yes, `ssh-keygen -K`. Non-resident: no, you must copy the key-handle file (`id_*_sk`) |
+| **Portable to a new machine** | Yes: the public key is read from the card | Yes, but the new machine needs your OpenPGP public key imported and `gpg --card-status` run once; then `sca security_key openpgp_ssh public_key` prints the SSH key | Resident: yes, `ssh-keygen -K`. Non-resident: no, you must copy the key-handle file (`id_*_sk`) |
 | **PIN** | PIV PIN, asked by `ssh-add -s` or `ssh` and cached by the agent | OpenPGP user PIN, asked by `pinentry` and cached by `scdaemon` | FIDO2 PIN only with `-O verify-required` (and when creating or downloading resident keys) |
 | **Touch** | Set by the slot's touch policy when the key is generated (`never`/`always`/`cached`) | Optional: `ykman openpgp keys set-touch aut on` | Required on every use by default (`-O no-touch-required` turns it off and the server has to allow it) |
 | **OpenSSH certificates (SSH CA)** | Yes, with `CertificateFile` in `~/.ssh/config` | Yes, with `CertificateFile` in `~/.ssh/config`. gpg-agent holds only the plain key; the certificate can't be loaded into it with `ssh-add` | Yes: `-sk` public keys can be signed with `ssh-keygen -s` |
@@ -112,6 +112,26 @@ OpenPGP applet), `cached` and `cached-fixed`.
 ### 3. Enable SSH support in gpg-agent
 
 ```bash
+sca security_key openpgp_ssh setup --shell-rc ~/.bashrc
+. ~/.bashrc
+```
+
+`sca security_key openpgp_ssh setup` needs no `sca` configuration. It:
+
+- adds `enable-ssh-support` to `gpg-agent.conf` in the GnuPG home folder
+  (`~/.gnupg`, or `GNUPGHOME`) unless it is already there, and only then
+  restarts gpg-agent, so a cached PIN isn't dropped for nothing;
+- prints the shell lines below, and with `--shell-rc FILE` appends the ones
+  FILE doesn't have yet (sh, bash and zsh syntax);
+- prints the `~/.ssh/config` line from [Troubleshooting](#troubleshooting), but
+  doesn't edit `~/.ssh/config`.
+
+Use `--dry-run` to see what it would change first. If `gpgconf` is missing,
+run `sca install --openpgp`.
+
+**What it does:**
+
+```bash
 echo enable-ssh-support >> ~/.gnupg/gpg-agent.conf
 gpgconf --kill gpg-agent
 ```
@@ -134,7 +154,20 @@ ssh-add -L            # should list "cardno:..."
 ### 4. Get the public key
 
 ```bash
-gpg --export-ssh-key <KEYID> > ~/.ssh/id_gpg.pub
+sca security_key openpgp_ssh public_key -o ~/.ssh/id_gpg.pub
+```
+
+It reads the card's authentication key and prints its SSH public key, or
+writes it to `-o FILE` (an existing file is never overwritten). If there is no
+card, or the card has no authentication key, it says so and what to do next.
+The OpenPGP public key has to be in the local keyring (`gpg --import`, or
+`fetch` in `gpg --card-edit`).
+
+**What it does:**
+
+```bash
+gpg --card-status --with-colons | grep '^fpr:'   # fpr:<sig>:<enc>:<aut>:
+gpg --export-ssh-key '<aut fingerprint>!' > ~/.ssh/id_gpg.pub
 ```
 
 Add the output to the server's `~/.ssh/authorized_keys`.

@@ -11,8 +11,8 @@ display_p12() {
   local password=""
   local p12_file=""
 
-  local OPTS=`getopt -o hp: --long help,password: -n "display p12" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca display p12 -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hp: --long help,password: -n "display p12" -- "$@") || error "failed parsing options. use sca display p12 -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

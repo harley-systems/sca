@@ -22,13 +22,14 @@ config() {
   case "$config_verb" in
     create|resolve|set|get|load|save|reset)
       shift
-      eval config_$config_verb "$@"
+      config_"$config_verb" "$@"
       rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
       invalid value '$config_verb' for config_verb (first) argument.
-      supported values are 'create' 'resolve' 'set' and 'get'.
+      supported values are 'create', 'resolve', 'set', 'get', 'load', 'save' and
+      'reset'.
 ____EOM
     error "$message" 1
     ;;

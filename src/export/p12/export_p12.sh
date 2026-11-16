@@ -18,8 +18,8 @@ export_p12() {
   local legacy=false
   local output_file=""
 
-  local OPTS=`getopt -o hp:n:lo: --long help,password:,friendly-name:,legacy,output: -n "export p12" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca export p12 -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hp:n:lo: --long help,password:,friendly-name:,legacy,output: -n "export p12" -- "$@") || error "failed parsing options. use sca export p12 -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

@@ -8,8 +8,8 @@
 #
 create_csr() {
   local force=false
-  local OPTS=`getopt -o hf --long help,force -n 'create csr' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca create csr -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force -n 'create csr' -- "$@") || error "failed parsing options. use sca create csr -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

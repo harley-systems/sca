@@ -1,0 +1,13 @@
+setup_options:
+
+  -h, --help          - print this help
+  --shell-rc FILE     - append the shell lines to FILE (e.g. ~/.bashrc),
+                        skipping any it already has. FILE is created if
+                        missing
+  -n, --dry-run       - print what would change, and change nothing
+
+public_key_options:
+
+  -h, --help          - print this help
+  -o, --output FILE   - write the public key to FILE rather than stdout. an
+                        existing FILE is never overwritten

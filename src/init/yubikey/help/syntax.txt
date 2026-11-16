@@ -1,7 +1,0 @@
-sca [<sca_options>] init [<init_options>] yubikey <yubikey_options>
-
-@@@SCA OPTIONS@@@
-
-@@@INIT OPTIONS@@@
-
-@@@OPTIONS@@@

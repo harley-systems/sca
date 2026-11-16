@@ -7,8 +7,8 @@
 #
 init_demo() {
 
-  local OPTS=`getopt -o h --long help -n "init demo" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca init demo -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n "init demo" -- "$@") || error "failed parsing options. use sca init demo -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

@@ -14,8 +14,8 @@
 create_key() {
   local force=false
   local format=""
-  local OPTS=`getopt -o hf --long help,force,format: -n 'create key' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca create key -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force,format: -n 'create key' -- "$@") || error "failed parsing options. use sca create key -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

@@ -27,9 +27,12 @@ The security key command is one of the following:
 
   get_crt   - retrieving certificate for the given entity from a security key
   id        - retrieving ids of the currently inserted security key
+  info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
+  openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
+  verify    - test that an entity's private key on the security key can sign
   wait_for  - awaits for specific security key connection
 ```
 
@@ -42,7 +45,7 @@ security key related commands.
 
 ### Choosing a key: `--device SERIAL`
 
-Every `security_key` subcommand accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
+Every `security_key` subcommand except `openpgp_ssh` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
 
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
@@ -61,11 +64,12 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 
 - [get_crt](#sca-security_key-get_crt) - retrieving certificate for the given entity from a security key
 - [id](#sca-security_key-id) - retrieving ids of the currently inserted security key
-- [info](#sca-security_key-info)
+- [info](#sca-security_key-info) - show the status of every PIV slot on the security key
 - [init](#sca-security_key-init) - first time initialization of security_key
+- [openpgp_ssh](#sca-security_key-openpgp_ssh) - set up SSH with the OpenPGP authentication key and gpg-agent
 - [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
-- [verify](#sca-security_key-verify)
+- [verify](#sca-security_key-verify) - test that an entity's private key on the security key can sign
 - [wait_for](#sca-security_key-wait_for) - awaits for specific security key connection
 
 ---
@@ -220,6 +224,9 @@ file-system.
 Rolling (assigning new values to) the access keys is also performed by this
 command when ran with appropriate parameters.
 
+init supports security_key_type 'yubikey' only; for 'pkcs11' tokens set the
+pin, puk and management key with the token's own tools.
+
 IMPORTANT NOTE: this command shall be run in an air-gapped (offline,
 disconnected from the internet) environment.
 ```
@@ -260,6 +267,77 @@ storage device (a security key) to each of the declared default entity types
   record the new values for what changed, and the error says which ones
 
 **Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+
+---
+
+## sca security_key openpgp_ssh
+
+```text
+The security key openpgp_ssh command help
+
+The security key openpgp_ssh command sets up SSH with the authentication key of
+the YubiKey's OpenPGP applet, served by gpg-agent in place of ssh-agent, and
+prints that key's SSH public key. It needs no sca configuration.
+
+setup adds enable-ssh-support to gpg-agent.conf in the GnuPG home folder
+(gpgconf --list-dirs homedir, which honours GNUPGHOME), once, and restarts
+gpg-agent only when it added it, since a restart drops the cached PIN. It then
+prints the shell lines that point SSH_AUTH_SOCK at gpg-agent (sh, bash and zsh
+syntax; fish is not covered), and with --shell-rc FILE appends the ones FILE
+does not have yet. It never edits ~/.ssh/config, but prints the Match line
+that keeps the PIN prompt in the current terminal.
+
+public_key reads the authentication key's fingerprint from the card
+(gpg --card-status) and prints its SSH public key (gpg --export-ssh-key), for
+the server's ~/.ssh/authorized_keys. The public key must be in the local GnuPG
+keyring.
+
+gpg runs with --batch: sca never asks for, reads or logs the OpenPGP PIN. If gpg
+or gpgconf is missing, install the OpenPGP packages with sca install --openpgp.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] openpgp_ssh setup [<setup_options>]
+sca [<sca_options>] security_key [<security_key_options>] openpgp_ssh public_key [<public_key_options>]
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+setup_options:
+
+  -h, --help          - print this help
+  --shell-rc FILE     - append the shell lines to FILE (e.g. ~/.bashrc),
+                        skipping any it already has. FILE is created if
+                        missing
+  -n, --dry-run       - print what would change, and change nothing
+
+public_key_options:
+
+  -h, --help          - print this help
+  -o, --output FILE   - write the public key to FILE rather than stdout. an
+                        existing FILE is never overwritten
+```
+
+**What it does:**
+- `setup`: appends `enable-ssh-support` to `gpg-agent.conf` in the GnuPG home folder (`gpgconf --list-dirs homedir`, so `GNUPGHOME` is honoured) unless it is already there, and then runs `gpgconf --kill gpg-agent`. When the option is already there the agent is left running, so its cached PIN is kept
+- `setup` prints the shell lines to add (sh, bash and zsh syntax). `--shell-rc FILE` appends the ones FILE doesn't already have, after a `# added by sca security_key openpgp_ssh setup` comment
+- `setup` prints the `~/.ssh/config` line `Match host * exec "gpg-connect-agent updatestartuptty /bye"` but never edits `~/.ssh/config`. `-n`, `--dry-run` prints what would change and changes nothing
+- `public_key`: reads the authentication key's fingerprint from `gpg --card-status --with-colons` and runs `gpg --export-ssh-key <fingerprint>!`. `-o FILE` writes the key to FILE instead of stdout, and never overwrites an existing file
+- Neither mode needs `sca config`, and gpg runs with `--batch`, so sca never asks for or sees the OpenPGP PIN
+
+**Example:**
+```bash
+sca install --openpgp                         # gnupg, scdaemon, ykman
+sca security_key openpgp_ssh setup --shell-rc ~/.bashrc
+. ~/.bashrc
+ssh-add -L                                    # cardno:... key
+sca security_key openpgp_ssh public_key -o ~/.ssh/id_gpg.pub
+```
+
+See [SSH with a YubiKey](../ssh-yubikey-options.md#openpgp-gpg-agent-ssh) for when to choose OpenPGP, and [GPG with a YubiKey](../gpg-yubikey.md#3-keys) to put an authentication key on the card.
 
 ---
 
