@@ -1,0 +1,19 @@
+The security key openpgp_ssh command sets up SSH with the authentication key of
+the YubiKey's OpenPGP applet, served by gpg-agent in place of ssh-agent, and
+prints that key's SSH public key. It needs no sca configuration.
+
+setup adds enable-ssh-support to gpg-agent.conf in the GnuPG home folder
+(gpgconf --list-dirs homedir, which honours GNUPGHOME), once, and restarts
+gpg-agent only when it added it, since a restart drops the cached PIN. It then
+prints the shell lines that point SSH_AUTH_SOCK at gpg-agent (sh, bash and zsh
+syntax; fish is not covered), and with --shell-rc FILE appends the ones FILE
+does not have yet. It never edits ~/.ssh/config, but prints the Match line
+that keeps the PIN prompt in the current terminal.
+
+public_key reads the authentication key's fingerprint from the card
+(gpg --card-status) and prints its SSH public key (gpg --export-ssh-key), for
+the server's ~/.ssh/authorized_keys. The public key must be in the local GnuPG
+keyring.
+
+gpg runs with --batch: sca never asks for, reads or logs the OpenPGP PIN. If gpg
+or gpgconf is missing, install the OpenPGP packages with sca install --openpgp.
