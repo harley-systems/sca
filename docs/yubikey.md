@@ -66,7 +66,7 @@ sca config set subca admin
 sca security_key init subca
 ```
 
-Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
+Run `sca create key subca` after init, not before: `create key` uploads the new key with the management key init saves, so for an entity on a YubiKey it stops with a pointer to `sca security_key init <entity>` until init has run.
 
 The `sca security_key init <entity>` command:
 - Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.

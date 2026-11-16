@@ -39,7 +39,7 @@ list_cas() {
     esac
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_cas: finished (ca_files_folder=${ca_files_folder},output_format=${output_format})"

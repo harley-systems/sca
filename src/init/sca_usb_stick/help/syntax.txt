@@ -14,8 +14,8 @@ ubuntu cd image signing key bundled in sca. An image already in ~/.sca/downloads
 is checked the same way. Any failed check stops the command before anything is
 mounted. Any other ubuntu version id is rejected.
 
-The sca usb stick image is built on, and only on, an ubuntu host of the same
-version, @@@UBUNTU VERSION ID@@@. On any other host the command fails before
+The sca usb stick image is built on, and only on, an x86_64 ubuntu host of the
+same version, @@@UBUNTU VERSION ID@@@. On any other host the command fails before
 downloading anything.
 
 The sca iso image is written to ~/.sca/downloads/ next to the original ubuntu

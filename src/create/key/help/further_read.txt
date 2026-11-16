@@ -2,3 +2,6 @@ For additional information on using yubikey for the first time, see help for
 yubikey initalization by issuing command:
 
   'sca security_key init --help'
+
+For an entity on a yubikey, run 'sca security_key init <entity>' first:
+create key needs the management key it saves, and stops until it exists.

@@ -126,11 +126,13 @@ exiting.
   log_detailed "sca: OPTS=${OPTS}"
   # eval set -- "$OPTS"
 
+  local rc=0
   case "$verb" in
     create|display|export|import|init|request|security_key|appliance|approve|revoke|scrub_log|config|list|completion|install|test)
       shift
       log_detailed "sca: calling function for the verb $verb "$@""
       if [ $verb == 'export' ]; then eval ${verb}_ "${@@Q}"; else eval $verb "${@@Q}"; fi
+      rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
@@ -142,8 +144,8 @@ ____EOM
       error "$message" 1
       ;;
   esac
-  log_detailed "sca:  finish (verb=${verb})"
-  return 0
+  log_detailed "sca:  finish (verb=${verb}, rc=${rc})"
+  return $rc
 }
 sca_help() {
   cat <<'SCA_HELP'
