@@ -12,8 +12,8 @@
 appliance_verify() {
   local platform=''
   local OPTS
-  OPTS=$(getopt -o h --long help,platform: -n "sca appliance verify" -- "$@")
-  if [ $? != 0 ] ; then error "failed parsing options. use sca appliance verify -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help,platform: -n "sca appliance verify" -- "$@") || error "failed parsing options. use sca appliance verify -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

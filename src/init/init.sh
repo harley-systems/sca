@@ -11,8 +11,6 @@
 #
 init() {
 
-  #local OPTS=`getopt -o h --long help -n 'init' -- "$@"`
-  #if [ $? != 0 ] ; then error "failed parsing options. use sca init -h for help." 1; fi
   while true; do
     case "$1" in
       -h | --help )

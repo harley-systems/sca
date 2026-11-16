@@ -44,8 +44,8 @@ display() {
       rc=$?
     ;;
     key|pub|pub_ssh)
-      OPTS=`getopt -o h --long help -n "display $document_type" -- "$@"`
-      if [ $? != 0 ] ; then error "failed parsing options. use sca display $document_type -h for help." 1; fi
+      local OPTS
+      OPTS=$(getopt -o h --long help -n "display $document_type" -- "$@") || error "failed parsing options. use sca display $document_type -h for help." 1
       eval set -- "$OPTS"
       while true; do
         case "$1" in

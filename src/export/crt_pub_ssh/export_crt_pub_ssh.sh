@@ -8,8 +8,8 @@
 #
 export_crt_pub_ssh() {
 
-  local OPTS=`getopt -o h --long help -n "export crt_pub_ssh" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca export crt_pub_ssh -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n "export crt_pub_ssh" -- "$@") || error "failed parsing options. use sca export crt_pub_ssh -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

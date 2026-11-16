@@ -16,9 +16,8 @@ install() {
   # local sca_script_file_name="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
   local sca_script_file_name=$0
 
-  local OPTS=`getopt -o hafyxgkn --long help,air-gapped,force,yubikey-support,exclude-pkcs11-support,openpgp,fido2,configure-scdaemon,dry-run -n 'sca install' -- "$@"`
-  if [ $? != 0 ] ; then \
-    error "failed parsing options. use sca install -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hafyxgkn --long help,air-gapped,force,yubikey-support,exclude-pkcs11-support,openpgp,fido2,configure-scdaemon,dry-run -n 'sca install' -- "$@") || error "failed parsing options. use sca install -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

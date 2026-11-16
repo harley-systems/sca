@@ -9,8 +9,8 @@
 display_crt() {
   local from_disk=false
   local from_security_key=false
-  local OPTS=`getopt -o h --long help,from-disk,from-security-key -n "display crt" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca display crt -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help,from-disk,from-security-key -n "display crt" -- "$@") || error "failed parsing options. use sca display crt -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
