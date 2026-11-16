@@ -1,36 +1,23 @@
 #!/bin/bash
 ################################################################################
-# entrypoint of the fixture broker's test image: start pcscd, then do one step
+# entrypoint of the fixture broker's test image: start pcscd, then run one step
 #
-#   run-step probe        print the serial of the one YubiKey this container sees
 #   run-step test PATH    run /src/PATH with bash
 
-pcscd || { echo "run-step: pcscd did not start" >&2; exit 125; }
+# the container has no polkit: without --disable-polkit pcscd denies every client
+pcscd --disable-polkit || { echo "run-step: pcscd did not start" >&2; exit 125; }
 for _ in $(seq 50); do
   [ -S /run/pcscd/pcscd.comm ] && break
   sleep 0.1
 done
 
 case "${1:-}" in
-  probe)
-    # a key that has just come up can take a moment to show as a reader
-    for _ in $(seq 10); do
-      serials="$(ykman list --serials 2>/dev/null)"
-      if [ -n "${serials}" ]; then
-        echo "${serials}"
-        exit 0
-      fi
-      sleep 0.5
-    done
-    echo "run-step: no YubiKey found" >&2
-    exit 1
-    ;;
   test)
     [ -n "${2:-}" ] || { echo "run-step: test needs a path" >&2; exit 125; }
     exec bash "/src/$2"
     ;;
   *)
-    echo "usage: run-step probe | test PATH" >&2
+    echo "usage: run-step test PATH" >&2
     exit 125
     ;;
 esac

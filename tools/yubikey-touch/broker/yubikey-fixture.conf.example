@@ -1,10 +1,11 @@
 # YubiKey fixture broker config: ~/.config/sca/yubikey-fixture.conf
 #
-# The broker only acts for the keys listed here. Any other YubiKey, including
-# your own, is never opened or shown to a test.
+# The broker only acts for the keys listed here, found by the serial they
+# publish over USB. Any other YubiKey, including your own, is never opened or
+# shown to a test.
 
 [slots]
-# fixture slot = test-key serial (ykman list --serials)
+# slot (4 or 5, the touch fixture's names) = test-key serial (ykman list --serials)
 4 = 38263298
 # 5 =
 

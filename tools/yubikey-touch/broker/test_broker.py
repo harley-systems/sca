@@ -136,31 +136,43 @@ class ValidateTest(unittest.TestCase):
 
 
 class FakeTree(TempDir):
-    """A sysfs and /dev with the fixture on hub 1-3, a test key on 1-3.4 and the owner's key on 1-1."""
+    """A sysfs and /dev with the test key (USB serial 0038263298), the owner's key and a YubiKey that
+    doesn't publish its serial. With fixture = True the fixture's hub is 1-3 and the test key is on it."""
+
+    fixture = False
 
     def setUp(self):
         super().setUp()
         self.sys = os.path.join(self.tmp, "sys")
         self.dev = os.path.join(self.tmp, "dev")
         usb1 = "sys/devices/pci0000:00/usb1"
-        self.usb_device(usb1 + "/1-3", "05e3", 1, 2)                  # the fixture's hub
-        self.usb_device(usb1 + "/1-3/1-3.1", "2e8a", 1, 4)            # the RP2040
-        os.makedirs(os.path.join(self.tmp, usb1, "1-3/1-3.1/1-3.1:1.0"))
-        self.link("sys/class/tty/ttyACM0/device", os.path.join(self.tmp, usb1, "1-3/1-3.1/1-3.1:1.0"))
-        self.write("dev/ttyACM0")
-        self.link("dev/serial/by-id/usb-harley_YubiKey_touch_E66-if00", "../../ttyACM0")
-        self.test_key = self.usb_device(usb1 + "/1-3/1-3.4", broker.YUBICO_VENDOR, 1, 7)
-        self.hidraw(usb1 + "/1-3/1-3.4/1-3.4:1.0/0003:1050:0407.0002", "hidraw2")
-        self.hidraw(usb1 + "/1-3/1-3.4/1-3.4:1.1/0003:1050:0407.0003", "hidraw3")
-        self.usb_device(usb1 + "/1-1", broker.YUBICO_VENDOR, 1, 3)    # the owner's key, not on the hub
+        key = usb1 + "/1-2"
+        if self.fixture:
+            self.usb_device(usb1 + "/1-3", "05e3", 1, 2)                  # the fixture's hub
+            self.usb_device(usb1 + "/1-3/1-3.1", "2e8a", 1, 4)            # the RP2040
+            os.makedirs(os.path.join(self.tmp, usb1, "1-3/1-3.1/1-3.1:1.0"))
+            self.link("sys/class/tty/ttyACM0/device", os.path.join(self.tmp, usb1, "1-3/1-3.1/1-3.1:1.0"))
+            self.write("dev/ttyACM0")
+            self.link("dev/serial/by-id/usb-harley_YubiKey_touch_E66-if00", "../../ttyACM0")
+            key = usb1 + "/1-3/1-3.4"
+        self.test_key = self.usb_device(key, broker.YUBICO_VENDOR, 1, 7, "0038263298")
+        self.hidraw(key + "/" + os.path.basename(key) + ":1.0/0003:1050:0407.0002", "hidraw2")
+        self.hidraw(key + "/" + os.path.basename(key) + ":1.1/0003:1050:0407.0003", "hidraw3")
+        self.owner_key = self.usb_device(usb1 + "/1-1", broker.YUBICO_VENDOR, 1, 3, "0012345678")
         self.hidraw(usb1 + "/1-1/1-1:1.0/0003:1050:0407.0001", "hidraw0")
-        self.usb_device(usb1 + "/1-3/1-3.2", "046d", 1, 5)            # something else on the hub
+        self.usb_device(usb1 + "/1-4", broker.YUBICO_VENDOR, 1, 6)    # publishes no serial
+        self.usb_device(usb1 + "/1-5", "046d", 1, 5, "0038263298")   # not a YubiKey
+        os.makedirs(os.path.join(self.tmp, usb1, "1-2:1.0"), exist_ok=True)   # an interface, not a device
+        self.write(usb1 + "/1-2:1.0/serial", "0038263298\n")
+        self.link("sys/bus/usb/devices/1-2:1.0", os.path.join(self.tmp, usb1, "1-2:1.0"))
         self.devices = broker.Devices(self.sys, self.dev)
 
-    def usb_device(self, rel, vendor, busnum, devnum):
+    def usb_device(self, rel, vendor, busnum, devnum, serial=None):
         self.write(rel + "/idVendor", vendor + "\n")
         self.write(rel + "/busnum", f"{busnum}\n")
         self.write(rel + "/devnum", f"{devnum}\n")
+        if serial is not None:
+            self.write(rel + "/serial", serial + "\n")
         self.link("sys/bus/usb/devices/" + os.path.basename(rel), os.path.join(self.tmp, rel))
         return os.path.join(self.tmp, rel)
 
@@ -171,16 +183,31 @@ class FakeTree(TempDir):
     def set_devnum(self, devnum):
         self.write(os.path.relpath(self.test_key, self.tmp) + "/devnum", f"{devnum}\n")
 
+    def unplug(self):
+        os.unlink(os.path.join(self.sys, "bus/usb/devices", os.path.basename(self.test_key)))
+
 
 class DevicesTest(FakeTree):
-    def test_hub(self):
-        self.assertEqual("1-3", self.devices.hub())
+    def test_find_by_usb_serial(self):
+        self.assertEqual(broker.Instance(self.test_key, 1, 7), self.devices.find(38263298))
+        self.assertIsNone(self.devices.find(99))
+        self.unplug()
+        self.assertIsNone(self.devices.find(38263298))
 
-    def test_only_yubikeys_on_the_hub(self):
-        self.assertEqual([broker.Instance(self.test_key, 1, 7)], self.devices.keys())
+    def test_yubikeys(self):
+        self.assertEqual([(broker.Instance(self.owner_key, 1, 3), 12345678),
+                          (broker.Instance(self.test_key, 1, 7), 38263298),
+                          (broker.Instance(os.path.join(os.path.dirname(self.test_key), "1-4"), 1, 6), None)],
+                         self.devices.yubikeys())
+
+    def test_two_keys_with_one_serial(self):
+        self.write(os.path.relpath(self.owner_key, self.tmp) + "/serial", "0038263298\n")
+        with self.assertRaises(broker.BrokerError) as e:
+            self.devices.find(38263298)
+        self.assertIn("2 USB devices claim serial 38263298", str(e.exception))
 
     def test_nodes(self):
-        inst = self.devices.keys()[0]
+        inst = self.devices.find(38263298)
         self.assertEqual([os.path.join(self.dev, "bus/usb/001/007"), os.path.join(self.dev, "hidraw2"),
                           os.path.join(self.dev, "hidraw3")], self.devices.nodes(inst))
         self.assertEqual([(os.path.join(self.dev, "bus/usb/001/007"), "/dev/bus/usb/001/007"),
@@ -188,10 +215,18 @@ class DevicesTest(FakeTree):
                           (os.path.join(self.dev, "hidraw3"), "/dev/hidraw3")], self.devices.device_args(inst))
 
     def test_no_fixture(self):
-        os.unlink(os.path.join(self.dev, "serial/by-id/usb-harley_YubiKey_touch_E66-if00"))
+        self.assertFalse(self.devices.has_fixture())
         with self.assertRaises(broker.BrokerError) as e:
-            self.devices.keys()
-        self.assertIn("fixture not found", str(e.exception))
+            self.devices.port()
+        self.assertEqual("no touch fixture is attached", str(e.exception))
+
+
+class FixtureDevicesTest(FakeTree):
+    fixture = True
+
+    def test_hub(self):
+        self.assertTrue(self.devices.has_fixture())
+        self.assertEqual("1-3", self.devices.hub())
 
 
 class FakeFixture:
@@ -206,83 +241,99 @@ class FakeFixture:
         return "ok " + line
 
 
-class FakeBroker(broker.Broker):
-    def __init__(self, devices, fixture, serials):
-        super().__init__(CONFIG, devices, fixture, cache_dir=tempfile.mkdtemp())
-        self.serials = serials      # devnum -> serial the probe finds
-        self.probed = []
+class BrokerCases:
+    """Broker tests that hold with or without the fixture."""
 
-    def probe(self, inst):
-        self.probed.append(inst.devnum)
-        return self.serials.get(inst.devnum)
+    def make(self, on_send=None, config=CONFIG):
+        cache = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, cache)
+        return broker.Broker(config, self.devices, FakeFixture(on_send), cache_dir=cache)
 
-
-class BrokerTest(FakeTree):
-    def make(self, serials, on_send=None):
-        b = FakeBroker(self.devices, FakeFixture(on_send), serials)
-        self.addCleanup(shutil.rmtree, os.path.dirname(b.repo))
-        return b
-
-    def test_probe_is_cached_per_instance(self):
-        b = self.make({7: 38263298, 8: 38263298})
-        b.key_for(4)
-        b.key_for(4)
-        self.assertEqual([7], b.probed)
-        self.set_devnum(8)          # a power cycle: new devnum
+    def test_key_is_looked_up_every_time(self):
+        b = self.make()
+        self.assertEqual(7, b.key_for(4).devnum)
+        self.set_devnum(8)          # replugged: new devnum
         self.assertEqual(8, b.key_for(4).devnum)
-        self.assertEqual([7, 8], b.probed)
-
-    def test_unknown_serial_is_not_served(self):
-        b = self.make({7: 11111111})
+        self.unplug()
         with self.assertRaises(broker.BrokerError) as e:
-            b.handle({"op": "touch", "slot": 4})
+            b.key_for(4)
         self.assertIn("test key 38263298 is not present", str(e.exception))
+
+    def test_key_devices_never_include_other_keys(self):
+        devices = [host for host, _ in self.make().key_devices(4)]
+        self.assertEqual([os.path.join(self.dev, n) for n in ("bus/usb/001/007", "hidraw2", "hidraw3")], devices)
+
+    def test_run_socket_is_restricted(self):
+        b = self.make()
+        for req, message in (({"op": "power", "slot": 4, "state": "off"}, "not allowed from inside a test"),
+                             ({"op": "cycle", "slot": 4}, "not allowed from inside a test"),
+                             ({"op": "run", "sha": SHA, "slot": 4, "steps": [{"test": "tests/hw/a.sh"}]},
+                              "not allowed")):
+            with self.assertRaises(broker.BrokerError) as e:
+                b.handle(req, run_slot=4)
+            self.assertIn(message, str(e.exception))
+        self.assertEqual({"4"}, set(b.handle({"op": "status"}, run_slot=4)["slots"]))
+
+
+class BrokerTest(BrokerCases, FakeTree):
+    def test_status_without_fixture(self):
+        b = self.make()
+        self.assertEqual({"ok": True, "fixture": None,
+                          "slots": {"4": {"serial": 38263298, "present": True, "busy": False}},
+                          "other_keys": 2}, b.handle({"op": "status"}))
         self.assertEqual([], b.fixture.sent)
 
-    def test_touch(self):
-        b = self.make({7: 38263298})
-        self.assertEqual({"ok": True, "reply": "ok touch 4 500"}, b.handle({"op": "touch", "slot": 4, "ms": 500}))
+    def test_fixture_ops_need_the_fixture(self):
+        b = self.make()
+        for req in ({"op": "touch", "slot": 4}, {"op": "hold", "slot": 4}, {"op": "release", "slot": 4},
+                    {"op": "power", "slot": 4, "state": "off"}, {"op": "cycle", "slot": 4}):
+            with self.assertRaises(broker.BrokerError) as e:
+                b.handle(req)
+            self.assertIn("no touch fixture is attached", str(e.exception))
+        with self.assertRaises(broker.BrokerError) as e:
+            b.handle({"op": "run", "sha": SHA, "slot": 4, "steps": [{"test": "tests/hw/a.sh"}, {"cycle": 1000}]})
+        self.assertIn("cycle steps need the touch fixture", str(e.exception))
+        self.assertEqual([], b.fixture.sent)
+
+
+class FixtureBrokerTest(BrokerCases, FakeTree):
+    fixture = True
 
     def test_status(self):
-        b = self.make({7: 38263298})
-        self.assertEqual({"ok": True, "fixture": "ok status",
-                          "slots": {"4": {"serial": 38263298, "present": True, "busy": False}},
-                          "other_keys": 0}, b.handle({"op": "status"}))
+        self.assertEqual("ok status", self.make().handle({"op": "status"})["fixture"])
+
+    def test_touch(self):
+        b = self.make()
+        self.assertEqual({"ok": True, "reply": "ok touch 4 500"}, b.handle({"op": "touch", "slot": 4, "ms": 500}))
+        b.handle({"op": "touch", "slot": 4}, run_slot=4)
+
+    def test_touch_needs_the_key_in_the_fixture(self):
+        b = self.make(config=broker.Config({4: 38263298, 5: 12345678}, "repo", "img", 1800))
+        with self.assertRaises(broker.BrokerError) as e:
+            b.handle({"op": "touch", "slot": 5})
+        self.assertIn("test key 12345678 is not in the fixture", str(e.exception))
+        self.assertEqual([], b.fixture.sent)
 
     def test_cycle_waits_for_the_new_instance(self):
-        b = self.make({7: 38263298, 9: 38263298}, on_send=lambda line: self.set_devnum(9))
-        b.key_for(4)
+        b = self.make(on_send=lambda line: self.set_devnum(9))
         self.assertEqual({"ok": True, "reply": "ok cycle 4 1000"}, b.handle({"op": "cycle", "slot": 4}))
         self.assertEqual(9, b.key_for(4).devnum)
 
-    def test_wrong_key_after_power_on_is_switched_off(self):
-        b = self.make({9: 22222222}, on_send=lambda line: self.set_devnum(9))
-        self.set_devnum(1)          # key not identified before
-        b.serials[1] = None
+    def test_key_not_back(self):
+        self.addCleanup(setattr, broker, "COMEBACK_S", broker.COMEBACK_S)
+        broker.COMEBACK_S = 0
+        b = self.make(on_send=lambda line: self.unplug())
         with self.assertRaises(broker.BrokerError) as e:
             b.handle({"op": "power", "slot": 4, "state": "on"})
-        self.assertIn("found key 22222222 instead of test key 38263298", str(e.exception))
-        self.assertEqual(["power 4 on", "power 4 off"], b.fixture.sent)
+        self.assertIn("did not come back", str(e.exception))
 
     def test_busy_slot(self):
-        b = self.make({7: 38263298})
+        b = self.make()
         b.claim(4)
         with self.assertRaises(broker.BrokerError) as e:
             b.handle({"op": "cycle", "slot": 4})
         self.assertEqual("slot 4 is busy", str(e.exception))
         b.handle({"op": "touch", "slot": 4})    # a touch still works during a run
-
-    def test_run_socket_is_restricted(self):
-        b = self.make({7: 38263298})
-        b.key_for(4)
-        for req, message in (({"op": "power", "slot": 4, "state": "off"}, "not allowed from inside a test"),
-                             ({"op": "cycle", "slot": 4}, "not allowed from inside a test"),
-                             ({"op": "run", "sha": SHA, "slot": 4, "steps": [{"cycle": 1000}]}, "not allowed")):
-            with self.assertRaises(broker.BrokerError) as e:
-                b.handle(req, run_slot=4)
-            self.assertIn(message, str(e.exception))
-        b.handle({"op": "touch", "slot": 4}, run_slot=4)
-        self.assertEqual({"4"}, set(b.handle({"op": "status"}, run_slot=4)["slots"]))
 
 
 class ContainerTest(unittest.TestCase):
@@ -384,9 +435,6 @@ while not args[i] == "img":
         name = args[i + 1]
     i += 1 if args[i] in ("--rm", "--init") else 2
 cmd = args[i + 1:]
-if cmd == ["probe"]:
-    print(os.environ["FAKE_SERIAL"])
-    sys.exit(0)
 with open(os.path.join(pids, name), "w") as f:
     f.write(str(os.getpid()))
 env["YUBIKEY_FIXTURE_SOCK"] = mounts["/run/services/yubikey-fixture.sock"]
@@ -395,8 +443,9 @@ os.execvpe("bash", ["bash", os.path.join(mounts["/src"], cmd[1])], env)
 """
 
 TESTS = {
-    "touch.sh": 'yubikey-fixture touch "$YUBIKEY_FIXTURE_SLOT" 100 && echo "serial=$YUBIKEY_FIXTURE_SERIAL"\n'
-                'echo marker > "$STATE/marker"\n',
+    "before.sh": 'yubikey-fixture status && echo "serial=$YUBIKEY_FIXTURE_SERIAL"\n'
+                 'echo marker > "$STATE/marker"\n',
+    "touch.sh": 'yubikey-fixture touch "$YUBIKEY_FIXTURE_SLOT" 100\n',
     "after.sh": 'cat "$STATE/marker"\n',
     "power.sh": 'yubikey-fixture cycle "$YUBIKEY_FIXTURE_SLOT"\n',
     "fail.sh": 'echo failing; exit 3\n',
@@ -404,7 +453,7 @@ TESTS = {
 }
 
 
-class EndToEndTest(FakeTree):
+class EndToEndCases:
     """The client talks to a real broker server; a fake docker runs the steps on the host."""
 
     def setUp(self):
@@ -428,7 +477,7 @@ class EndToEndTest(FakeTree):
         os.symlink(os.path.abspath(CLIENT), os.path.join(bin_dir, "yubikey-fixture"))
         self.sock = os.path.join(self.tmp, "broker.sock")
         self.env = dict(os.environ, PATH=bin_dir + os.pathsep + os.environ["PATH"], YUBIKEY_FIXTURE_SOCK=self.sock,
-                        FAKE_SERIAL="38263298", FAKE_DOCKER_PIDS=os.path.join(self.tmp, "pids"))
+                        FAKE_DOCKER_PIDS=os.path.join(self.tmp, "pids"))
         self.old_environ = dict(os.environ)
         os.environ.update(self.env)     # the broker's own docker calls use the fake too
         self.addCleanup(os.environ.update, self.old_environ)    # cleanups run last first
@@ -449,26 +498,9 @@ class EndToEndTest(FakeTree):
         return subprocess.run([sys.executable, CLIENT, *args], env=self.env, capture_output=True, text=True,
                               timeout=60)
 
-    def test_fixture_commands(self):
-        result = self.client("touch", "4", "500")
-        self.assertEqual((0, "ok touch 4 500\n"), (result.returncode, result.stdout))
-        result = self.client("status")
-        self.assertEqual(0, result.returncode)
-        self.assertIn("slot 4: test key 38263298, present", result.stdout)
-
     def test_unconfigured_slot(self):
-        result = self.client("touch", "5")
+        result = self.client("run", "tests/hw/before.sh", self.sha, "5")
         self.assertEqual((125, "yubikey-fixture: slot 5 is not configured\n"), (result.returncode, result.stderr))
-
-    def test_run_with_a_cycle(self):
-        result = self.client("run", "tests/hw/touch.sh", self.sha, "4", "cycle=500", "tests/hw/after.sh")
-        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertEqual("== step 0: tests/hw/touch.sh ==\nok touch 4 100\nserial=38263298\n"
-                         "== step 1: cycle 500 ms ==\nbroker: slot 4 test key 38263298 is back\n"
-                         "== step 2: tests/hw/after.sh ==\nmarker\n", result.stdout)
-        self.assertEqual(["touch 4 100", "cycle 4 500"], self.fixture.sent)
-        self.assertEqual(9, self.broker.key_for(4).devnum)
-        self.assertEqual(set(), self.broker.workdirs)
 
     def test_test_cannot_power_the_key(self):
         result = self.client("run", "tests/hw/power.sh", self.sha, "4")
@@ -476,7 +508,7 @@ class EndToEndTest(FakeTree):
         self.assertIn("cycle is not allowed from inside a test", result.stdout)
 
     def test_failing_step_stops_the_run(self):
-        result = self.client("run", "tests/hw/fail.sh", self.sha, "4", "tests/hw/touch.sh")
+        result = self.client("run", "tests/hw/fail.sh", self.sha, "4", "tests/hw/before.sh")
         self.assertEqual(3, result.returncode)
         self.assertEqual("== step 0: tests/hw/fail.sh ==\nfailing\n", result.stdout)
 
@@ -489,9 +521,54 @@ class EndToEndTest(FakeTree):
         result = self.client("run", "tests/hw/missing.sh", self.sha, "4")
         self.assertEqual(125, result.returncode)
         self.assertIn("is not a file in commit", result.stderr)
-        result = self.client("run", "tests/hw/touch.sh", "main", "4")
+        result = self.client("run", "tests/hw/before.sh", "main", "4")
         self.assertEqual(125, result.returncode)
         self.assertIn("40-character", result.stderr)
+
+
+class EndToEndTest(EndToEndCases, FakeTree):
+    """No fixture: status and run work with just the key."""
+
+    def test_status(self):
+        result = self.client("status")
+        self.assertEqual((0, "fixture: none attached\nslot 4: test key 38263298, present\n"
+                             "other YubiKeys (never used): 2\n"), (result.returncode, result.stdout))
+
+    def test_touch_without_fixture(self):
+        result = self.client("touch", "4", "500")
+        self.assertEqual((125, "yubikey-fixture: touch: no touch fixture is attached\n"),
+                         (result.returncode, result.stderr))
+
+    def test_run_with_two_steps(self):
+        result = self.client("run", "tests/hw/before.sh", self.sha, "4", "tests/hw/after.sh")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual("== step 0: tests/hw/before.sh ==\nfixture: none attached\n"
+                         "slot 4: test key 38263298, present, busy\nserial=38263298\n"
+                         "== step 1: tests/hw/after.sh ==\nmarker\n", result.stdout)
+        self.assertEqual(set(), self.broker.workdirs)
+
+
+class FixtureEndToEndTest(EndToEndCases, FakeTree):
+    """The touch fixture is attached: touches and cycle steps work too."""
+
+    fixture = True
+
+    def test_status(self):
+        self.assertIn("fixture: ok status\n", self.client("status").stdout)
+
+    def test_touch(self):
+        result = self.client("touch", "4", "500")
+        self.assertEqual((0, "ok touch 4 500\n"), (result.returncode, result.stdout))
+
+    def test_run_with_a_cycle(self):
+        result = self.client("run", "tests/hw/touch.sh", self.sha, "4", "cycle=500", "tests/hw/before.sh")
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertEqual("== step 0: tests/hw/touch.sh ==\nok touch 4 100\n"
+                         "== step 1: cycle 500 ms ==\nbroker: slot 4 test key 38263298 is back\n"
+                         "== step 2: tests/hw/before.sh ==\nfixture: ok status\n"
+                         "slot 4: test key 38263298, present, busy\nserial=38263298\n", result.stdout)
+        self.assertEqual(["touch 4 100", "cycle 4 500", "status"], self.fixture.sent)
+        self.assertEqual(9, self.broker.key_for(4).devnum)
 
 
 if __name__ == "__main__":

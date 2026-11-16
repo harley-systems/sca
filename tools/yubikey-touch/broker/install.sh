@@ -8,8 +8,8 @@
 # - installs sca-yubikey-fixture.socket and .service into ~/.config/systemd/user/,
 #   pointing at the broker in this checkout, and starts the socket
 #
-# needs docker (your user in the docker group) and the fixture's udev rule
-# (70-yktouch.rules). see README.md, "Fixture broker".
+# needs docker (your user in the docker group) and the udev rule that keeps the
+# host's pcscd off the test key. see README.md, "Fixture broker".
 
 set -euo pipefail
 

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""YubiKey fixture broker: lets sandboxed sessions use the touch fixture and its test keys.
+"""YubiKey fixture broker: lets sandboxed sessions use the test keys (and the touch fixture, if attached).
 
 Serves one JSON request per line on a Unix socket: the one systemd passes in (socket
 activation), or --socket PATH when run by hand. See README.md, "Fixture broker".
 
-It only ever looks at the YubiKeys on the fixture's own USB hub, only acts for the ones whose
-serials are in the config, and runs tests from pushed commits in throwaway containers that see
-nothing but one test key.
+It finds the test keys by the USB serial in sysfs, never opens or probes any other YubiKey, and
+runs tests from pushed commits in throwaway containers that see nothing but one test key. The
+touch fixture is optional: without it, touch, hold, release, power, cycle and cycle steps are
+refused, and everything else works.
 """
 import argparse
 import collections
@@ -45,9 +46,9 @@ MAX_STEPS = 20
 TOUCH_MS = (10, 10000)      # the firmware's ranges
 CYCLE_MS = (100, 10000)
 COMEBACK_S = 15             # how long a key gets to come back after power on or a cycle
-PROBE_TIMEOUT_S = 30
 
 SHA_RE = re.compile(r"[0-9a-f]{40}")
+USB_DEVICE_RE = re.compile(r"[0-9]+-[0-9]+(\.[0-9]+)*")    # 1-3, 1-3.4: devices, not interfaces or root hubs
 TEST_RE = re.compile(r"tests/hw/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*")
 GIT_ENV = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_ASKPASS="true", LC_ALL="C")
 
@@ -193,16 +194,22 @@ def read_attr(path, name):
 
 
 class Devices:
-    """Finds the fixture and the YubiKeys on its hub in sysfs (roots injectable for tests)."""
+    """Finds the test keys and the fixture in sysfs (roots injectable for tests)."""
 
     def __init__(self, sys_root="/sys", dev_root="/dev"):
         self.sys_root = sys_root
         self.dev_root = dev_root
 
+    def fixture_ports(self):
+        return sorted(glob.glob(os.path.join(self.dev_root, "serial/by-id/*YubiKey_touch*")))
+
+    def has_fixture(self):
+        return bool(self.fixture_ports())
+
     def port(self):
-        ports = sorted(glob.glob(os.path.join(self.dev_root, "serial/by-id/*YubiKey_touch*")))
+        ports = self.fixture_ports()
         if not ports:
-            raise BrokerError("fixture not found (is it plugged in and programmed?)")
+            raise BrokerError("no touch fixture is attached")
         return ports[0]
 
     def hub(self):
@@ -210,27 +217,38 @@ class Devices:
         tty = os.path.basename(os.path.realpath(self.port()))
         interface = os.path.realpath(os.path.join(self.sys_root, "class/tty", tty, "device"))
         hub = os.path.basename(os.path.dirname(os.path.dirname(interface)))
-        if not re.fullmatch(r"[0-9]+-[0-9]+(\.[0-9]+)*", hub):
+        if not USB_DEVICE_RE.fullmatch(hub):
             raise BrokerError("the fixture is not behind its own USB hub")
         return hub
 
-    def keys(self):
-        """The YubiKeys plugged into the fixture's hub. Keys anywhere else are never listed."""
-        hub = self.hub()
+    def yubikeys(self):
+        """(Instance, USB serial or None) for every YubiKey. Reads sysfs attributes only: opens no key."""
         base = os.path.join(self.sys_root, "bus/usb/devices")
         found = []
         for name in sorted(os.listdir(base)):
-            if not re.fullmatch(re.escape(hub) + r"(\.[0-9]+)+", name):
+            if not USB_DEVICE_RE.fullmatch(name):
                 continue
             path = os.path.join(base, name)
             try:
                 if read_attr(path, "idVendor") != YUBICO_VENDOR:
                     continue
-                found.append(Instance(os.path.realpath(path), int(read_attr(path, "busnum")),
-                                      int(read_attr(path, "devnum"))))
+                inst = Instance(os.path.realpath(path), int(read_attr(path, "busnum")),
+                                int(read_attr(path, "devnum")))
             except (OSError, ValueError):
                 continue            # it went away while we looked
+            try:
+                serial = read_attr(path, "serial")
+            except OSError:
+                serial = ""         # the key doesn't publish its serial over USB
+            found.append((inst, int(serial) if re.fullmatch(r"[0-9]{1,10}", serial) else None))
         return found
+
+    def find(self, serial):
+        """The YubiKey whose USB serial (e.g. 0038263298) is serial, or None."""
+        found = [inst for inst, s in self.yubikeys() if s == serial]
+        if len(found) > 1:
+            raise BrokerError(f"{len(found)} USB devices claim serial {serial}; refusing all of them")
+        return found[0] if found else None
 
     def nodes(self, inst):
         """The device nodes of one key: its USB node and the hidraw nodes of its interfaces."""
@@ -281,10 +299,10 @@ class Fixture:
 
 # ---------------------------------------------------------------- containers
 
-def container_argv(name, image, devices, mounts=(), env=(), workdir=None, cmd=(), pids=256):
-    """The docker run command for a probe or a test step. Nothing else ever reaches a container."""
+def container_argv(name, image, devices, mounts=(), env=(), workdir=None, cmd=()):
+    """The docker run command for a test step. Nothing else ever reaches a container."""
     argv = ["docker", "run", "--rm", "--init", "--name", name, "--network", "none",
-            "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", str(pids),
+            "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256",
             "--tmpfs", "/run", "--tmpfs", "/tmp"]
     for src, dst, readonly in mounts:
         argv += ["-v", f"{src}:{dst}" + (":ro" if readonly else "")]
@@ -336,8 +354,6 @@ class Broker:
         self.devices = devices
         self.fixture = fixture
         self.repo = os.path.join(cache_dir, "sca.git")
-        self.verified = {}          # Instance -> serial, learnt by a probe container
-        self.dev_lock = threading.Lock()
         self.git_lock = threading.Lock()
         self.busy = set()
         self.busy_lock = threading.Lock()
@@ -346,73 +362,45 @@ class Broker:
 
     # -- keys
 
-    def probe(self, inst):
-        """Learn a key's serial in a container that sees only that key."""
-        name = "sca-ykfx-probe-" + uuid.uuid4().hex[:12]
-        argv = container_argv(name, self.config.image, self.devices.device_args(inst),
-                              cmd=["probe"], pids=64)
-        self.containers.add(name)
-        try:
-            result = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                    timeout=PROBE_TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            subprocess.run(["docker", "kill", name], capture_output=True)
-            log(f"probe of {inst.syspath} timed out")
-            return None
-        finally:
-            self.containers.discard(name)
-        serials = result.stdout.split()
-        if result.returncode != 0 or len(serials) != 1 or not serials[0].isdigit():
-            log(f"probe of {inst.syspath} failed ({result.returncode}): {result.stderr.strip()[-300:]}")
-            return None
-        return int(serials[0])
-
-    def scan(self, probe=True):
-        """Serial -> Instance for the identified keys on the fixture's hub, and the unidentified ones."""
-        with self.dev_lock:
-            keys = self.devices.keys()
-            self.verified = {inst: serial for inst, serial in self.verified.items() if inst in keys}
-            if probe:
-                for inst in keys:
-                    if inst not in self.verified:
-                        serial = self.probe(inst)
-                        if serial is not None:
-                            self.verified[inst] = serial
-            return ({serial: inst for inst, serial in self.verified.items()},
-                    [inst for inst in keys if inst not in self.verified])
-
-    def key_for(self, slot, probe=True):
-        """The slot's test key, checked against the config: the same verified device instance."""
+    def key_for(self, slot):
+        """The slot's test key: the YubiKey whose USB serial is the configured one, looked up afresh."""
         serial = self.config.slots[slot]
-        inst = self.scan(probe)[0].get(serial)
+        inst = self.devices.find(serial)
         if inst is None:
             raise BrokerError(f"slot {slot}: test key {serial} is not present")
         return inst
 
+    def key_devices(self, slot):
+        """The --device list for the slot's key, checked to still be that key after reading its nodes."""
+        inst = self.key_for(slot)
+        args = self.devices.device_args(inst)
+        if self.key_for(slot) != inst:
+            raise BrokerError(f"slot {slot}: test key {self.config.slots[slot]} changed while it was looked up")
+        return args
+
+    def in_fixture(self, slot):
+        """The slot's key must sit on the fixture's hub before the fixture touches it."""
+        inst = self.key_for(slot)
+        if not re.fullmatch(re.escape(self.devices.hub()) + r"(\.[0-9]+)+", os.path.basename(inst.syspath)):
+            raise BrokerError(f"slot {slot}: test key {self.config.slots[slot]} is not in the fixture")
+
     def power(self, slot, line, fresh):
-        """Send a power command; for on/cycle wait until the slot's key is back and verified.
+        """Send a power command; for on/cycle wait until the slot's key is back.
 
         fresh: the key must come back as a new device instance (a cycle).
         """
         serial = self.config.slots[slot]
-        before = set(self.devices.keys())
+        before = self.devices.find(serial)
         reply = self.fixture.send(line)
         if line.endswith(" off"):
             return reply
         deadline = time.monotonic() + COMEBACK_S
         while True:
-            by_serial, unknown = self.scan()
-            inst = by_serial.get(serial)
-            if inst is not None and not (fresh and inst in before):
+            inst = self.devices.find(serial)
+            if inst is not None and not (fresh and inst == before):
                 return reply
-            strangers = [s for s, i in by_serial.items() if s != serial and i not in before]
-            if strangers:
-                self.fixture.send(f"power {slot} off")
-                raise BrokerError(f"slot {slot}: found key {strangers[0]} instead of test key {serial}; "
-                                  f"slot {slot} is switched off")
             if time.monotonic() >= deadline:
-                why = " (a key came up but could not be identified)" if unknown else ""
-                raise BrokerError(f"slot {slot}: test key {serial} did not come back within {COMEBACK_S} s{why}")
+                raise BrokerError(f"slot {slot}: test key {serial} did not come back within {COMEBACK_S} s")
             time.sleep(0.5)
 
     def claim(self, slot):
@@ -441,8 +429,10 @@ class Broker:
         slot = req["slot"]
         if op == "run":
             return self.run(req)
+        if not self.devices.has_fixture():
+            raise BrokerError(f"{op}: no touch fixture is attached")
         if op in ("touch", "hold"):
-            self.key_for(slot, probe=run_slot is None)
+            self.in_fixture(slot)
             ms = f" {req['ms']}" if "ms" in req else ""
             return {"ok": True, "reply": self.fixture.send(f"{op} {slot}{ms}")}
         if op == "release":
@@ -458,16 +448,23 @@ class Broker:
             self.release(slot)
 
     def status(self, only=None):
-        fixture = self.fixture.send("status")
-        by_serial, unknown = self.scan(probe=only is None)
+        fixture = None
+        if self.devices.has_fixture():
+            try:
+                fixture = self.fixture.send("status")
+            except BrokerError as e:    # a faulty fixture must not stop the key's tests
+                fixture = str(e)
+        keys = self.devices.yubikeys()
+        present = [serial for _, serial in keys]
         slots = {}
         for slot, serial in sorted(self.config.slots.items()):
             if only is None or slot == only:
-                slots[str(slot)] = {"serial": serial, "present": serial in by_serial, "busy": slot in self.busy}
+                slots[str(slot)] = {"serial": serial, "present": present.count(serial) == 1,
+                                    "busy": slot in self.busy}
         resp = {"ok": True, "fixture": fixture, "slots": slots}
         if only is None:
             configured = set(self.config.slots.values())
-            resp["other_keys"] = len(unknown) + len([s for s in by_serial if s not in configured])
+            resp["other_keys"] = len([s for s in present if s not in configured])
         return resp
 
     # -- runs
@@ -524,6 +521,8 @@ class Broker:
     def run(self, req):
         slot, sha, steps = req["slot"], req["sha"], req["steps"]
         timeout = req.get("timeout", min(DEFAULT_TIMEOUT, self.config.max_timeout))
+        if any("cycle" in step for step in steps) and not self.devices.has_fixture():
+            raise BrokerError("run: cycle steps need the touch fixture, and none is attached")
         self.claim(slot)
         work = server = None
         try:
@@ -567,6 +566,7 @@ class Broker:
 
     def run_cycle(self, slot, ms, out):
         try:
+            self.in_fixture(slot)
             self.power(slot, f"cycle {slot} {ms}", fresh=True)
         except BrokerError as e:
             out.add(f"broker: {e}\n")
@@ -576,13 +576,13 @@ class Broker:
 
     def run_test(self, slot, path, src, state, sock, out, deadline):
         try:
-            inst = self.key_for(slot)
+            devices = self.key_devices(slot)
         except BrokerError as e:
             out.add(f"broker: {e}\n")
             return 125
         name = "sca-ykfx-" + uuid.uuid4().hex[:12]
         argv = container_argv(
-            name, self.config.image, self.devices.device_args(inst),
+            name, self.config.image, devices,
             mounts=[(src, "/src", True), (state, "/state", False), (sock, SESSION_SOCK, False)],
             env=[("YUBIKEY_FIXTURE_SLOT", slot), ("YUBIKEY_FIXTURE_SERIAL", self.config.slots[slot]),
                  ("HOME", "/tmp")],

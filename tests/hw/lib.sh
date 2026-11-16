@@ -5,6 +5,7 @@
 # a test runs inside the broker's test container (tools/yubikey-touch/broker/),
 # which sees one test key; YUBIKEY_FIXTURE_SLOT and YUBIKEY_FIXTURE_SERIAL name
 # it. these tests may reset the key: never run them against a key you use.
+# they never need a touch: the touch fixture is optional.
 
 set -u
 
@@ -27,25 +28,16 @@ fail() {
   exit 1
 }
 
-# touch the key every second in the background until stop_touching
-start_touching() {
-  ( while sleep 1; do yubikey-fixture touch "${YUBIKEY_FIXTURE_SLOT}" 500 >/dev/null || exit; done ) &
-  touch_pid=$!
-}
-
-stop_touching() {
-  kill "${touch_pid}" 2>/dev/null
-  wait "${touch_pid}" 2>/dev/null
-}
-
-# reset PIV and make a 9c key that needs a touch for every signature
-make_touch_key() {
+# reset PIV and make a 9c key that needs the PIN once and never a touch:
+# nothing in these tests can touch the key
+make_key() {
   yk piv reset -f >/dev/null || fail "piv reset"
-  yk piv keys generate -m "${mgmt_key}" -a ECCP256 --pin-policy once --touch-policy always \
+  yk piv keys generate -m "${mgmt_key}" -a ECCP256 --pin-policy once --touch-policy never \
     9c /tmp/pub.pem >/dev/null || fail "generating the 9c key"
 }
 
-# sign with the 9c key (a self-signed certificate): waits up to 15 s for a touch
+# sign with the 9c key: a self-signed certificate, written to /tmp/cert.pem
 sign() {
-  yk piv certificates generate -m "${mgmt_key}" -P "${pin}" -s CN=fixture-touch-test 9c /tmp/pub.pem
+  yk piv certificates generate -m "${mgmt_key}" -P "${pin}" -s CN=fixture-sign-test 9c /tmp/pub.pem \
+    && yk piv certificates export 9c /tmp/cert.pem
 }

@@ -2,15 +2,19 @@
 """Talk to the YubiKey fixture broker (see tools/yubikey-touch/README.md, "Fixture broker").
 
     yubikey-fixture status
+    yubikey-fixture run [--timeout S] TEST SHA SLOT [TEST]...
+
+run fetches the pushed commit SHA and runs each TEST (a path under tests/hw/) in a container
+that sees only the slot's test key.
+
+Only when the touch fixture is attached:
+
     yubikey-fixture touch 4 [ms]        # touch the key in slot 4 (default 500 ms)
     yubikey-fixture hold 4              # touch until released
     yubikey-fixture release 4
     yubikey-fixture power 4 on|off
     yubikey-fixture cycle 4 [ms]        # power off for ms (default 1000), then on
-    yubikey-fixture run [--timeout S] TEST SHA SLOT [cycle[=MS] TEST]...
-
-run fetches the pushed commit SHA and runs each TEST (a path under tests/hw/) in a container
-that sees only the slot's test key; a cycle between tests power-cycles the key.
+    yubikey-fixture run ... cycle[=MS] TEST   # a power cycle between two tests
 
 The socket is $YUBIKEY_FIXTURE_SOCK, else /run/services/yubikey-fixture.sock if it exists,
 else $XDG_RUNTIME_DIR/sca-yubikey-fixture.sock. A fixture command exits 0, or 1 if the fixture
@@ -116,12 +120,12 @@ def main():
             print("yubikey-fixture: output truncated", file=sys.stderr)
         sys.exit(resp["exit"])
     if req["op"] == "status":
-        print(f"fixture: {resp['fixture']}")
+        print(f"fixture: {resp['fixture'] or 'none attached'}")
         for slot, info in resp["slots"].items():
             state = "present" if info["present"] else "not present"
             print(f"slot {slot}: test key {info['serial']}, {state}" + (", busy" if info["busy"] else ""))
         if resp.get("other_keys"):
-            print(f"other keys on the fixture's hub (not used): {resp['other_keys']}")
+            print(f"other YubiKeys (never used): {resp['other_keys']}")
         return
     print(resp["reply"])
 
