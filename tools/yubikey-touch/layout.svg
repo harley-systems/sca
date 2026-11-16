@@ -1,0 +1,217 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="864" viewBox="0 0 940 864" font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<title>YubiKey touch fixture, rev I: layout</title>
+<defs><marker id="a" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 2 L 5 5 L 0 8" fill="none" stroke="#b3261e" stroke-width="1.5"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20.0" y="34.0" font-size="20" text-anchor="start" font-weight="700" fill="#1f2328">YubiKey touch fixture, rev I: layout (mm)</text>
+<text x="20.0" y="56.0" font-size="12" text-anchor="start" font-weight="400" fill="#59616e">Generated from fixture.scad by drawings/make.sh. North, the YubiKey 4 end, is on the left.</text>
+<text x="20.0" y="78.0" font-size="14" text-anchor="start" font-weight="700" fill="#1f2328">Plan: lid off, seen from above, east up</text>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 23.05,68 L 43,68 L 43,-0 L 23.05,-0 L 23.05,-28 L 0.75,-28
+ L 0.75,-0 L 0,-0 L 0,68 L 0.75,68 L 0.75,96 L 23.05,96
+ z" fill="#d5d9df" fill-opacity="1.0" stroke="#59616e" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 0,68 L 0.75,68 L 0.75,96 L 2.75,96 L 2.75,67 L 6.4,67
+ L 6.4,66 L 3.7,66 L 3.7,57 L 2,57 L 2,37.15 L 2.2,37.15
+ L 2.2,34.15 L 2,34.15 L 2,29.85 L 0,29.85 z
+M 0,14.85 L 2,14.85 L 2,8.85 L 2.2,8.85 L 2.2,5.85 L 2,5.85
+ L 2,2 L 5,2 L 5,1 L 2.75,1 L 2.75,-28 L 0.75,-28
+ L 0.75,-0 L 0,-0 z
+M 2.7,40 L 5.1,40 L 5.1,38.65 L 2.7,38.65 z
+M 17.4,67 L 21.05,67 L 21.05,96 L 23.05,96 L 23.05,68 L 43,68
+ L 43,-0 L 23.05,-0 L 23.05,-28 L 21.05,-28 L 21.05,1 L 18.8,1
+ L 18.8,2 L 41,2 L 41,5.85 L 38.7,5.85 L 38.7,8.85 L 41,8.85
+ L 41,34.15 L 38.7,34.15 L 38.7,37.15 L 41,37.15 L 41,66 L 21.35,66
+ L 21.35,57 L 20.1,57 L 20.1,66 L 17.4,66 z
+M 18.9,40 L 22,40 L 22,38.65 L 18.9,38.65 z
+M 35.8,40 L 38.2,40 L 38.2,38.65 L 35.8,38.65 z" fill="#b4bac4" fill-opacity="1.0" stroke="#59616e" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 2.7,16.35 L -12,16.35 L -12,28.35 L 2.7,28.35 z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 18.4,37.65 L 22.5,37.65 L 22.5,40.5 L 35.5,40.5 L 35.5,37.65 L 38.2,37.65
+ L 38.2,5.34999 L 35.5,5.34999 L 35.5,2.5 L 22.5,2.5 L 22.5,5.34999 L 18.4,5.34999
+ L 18.4,2.5 L 5.39999,2.5 L 5.39999,5.34999 L 2.7,5.34999 L 2.7,37.65 L 5.39999,37.65
+ L 5.39999,40.5 L 18.4,40.5 z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 19.15,40.5 L 4.64999,40.5 L 4.64999,65.5 L 19.15,65.5 z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 36,40.5 L 22,40.5 L 22,52.6 L 36,52.6 z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 38.2,17 L 20.2,17 L 20.2,40.5 L 38.2,40.5 z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 17.9,-0.599991 L 20.8,-0.599991 L 20.8,-33.6 L 3,-33.6 L 3,-0.599991 L 5.89999,-0.599991
+ L 5.89999,11.3 L 17.9,11.3 z
+M 20.8,70.3 L 16.9,70.3 L 16.9,65.51 L 6.89999,65.51 L 6.89999,70.3 L 3,70.3
+ L 3,103.3 L 20.8,103.3 z" fill="#3d424a" fill-opacity="0.85" stroke="#1f2328" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(0,-5.0,5.0,0,200.0,365.0)"><path d="M 7.075,-4.09999 L 7.075,-14.425 L 10.1,-14.425 L 10.1,-13.5 L 13.7,-13.5 L 13.7,-14.425
+ L 13.85,-14.425 L 13.85,-16.175 L 13.7,-16.175 L 13.7,-17.1 L 10.1,-17.1 L 10.1,-16.175
+ L 7.075,-16.175 L 7.075,-18.5 L 6.77499,-18.8 L 5.37498,-18.8 L 5.075,-18.5 L 5.075,-16.175
+ L 4.84999,-16.175 L 4.84999,-14.425 L 5.075,-14.425 L 5.075,-4.09999 L 5.37498,-3.79999 L 6.77499,-3.79999
+ z
+M 7.075,96.4 L 7.075,86.075 L 10.1,86.075 L 10.1,87 L 13.7,87 L 13.7,86.075
+ L 13.85,86.075 L 13.85,84.325 L 13.7,84.325 L 13.7,83.4 L 10.1,83.4 L 10.1,84.325
+ L 7.075,84.325 L 7.075,82 L 6.77499,81.7 L 5.37498,81.7 L 5.075,82 L 5.075,84.325
+ L 4.84999,84.325 L 4.84999,86.075 L 5.075,86.075 L 5.075,96.4 L 5.37498,96.7 L 6.77499,96.7
+ z" fill="#f2a65a" fill-opacity="1.0" stroke="#a85c12" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<line x1="60.0" y1="249.8" x2="60.0" y2="129.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="200.0" y1="249.8" x2="200.0" y2="129.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="60.0" y1="134.0" x2="200.0" y2="134.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="130.0" y="129.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">drawer 28</text>
+<line x1="200.0" y1="150.0" x2="200.0" y2="129.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="540.0" y1="150.0" x2="540.0" y2="129.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="200.0" y1="134.0" x2="540.0" y2="134.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="370.0" y="129.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">box 68</text>
+<line x1="540.0" y1="249.8" x2="540.0" y2="129.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="680.0" y1="249.8" x2="680.0" y2="129.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="540.0" y1="134.0" x2="680.0" y2="134.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="610.0" y="129.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">drawer 28</text>
+<line x1="540.0" y1="365.0" x2="703.0" y2="365.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="540.0" y1="150.0" x2="703.0" y2="150.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="698.0" y1="365.0" x2="698.0" y2="150.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="705.0" y="168.0" font-size="12" text-anchor="start" font-weight="400" fill="#b3261e">43</text>
+<line x1="123.5" y1="305.5" x2="123.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="212.5" y1="305.5" x2="212.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="123.5" y1="455.0" x2="212.5" y2="455.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="168.0" y="450.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">17.8</text>
+<line x1="212.5" y1="305.5" x2="212.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="402.5" y1="305.5" x2="402.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="212.5" y1="455.0" x2="402.5" y2="455.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="307.5" y="450.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">hub with sockets 38</text>
+<line x1="402.5" y1="305.5" x2="402.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="527.5" y1="305.5" x2="527.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="402.5" y1="455.0" x2="527.5" y2="455.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="465.0" y="450.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">adapter 25</text>
+<line x1="527.5" y1="305.5" x2="527.5" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="626.0" y1="305.5" x2="626.0" y2="460.0" stroke="#a6adb7" stroke-width="0.8"/>
+<line x1="527.5" y1="455.0" x2="626.0" y2="455.0" stroke="#b3261e" stroke-width="1.0" marker-start="url(#a)" marker-end="url(#a)"/>
+<text x="576.8" y="450.0" font-size="12" text-anchor="middle" font-weight="400" fill="#b3261e">19.7</text>
+<text x="60.0" y="475.0" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">YubiKey 4 pin: over the button centre</text>
+<text x="680.0" y="475.0" font-size="11" text-anchor="end" font-weight="400" fill="#59616e">YubiKey 5 pin: over the button centre</text>
+<text x="370.0" y="497.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">The hub with its adapters can move 1 between the end walls; the pins sit over the buttons in the middle of that travel.</text>
+<line x1="277.5" y1="321.5" x2="732.0" y2="154.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="277.5" cy="321.5" r="2.2" fill="#59616e"/>
+<text x="736.0" y="158.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">hub 32.3 x 35.5</text>
+<text x="736.0" y="172.0" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">on 4 corner pads, fences 0.5 away</text>
+<line x1="362.5" y1="204.0" x2="732.0" y2="200.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="362.5" cy="204.0" r="2.2" fill="#59616e"/>
+<text x="736.0" y="204.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">RP2040-Zero, over the hub</text>
+<line x1="432.5" y1="220.0" x2="732.0" y2="226.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="432.5" cy="220.0" r="2.2" fill="#59616e"/>
+<text x="736.0" y="230.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">U-turn adapter to the RP2040</text>
+<line x1="492.5" y1="305.5" x2="732.0" y2="252.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="492.5" cy="305.5" r="2.2" fill="#59616e"/>
+<text x="736.0" y="256.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">YubiKey 5 adapter,</text>
+<text x="736.0" y="270.0" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">its USB-C end in the cradle</text>
+<line x1="311.8" y1="395.0" x2="732.0" y2="395.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="311.8" cy="395.0" r="2.2" fill="#59616e"/>
+<text x="736.0" y="399.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">plug for the laptop</text>
+<line x1="123.5" y1="285.5" x2="70.0" y2="106.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="123.5" cy="285.5" r="2.2" fill="#59616e"/>
+<text x="74.0" y="110.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">pin holder and slide bar</text>
+<text x="20.0" y="553.0" font-size="14" text-anchor="start" font-weight="700" fill="#1f2328">Cut along the key centre line, seen from the east</text>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M 2.3,-28.75 L 65,-28.75 L 65,-30.45 L 64.7,-30.75 L 2.6,-30.75 L 2.3,-30.45
+ z
+M 2.5,-10.45 L 39.7,-10.45 L 39.7,-14.85 L 2.5,-14.85 z" fill="#eef0f3" fill-opacity="0.6" stroke="#8a929e" stroke-width="0.240" stroke-dasharray="0.9 0.6" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M 52.6,-27.95 L 40.5,-27.95 L 40.5,-2.84999 L 52.6,-2.84999 z" fill="none" fill-opacity="1.0" stroke="#2f6db5" stroke-width="0.240" stroke-dasharray="0.9 0.6" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M 40.5,-27.05 L 33.1,-27.05 L 33.1,-23.85 L 26.4,-23.85 L 26.4,-25.85 L 22.2,-25.85
+ L 22.2,-23.85 L 17,-23.85 L 17,-22.25 L 40.5,-22.25 z" fill="none" fill-opacity="1.0" stroke="#2f6db5" stroke-width="0.240" stroke-dasharray="0.9 0.6" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M -28,-0 L 96,-0 L 96,-5.95 L 69,-5.95 L 69,-5.75 L 66,-5.75
+ L 66,-3.85 L 57,-3.85 L 57,-1.4 L 2,-1.4 L 2,-4.4 L -1,-4.4
+ L -1,-4.6 L -28,-4.6 z
+M -28,-9.8 L -16.4,-9.8 L -16.4,-12 L -17.25,-12 L -17.25,-31.255 L -19.8,-31.255
+ L -19.8,-11.8 L -28,-11.8 z
+M -14.2,-9.8 L -1,-9.8 L -1,-10.75 L 2,-10.75 L 2,-28.85 L 1.1,-28.85
+ L 1.1,-30.05 L 2,-30.05 L 2,-30.75 L 0,-30.75 L 0,-11.8 L -7.76987,-11.8
+ L -7.76987,-23.1667 L -10.7,-24.3779 L -10.7,-22.7714 L -10.4222,-22.3642 L -10.3549,-22.2192 L -10.3467,-22.2015
+ L -10.3467,-21.8113 L -10.6291,-21.581 L -10.6593,-21.5564 L -10.6785,-21.5518 L -10.7,-21.5466 L -10.7,-21.5
+ L -10.9234,-21.5 L -11.3712,-21.4433 L -11.391,-21.4455 L -11.6621,-21.4756 L -11.7725,-21.5 L -13.35,-21.5
+ L -13.35,-12 L -14.2,-12 z
+M 62.3,-23.34 L 65.99,-19.65 L 66,-19.65 L 66,-9.45 L 67,-9.45 L 67,-11.15
+ L 68,-11.15 L 68,-11.15 L 84.1,-11.15 L 84.1,-13.35 L 83.25,-13.35 L 83.25,-22.85
+ L 82.0102,-22.85 L 81.8968,-22.8058 L 81.8732,-22.7966 L 81.852,-22.7902 L 81.4417,-22.6672 L 81.1614,-22.6249
+ L 81.1408,-22.6218 L 80.5652,-22.6014 L 80.3969,-22.6629 L 80.3791,-22.6693 L 80.3458,-22.6898 L 80.0341,-22.8817
+ L 80.0341,-23.2718 L 80.0478,-23.2967 L 80.1595,-23.5002 L 80.4614,-23.9392 L 80.4854,-23.9741 L 80.6,-24.0665
+ L 80.6,-25.6493 L 77.2099,-23.904 L 77.2099,-13.15 L 68,-13.15 L 68,-30.75 L 66,-30.75
+ L 66,-28.75 L 62.3,-28.75 z
+M 86.3,-11.15 L 96,-11.15 L 96,-13.15 L 89.7,-13.15 L 89.7,-32.605 L 87.15,-32.605
+ L 87.15,-13.35 L 86.3,-13.35 z" fill="#d5d9df" fill-opacity="1.0" stroke="#59616e" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M 2.5,-4.75 L 13.5,-4.75 L 13.5,-5.25 L 29.5,-5.25 L 29.5,-4.75 L 40.5,-4.75
+ L 40.5,-10.45 L 29.5,-10.45 L 29.5,-6.85 L 13.5,-6.85 L 13.5,-10.45 L 2.5,-10.45
+ z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M 40.5,-3.95 L 65.5,-3.95 L 65.5,-10.95 L 40.5,-10.95 z" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M -33.6,-4.61 L -0.599999,-4.61 L -0.599999,-5.05 L 11.3,-5.05 L 11.3,-7.35 L -0.599999,-7.35
+ L -0.599999,-7.9 L -33.6,-7.9 z
+M 65.51,-6.25 L 70.3,-6.25 L 70.3,-5.96 L 103.3,-5.96 L 103.3,-9.25 L 70.3,-9.25
+ L 70.3,-8.95 L 65.51,-8.95 z" fill="#3d424a" fill-opacity="0.85" stroke="#1f2328" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<g transform="matrix(5.0,0,0,5.0,200.0,768.75)"><path d="M -17.1,-12.95 L -16,-12.95 L -16,-23.4922 L -16.0578,-23.5675 L -16.0871,-23.6382 L -15.9187,-23.3863
+ L -15.6348,-23.1966 L -15.3,-23.13 L -14.9652,-23.1966 L -14.6813,-23.3863 L -14.4916,-23.6702 L -14.425,-24.005
+ L -14.4916,-24.3398 L -14.6813,-24.6237 L -14.9652,-24.8134 L -15.3,-24.88 L -15.6348,-24.8134 L -15.9187,-24.6237
+ L -16.0871,-24.3718 L -16.0578,-24.4425 L -16,-24.5178 L -16,-32.755 L -17.1,-32.755 z
+M -16.175,-24.005 L -16.1452,-24.2315 L -16.1159,-24.3022 L -16.175,-24.005 L -16.1159,-23.7078 L -16.1452,-23.7785
+ z
+M -15.81,-12.7 L -15.67,-12.7 L -15.67,-7.6 L -14.93,-7.6 L -14.93,-12.7 L -14.79,-12.7
+ L -14.79,-23.1 L -15.81,-23.1 z
+M -14.6,-12.95 L -13.5,-12.95 L -13.5,-21.8 L -14.6,-21.8 z
+M 83.4,-14.3 L 84.5,-14.3 L 84.5,-23.15 L 83.4,-23.15 z
+M 84.325,-25.355 L 84.3916,-25.0202 L 84.5813,-24.7363 L 84.8652,-24.5466 L 85.2,-24.48 L 85.5348,-24.5466
+ L 85.8187,-24.7363 L 85.9871,-24.9882 L 85.9578,-24.9175 L 85.9,-24.8422 L 85.9,-14.3 L 87,-14.3
+ L 87,-34.105 L 85.9,-34.105 L 85.9,-25.8678 L 85.9578,-25.7925 L 85.9871,-25.7218 L 85.8187,-25.9737
+ L 85.5348,-26.1634 L 85.2,-26.23 L 84.8652,-26.1634 L 84.5813,-25.9737 L 84.3916,-25.6898 z
+M 86.0159,-25.6522 L 86.0452,-25.5815 L 86.075,-25.355 L 86.0452,-25.1285 L 86.0159,-25.0578 L 86.075,-25.355
+ z
+M 84.69,-14.05 L 84.83,-14.05 L 84.83,-8.95 L 85.57,-8.95 L 85.57,-14.05 L 85.71,-14.05
+ L 85.71,-24.45 L 84.69,-24.45 z" fill="#f2a65a" fill-opacity="1.0" stroke="#a85c12" stroke-width="0.240" stroke-linejoin="round" fill-rule="evenodd"/></g>
+<line x1="50.0" y1="768.8" x2="690.0" y2="768.8" stroke="#59616e" stroke-width="1.5"/>
+<line x1="692.0" y1="615.0" x2="698.0" y2="615.0" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="615.0" x2="714.0" y2="615.0" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="619.0" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">30.75  box top</text>
+<line x1="692.0" y1="625.0" x2="698.0" y2="625.0" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="625.0" x2="714.0" y2="631.0" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="635.0" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">28.75  lid underside</text>
+<line x1="692.0" y1="629.0" x2="698.0" y2="629.0" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="629.0" x2="714.0" y2="647.0" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="651.0" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">27.95  U-turn top (25.1 tall)</text>
+<line x1="692.0" y1="657.5" x2="698.0" y2="657.5" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="657.5" x2="714.0" y2="663.0" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="667.0" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">22.25  RP2040 board (15.4 above the hub)</text>
+<line x1="692.0" y1="710.5" x2="698.0" y2="710.5" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="710.5" x2="714.0" y2="710.5" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="714.5" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">11.65  deck top</text>
+<line x1="692.0" y1="734.5" x2="698.0" y2="734.5" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="734.5" x2="714.0" y2="734.5" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="738.5" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">6.85  hub board top</text>
+<line x1="692.0" y1="749.0" x2="698.0" y2="749.0" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="749.0" x2="714.0" y2="750.5" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="754.5" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">3.95  YubiKey 5 adapter seat</text>
+<line x1="692.0" y1="768.8" x2="698.0" y2="768.8" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="698.0" y1="768.8" x2="714.0" y2="768.8" stroke="#b3261e" stroke-width="0.6"/>
+<text x="718.0" y="772.8" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">0  bed</text>
+<line x1="695.0" y1="768.8" x2="695.0" y2="615.0" stroke="#b3261e" stroke-width="1.0"/>
+<line x1="125.5" y1="622.5" x2="66.0" y2="585.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="125.5" cy="622.5" r="2.2" fill="#59616e"/>
+<text x="70.0" y="589.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">tower: pin holder, bar, pogo pin</text>
+<line x1="412.5" y1="644.0" x2="362.5" y2="585.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="412.5" cy="644.0" r="2.2" fill="#59616e"/>
+<text x="366.5" y="589.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">U-turn and RP2040 (behind the cut)</text>
+<line x1="320.0" y1="620.0" x2="310.0" y2="603.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="320.0" cy="620.0" r="2.2" fill="#59616e"/>
+<text x="314.0" y="607.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">lid</text>
+<line x1="270.0" y1="713.5" x2="220.0" y2="603.0" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="270.0" cy="713.5" r="2.2" fill="#59616e"/>
+<text x="224.0" y="607.0" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">deck</text>
+<line x1="93.5" y1="740.5" x2="66.0" y2="796.8" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="93.5" cy="740.5" r="2.2" fill="#59616e"/>
+<text x="70.0" y="800.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">YubiKey 4</text>
+<line x1="276.8" y1="738.5" x2="236.8" y2="796.8" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="276.8" cy="738.5" r="2.2" fill="#59616e"/>
+<text x="240.8" y="800.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">hub and its sockets</text>
+<line x1="462.5" y1="744.0" x2="422.5" y2="814.8" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="462.5" cy="744.0" r="2.2" fill="#59616e"/>
+<text x="426.5" y="818.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">YubiKey 5 adapter on its cradle</text>
+<line x1="656.0" y1="733.5" x2="676.0" y2="796.8" stroke="#59616e" stroke-width="0.8"/>
+<circle cx="656.0" cy="733.5" r="2.2" fill="#59616e"/>
+<text x="672.0" y="800.8" font-size="12" text-anchor="end" font-weight="400" fill="#1f2328">YubiKey 5, drawer 1.35 higher</text>
+<rect x="20" y="832.75" width="16" height="12" fill="#d5d9df" fill-opacity="1.0" stroke="#59616e" stroke-width="1.2"/>
+<text x="42.0" y="843.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">printed body</text>
+<rect x="139.2" y="832.75" width="16" height="12" fill="#eef0f3" fill-opacity="0.6" stroke="#8a929e" stroke-width="1.2" stroke-dasharray="0.9,0.6"/>
+<text x="161.2" y="843.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">deck and lid</text>
+<rect x="258.4" y="832.75" width="16" height="12" fill="#a9cbf2" fill-opacity="0.8" stroke="#2f6db5" stroke-width="1.2"/>
+<text x="280.4" y="843.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">hub, adapters, RP2040</text>
+<rect x="437.0" y="832.75" width="16" height="12" fill="none" fill-opacity="1.0" stroke="#2f6db5" stroke-width="1.2" stroke-dasharray="0.9,0.6"/>
+<text x="459.0" y="843.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">behind the cut</text>
+<rect x="569.4" y="832.75" width="16" height="12" fill="#3d424a" fill-opacity="0.85" stroke="#1f2328" stroke-width="1.2"/>
+<text x="591.4" y="843.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">YubiKeys</text>
+<rect x="662.1999999999999" y="832.75" width="16" height="12" fill="#f2a65a" fill-opacity="1.0" stroke="#a85c12" stroke-width="1.2"/>
+<text x="684.2" y="843.8" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">pin lift</text>
+</svg>

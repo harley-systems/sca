@@ -1,0 +1,1 @@
+I am building S C A, a simple certificate authority, in bash. Its signing key lives on a YubiKey, and I want every release tested automatically on real hardware. That includes the cases that wait for a person: touch policies, Fido logins, and one time passwords. So the test suite needed a finger.

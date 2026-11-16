@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="700" viewBox="0 0 980 700" font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+<title>YubiKey touch fixture: wiring</title>
+<defs><marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 1 L 9 5 L 0 9 z" fill="#1f2328"/></marker></defs>
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="34" font-size="20" text-anchor="start" font-weight="700" fill="#1f2328">YubiKey touch fixture: wiring</text>
+<text x="20" y="56" font-size="12" text-anchor="start" font-weight="400" fill="#59616e">USB in blue. Touch lines in orange, power switching in red (planned, not built yet). Ground is shared through the USB cables.</text>
+<rect x="20" y="100" width="130" height="54" rx="6" fill="#f4f5f7" stroke="#59616e" stroke-width="1.4"/>
+<text x="85.0" y="124.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">Laptop</text>
+<text x="85.0" y="140.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">USB-A port</text>
+<rect x="185" y="104" width="130" height="46" rx="6" fill="#ffffff" stroke="#2f6db5" stroke-width="1.4"/>
+<text x="250.0" y="124.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">A-C Forward</text>
+<text x="250.0" y="140.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">adapter</text>
+<polyline points="150,127 185,127" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="360" y="84" width="170" height="330" rx="6" fill="#eef4fc" stroke="#2f6db5" stroke-width="1.4"/>
+<text x="445.0" y="253.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328"></text>
+<text x="445" y="108" font-size="12" text-anchor="middle" font-weight="700" fill="#1f2328">USB 2.0 hub board</text>
+<text x="445" y="124" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">4 x USB-A, USB-C in</text>
+<polyline points="315,127 360,127" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="366" y="145" font-size="11" text-anchor="start" font-weight="400" fill="#2f6db5">USB-C in</text>
+<rect x="512" y="166" width="18" height="18" fill="#ffffff" stroke="#2f6db5" stroke-width="1.2"/>
+<text x="506" y="179" font-size="11" text-anchor="end" font-weight="400" fill="#2f6db5">north near</text>
+<rect x="512" y="236" width="18" height="18" fill="#ffffff" stroke="#2f6db5" stroke-width="1.2"/>
+<text x="506" y="249" font-size="11" text-anchor="end" font-weight="400" fill="#2f6db5">south near</text>
+<rect x="512" y="321" width="18" height="18" fill="#ffffff" stroke="#2f6db5" stroke-width="1.2"/>
+<text x="506" y="334" font-size="11" text-anchor="end" font-weight="400" fill="#2f6db5">south far</text>
+<rect x="512" y="381" width="18" height="18" fill="#ffffff" stroke="#2f6db5" stroke-width="1.2"/>
+<text x="506" y="394" font-size="11" text-anchor="end" font-weight="400" fill="#2f6db5">north far</text>
+<text x="540" y="394" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">free</text>
+<rect x="560" y="150" width="110" height="50" rx="6" fill="#fdeeee" stroke="#b3261e" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="615.0" y="172.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">switch 4</text>
+<text x="615.0" y="188.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">VBUS only</text>
+<polyline points="530,175 560,175" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="790" y="150" width="170" height="50" rx="6" fill="#e9eaec" stroke="#1f2328" stroke-width="1.4"/>
+<text x="875.0" y="172.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">YubiKey 4</text>
+<text x="875.0" y="188.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">USB-A, in the north drawer</text>
+<polyline points="670,175 790,175" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="560" y="220" width="110" height="50" rx="6" fill="#fdeeee" stroke="#b3261e" stroke-width="1.4" stroke-dasharray="5 4"/>
+<text x="615.0" y="242.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">switch 5</text>
+<text x="615.0" y="258.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">VBUS only</text>
+<polyline points="530,245 560,245" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="676" y="226" width="82" height="38" rx="6" fill="#ffffff" stroke="#2f6db5" stroke-width="1.4"/>
+<text x="717.0" y="249.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">C-A Fwd</text>
+<polyline points="670,245 676,245" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="790" y="220" width="170" height="50" rx="6" fill="#e9eaec" stroke="#1f2328" stroke-width="1.4"/>
+<text x="875.0" y="242.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">YubiKey 5C NFC</text>
+<text x="875.0" y="258.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">USB-C, in the south drawer</text>
+<polyline points="758,245 790,245" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="560" y="312" width="110" height="36" rx="6" fill="#ffffff" stroke="#2f6db5" stroke-width="1.4"/>
+<text x="615.0" y="334.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">U-turn</text>
+<polyline points="530,330 560,330" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<rect x="790" y="300" width="170" height="160" rx="6" fill="#f1f7ee" stroke="#2e7d32" stroke-width="1.4"/>
+<text x="875.0" y="384.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328"></text>
+<text x="875" y="322" font-size="12" text-anchor="middle" font-weight="700" fill="#1f2328">RP2040-Zero</text>
+<text x="875" y="338" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">serial port "YubiKey touch"</text>
+<polyline points="670,330 790,330" fill="none" stroke="#2f6db5" stroke-width="2.2" stroke-linejoin="round"/>
+<text x="796" y="326" font-size="11" text-anchor="start" font-weight="400" fill="#2f6db5">USB-C</text>
+<rect x="782" y="363" width="10" height="10" fill="#ffffff" stroke="#2e7d32"/>
+<text x="798" y="372" font-size="11" text-anchor="start" font-weight="400" fill="#1f2328">GP0</text>
+<rect x="782" y="383" width="10" height="10" fill="#ffffff" stroke="#2e7d32"/>
+<text x="798" y="392" font-size="11" text-anchor="start" font-weight="400" fill="#1f2328">GP1</text>
+<rect x="782" y="403" width="10" height="10" fill="#ffffff" stroke="#2e7d32"/>
+<text x="798" y="412" font-size="11" text-anchor="start" font-weight="400" fill="#1f2328">GP2</text>
+<rect x="782" y="423" width="10" height="10" fill="#ffffff" stroke="#2e7d32"/>
+<text x="798" y="432" font-size="11" text-anchor="start" font-weight="400" fill="#1f2328">GP3</text>
+<rect x="782" y="443" width="10" height="10" fill="#ffffff" stroke="#2e7d32"/>
+<text x="798" y="452" font-size="11" text-anchor="start" font-weight="400" fill="#1f2328">GND</text>
+<polyline points="782,368 772,368 772,211 898,211 898,200" fill="none" stroke="#a85c12" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="898" cy="200" r="3.2" fill="#a85c12"/>
+<text x="904" y="214" font-size="11" text-anchor="start" font-weight="400" fill="#a85c12">pogo pin</text>
+<polyline points="782,388 740,388 740,283 898,283 898,270" fill="none" stroke="#a85c12" stroke-width="2" stroke-linejoin="round"/>
+<circle cx="898" cy="270" r="3.2" fill="#a85c12"/>
+<text x="904" y="286" font-size="11" text-anchor="start" font-weight="400" fill="#a85c12">pogo pin</text>
+<text x="846" y="372" font-size="11" text-anchor="start" font-weight="400" fill="#a85c12">touch YubiKey 4</text>
+<text x="846" y="392" font-size="11" text-anchor="start" font-weight="400" fill="#a85c12">touch YubiKey 5</text>
+<polyline points="615,150 615,138" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<text x="621" y="141" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">from GP2</text>
+<polyline points="615,270 615,284" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<text x="621" y="292" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">from GP3</text>
+<polyline points="782,408 760,408" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<polyline points="782,428 760,428" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-dasharray="6 4" stroke-linejoin="round"/>
+<text x="846" y="412" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">power: switch 4</text>
+<text x="846" y="432" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">power: switch 5</text>
+<text x="846" y="452" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">to the switches</text>
+<text x="20" y="484" font-size="14" text-anchor="start" font-weight="700" fill="#1f2328">One power switch (two are built: one per key). High on the GPIO = key powered.</text>
+<rect x="20" y="500" width="940" height="180" rx="6" fill="#fffafa" stroke="#b3261e" stroke-dasharray="5 4"/>
+<text x="40" y="546" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">hub 5 V (the port's VBUS</text>
+<text x="40" y="562" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">trace, cut off its socket)</text>
+<polyline points="210,552 330,552" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<rect x="330" y="522" width="150" height="60" rx="6" fill="#ffffff" stroke="#b3261e" stroke-width="1.4"/>
+<text x="405.0" y="549.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">AO3401</text>
+<text x="405.0" y="565.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">P-channel, SOT-23 board</text>
+<text x="316" y="546" font-size="11" text-anchor="end" font-weight="400" fill="#b3261e">S (2)</text>
+<text x="494" y="546" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">D (3)</text>
+<polyline points="480,552 640,552" fill="none" stroke="#b3261e" stroke-width="2" stroke-linejoin="round"/>
+<text x="650" y="546" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">to the key's socket VBUS pin</text>
+<text x="650" y="562" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">(the key's 5 V)</text>
+<polyline points="405,582 405,612 260,612 260,552" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="260" cy="552" r="3.2" fill="#b3261e"/>
+<rect x="300" y="604" width="56" height="16" fill="#ffffff" stroke="#b3261e" stroke-width="1.4"/>
+<text x="328" y="616" font-size="11" text-anchor="middle" font-weight="400" fill="#b3261e">10k</text>
+<text x="411" y="598" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">G (1)</text>
+<text x="196" y="632" font-size="11" text-anchor="start" font-weight="400" fill="#59616e">the 10k holds the gate at the source: off by default</text>
+<polyline points="405,612 560,612 560,622" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-linejoin="round"/>
+<circle cx="405" cy="612" r="3.2" fill="#b3261e"/>
+<rect x="520" y="622" width="150" height="50" rx="6" fill="#ffffff" stroke="#b3261e" stroke-width="1.4"/>
+<text x="595.0" y="644.0" font-size="12" text-anchor="middle" font-weight="600" fill="#1f2328">2N7002</text>
+<text x="595.0" y="660.0" font-size="11" text-anchor="middle" font-weight="400" fill="#59616e">N-channel, SOT-23 board</text>
+<text x="566" y="618" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">D (3)</text>
+<polyline points="670,647 760,647" fill="none" stroke="#b3261e" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="680" y="641" font-size="11" text-anchor="start" font-weight="400" fill="#b3261e">G (1)</text>
+<text x="766" y="651" font-size="12" text-anchor="start" font-weight="400" fill="#1f2328">GP2 or GP3 on the RP2040</text>
+<polyline points="520,660 470,660" fill="none" stroke="#1f2328" stroke-width="1.6" stroke-linejoin="round"/>
+<text x="462" y="664" font-size="12" text-anchor="end" font-weight="400" fill="#1f2328">S (2) to GND</text>
+</svg>

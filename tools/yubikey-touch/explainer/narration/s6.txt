@@ -1,0 +1,1 @@
+One rule: use test keys only. This box fakes human presence, and that is the whole point, so never put a real key in it. The model, the firmware and the parts list are all open, in the S C A repository. Real hardware, real touch, and no human required.
