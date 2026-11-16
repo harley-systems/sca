@@ -1,0 +1,9 @@
+[Unit]
+Description=SCA YubiKey fixture broker
+Requires=sca-yubikey-fixture.socket
+After=sca-yubikey-fixture.socket
+
+[Service]
+ExecStart=@BROKER@
+Restart=on-failure
+UMask=0022

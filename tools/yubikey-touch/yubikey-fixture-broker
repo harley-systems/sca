@@ -1,0 +1,702 @@
+#!/usr/bin/env python3
+"""YubiKey fixture broker: lets sandboxed sessions use the touch fixture and its test keys.
+
+Serves one JSON request per line on a Unix socket: the one systemd passes in (socket
+activation), or --socket PATH when run by hand. See README.md, "Fixture broker".
+
+It only ever looks at the YubiKeys on the fixture's own USB hub, only acts for the ones whose
+serials are in the config, and runs tests from pushed commits in throwaway containers that see
+nothing but one test key.
+"""
+import argparse
+import collections
+import configparser
+import glob
+import json
+import os
+import re
+import select
+import shutil
+import signal
+import socket
+import socketserver
+import subprocess
+import sys
+import tempfile
+import termios
+import threading
+import time
+import traceback
+import uuid
+
+DEFAULT_CONFIG = os.path.expanduser("~/.config/sca/yubikey-fixture.conf")
+DEFAULT_REPOSITORY = "https://github.com/harley-systems/sca.git"
+DEFAULT_IMAGE = "sca-yubikey-fixture"
+DEFAULT_MAX_TIMEOUT = 1800
+DEFAULT_TIMEOUT = 300
+CACHE_DIR = os.path.expanduser("~/.cache/sca-yubikey-fixture")
+SESSION_SOCK = "/run/services/yubikey-fixture.sock"   # where sessions and test containers see it
+
+SLOTS = (4, 5)              # the firmware's key names
+YUBICO_VENDOR = "1050"
+MAX_LINE = 64 * 1024
+MAX_OUTPUT = 1024 * 1024
+MAX_STEPS = 20
+TOUCH_MS = (10, 10000)      # the firmware's ranges
+CYCLE_MS = (100, 10000)
+COMEBACK_S = 15             # how long a key gets to come back after power on or a cycle
+PROBE_TIMEOUT_S = 30
+
+SHA_RE = re.compile(r"[0-9a-f]{40}")
+TEST_RE = re.compile(r"tests/hw/[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*")
+GIT_ENV = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_ASKPASS="true", LC_ALL="C")
+
+FIELDS = {                  # op: (required fields, optional fields)
+    "status": ((), ()),
+    "touch": (("slot",), ("ms",)),
+    "hold": (("slot",), ()),
+    "release": (("slot",), ()),
+    "power": (("slot", "state"), ()),
+    "cycle": (("slot",), ("ms",)),
+    "run": (("sha", "slot", "steps"), ("timeout",)),
+}
+RUN_OPS = ("touch", "hold", "release", "status")    # all a test container may ask for
+
+Config = collections.namedtuple("Config", "slots repository image max_timeout")
+# One appearance of a USB device: a power cycle or replug gives it a new devnum.
+Instance = collections.namedtuple("Instance", "syspath busnum devnum")
+
+
+class BrokerError(Exception):
+    pass
+
+
+def log(msg):
+    print(msg, file=sys.stderr, flush=True)
+
+
+def is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+# ---------------------------------------------------------------- config
+
+def load_config(path):
+    parser = configparser.ConfigParser(interpolation=None, default_section="no default section")
+    try:
+        with open(path) as f:
+            parser.read_file(f)
+    except OSError as e:
+        raise BrokerError(f"cannot read config {path}: {e.strerror}")
+    except configparser.Error as e:
+        raise BrokerError(f"config {path}: {e}")
+    extra = set(parser.sections()) - {"slots", "broker"}
+    if extra:
+        raise BrokerError(f"config {path}: unknown section [{sorted(extra)[0]}]")
+    if not parser.has_section("slots") or not parser["slots"]:
+        raise BrokerError(f"config {path}: [slots] must map at least one slot to a test-key serial")
+    slots = {}
+    for name, value in parser["slots"].items():
+        if name not in [str(s) for s in SLOTS]:
+            raise BrokerError(f"config {path}: slot {name} does not exist (the fixture has slots 4 and 5)")
+        if not re.fullmatch(r"[0-9]{1,10}", value.strip()):
+            raise BrokerError(f"config {path}: slot {name}: serial must be a number, not {value!r}")
+        slots[int(name)] = int(value)
+    if len(set(slots.values())) != len(slots):
+        raise BrokerError(f"config {path}: the same serial is listed for two slots")
+    broker = parser["broker"] if parser.has_section("broker") else {}
+    extra = set(broker) - {"repository", "image", "max_timeout"}
+    if extra:
+        raise BrokerError(f"config {path}: unknown key {sorted(extra)[0]} in [broker]")
+    repository = broker.get("repository", DEFAULT_REPOSITORY).strip()
+    image = broker.get("image", DEFAULT_IMAGE).strip()
+    if not repository or repository.startswith("-"):
+        raise BrokerError(f"config {path}: bad repository {repository!r}")
+    if not re.fullmatch(r"[a-z0-9][a-z0-9._/:-]*", image):
+        raise BrokerError(f"config {path}: bad image name {image!r}")
+    max_timeout = broker.get("max_timeout", str(DEFAULT_MAX_TIMEOUT)).strip()
+    if not re.fullmatch(r"[0-9]{1,6}", max_timeout) or int(max_timeout) < 1:
+        raise BrokerError(f"config {path}: max_timeout must be a number of seconds")
+    return Config(slots, repository, image, int(max_timeout))
+
+
+# ---------------------------------------------------------------- requests
+
+def validate(req, config):
+    """Check a request's shape and values; return it, or raise BrokerError."""
+    if not isinstance(req, dict):
+        raise BrokerError("request must be a JSON object")
+    op = req.get("op")
+    if not isinstance(op, str) or op not in FIELDS:
+        raise BrokerError(f"unknown op {op!r}")
+    required, optional = FIELDS[op]
+    for key in req:
+        if key != "op" and key not in required + optional:
+            raise BrokerError(f"{op}: unknown field {key!r}")
+    for key in required:
+        if key not in req:
+            raise BrokerError(f"{op}: missing field {key!r}")
+    if "slot" in req:
+        if not is_int(req["slot"]):
+            raise BrokerError(f"{op}: slot must be a number")
+        if req["slot"] not in config.slots:
+            raise BrokerError(f"slot {req['slot']} is not configured")
+    if "ms" in req:
+        low, high = TOUCH_MS if op == "touch" else CYCLE_MS
+        if not is_int(req["ms"]) or not low <= req["ms"] <= high:
+            raise BrokerError(f"{op}: ms must be {low}..{high}")
+    if op == "power" and req["state"] not in ("on", "off"):
+        raise BrokerError("power: state must be \"on\" or \"off\"")
+    if op == "run":
+        if not isinstance(req["sha"], str) or not SHA_RE.fullmatch(req["sha"]):
+            raise BrokerError("run: sha must be a full 40-character commit SHA (no branch names or short SHAs)")
+        if "timeout" in req and (not is_int(req["timeout"]) or not 1 <= req["timeout"] <= config.max_timeout):
+            raise BrokerError(f"run: timeout must be 1..{config.max_timeout} seconds")
+        steps = req["steps"]
+        if not isinstance(steps, list) or not 1 <= len(steps) <= MAX_STEPS:
+            raise BrokerError(f"run: steps must be a list of 1..{MAX_STEPS} steps")
+        for step in steps:
+            if not isinstance(step, dict) or len(step) != 1:
+                raise BrokerError("run: each step is {\"test\": PATH} or {\"cycle\": MS}")
+            if "test" in step:
+                check_test_path(step["test"])
+            elif "cycle" in step:
+                if not is_int(step["cycle"]) or not CYCLE_MS[0] <= step["cycle"] <= CYCLE_MS[1]:
+                    raise BrokerError(f"run: cycle ms must be {CYCLE_MS[0]}..{CYCLE_MS[1]}")
+            else:
+                raise BrokerError("run: each step is {\"test\": PATH} or {\"cycle\": MS}")
+    return req
+
+
+def check_test_path(path):
+    if (not isinstance(path, str) or not TEST_RE.fullmatch(path)
+            or any(part in (".", "..") for part in path.split("/"))):
+        raise BrokerError(f"run: test {path!r} must be a relative path under tests/hw/")
+
+
+def summary(req):
+    """What to log about a request: never the test output."""
+    if not isinstance(req, dict):
+        return "?"
+    parts = [str(req.get("op"))]
+    for key in ("slot", "state", "ms", "sha", "steps", "timeout"):
+        if key in req:
+            parts.append(f"{key}={json.dumps(req[key], separators=(',', ':'))}")
+    return " ".join(parts)
+
+
+# ---------------------------------------------------------------- devices
+
+def read_attr(path, name):
+    with open(os.path.join(path, name)) as f:
+        return f.read().strip()
+
+
+class Devices:
+    """Finds the fixture and the YubiKeys on its hub in sysfs (roots injectable for tests)."""
+
+    def __init__(self, sys_root="/sys", dev_root="/dev"):
+        self.sys_root = sys_root
+        self.dev_root = dev_root
+
+    def port(self):
+        ports = sorted(glob.glob(os.path.join(self.dev_root, "serial/by-id/*YubiKey_touch*")))
+        if not ports:
+            raise BrokerError("fixture not found (is it plugged in and programmed?)")
+        return ports[0]
+
+    def hub(self):
+        """The sysfs name of the fixture's USB hub, e.g. 1-3: the RP2040 and the keys hang off it."""
+        tty = os.path.basename(os.path.realpath(self.port()))
+        interface = os.path.realpath(os.path.join(self.sys_root, "class/tty", tty, "device"))
+        hub = os.path.basename(os.path.dirname(os.path.dirname(interface)))
+        if not re.fullmatch(r"[0-9]+-[0-9]+(\.[0-9]+)*", hub):
+            raise BrokerError("the fixture is not behind its own USB hub")
+        return hub
+
+    def keys(self):
+        """The YubiKeys plugged into the fixture's hub. Keys anywhere else are never listed."""
+        hub = self.hub()
+        base = os.path.join(self.sys_root, "bus/usb/devices")
+        found = []
+        for name in sorted(os.listdir(base)):
+            if not re.fullmatch(re.escape(hub) + r"(\.[0-9]+)+", name):
+                continue
+            path = os.path.join(base, name)
+            try:
+                if read_attr(path, "idVendor") != YUBICO_VENDOR:
+                    continue
+                found.append(Instance(os.path.realpath(path), int(read_attr(path, "busnum")),
+                                      int(read_attr(path, "devnum"))))
+            except (OSError, ValueError):
+                continue            # it went away while we looked
+        return found
+
+    def nodes(self, inst):
+        """The device nodes of one key: its USB node and the hidraw nodes of its interfaces."""
+        nodes = [os.path.join(self.dev_root, "bus/usb/%03d/%03d" % (inst.busnum, inst.devnum))]
+        hidraw = os.path.join(self.sys_root, "class/hidraw")
+        for name in sorted(os.listdir(hidraw)) if os.path.isdir(hidraw) else []:
+            device = os.path.realpath(os.path.join(hidraw, name, "device"))
+            if device.startswith(inst.syspath + "/"):
+                nodes.append(os.path.join(self.dev_root, name))
+        return nodes
+
+    def device_args(self, inst):
+        """(host node, container node) pairs for docker --device."""
+        return [(node, "/dev/" + os.path.relpath(node, self.dev_root)) for node in self.nodes(inst)]
+
+
+class Fixture:
+    """The RP2040's serial port. One command at a time: replies would interleave otherwise."""
+
+    def __init__(self, devices):
+        self.devices = devices
+        self.lock = threading.Lock()
+
+    def send(self, line):
+        with self.lock:
+            fd = os.open(self.devices.port(), os.O_RDWR | os.O_NOCTTY)
+            try:
+                attrs = termios.tcgetattr(fd)
+                attrs[0] = attrs[1] = attrs[3] = 0      # raw: no echo, no line editing
+                attrs[2] |= termios.CLOCAL | termios.CREAD
+                attrs[4] = attrs[5] = termios.B115200   # never 1200, which reboots it into the bootloader
+                termios.tcsetattr(fd, termios.TCSANOW, attrs)
+                termios.tcflush(fd, termios.TCIFLUSH)
+                os.write(fd, (line + "\n").encode())
+                reply, deadline = b"", time.monotonic() + 15
+                while b"\n" not in reply and time.monotonic() < deadline:
+                    if select.select([fd], [], [], 0.5)[0]:
+                        reply += os.read(fd, 256)
+            finally:
+                os.close(fd)
+        text = reply.decode(errors="replace").strip()
+        if text.startswith("ok"):
+            return text
+        if not text:
+            raise BrokerError("fixture: no reply")
+        raise BrokerError("fixture: " + (text[4:] if text.startswith("err ") else text))
+
+
+# ---------------------------------------------------------------- containers
+
+def container_argv(name, image, devices, mounts=(), env=(), workdir=None, cmd=(), pids=256):
+    """The docker run command for a probe or a test step. Nothing else ever reaches a container."""
+    argv = ["docker", "run", "--rm", "--init", "--name", name, "--network", "none",
+            "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", str(pids),
+            "--tmpfs", "/run", "--tmpfs", "/tmp"]
+    for src, dst, readonly in mounts:
+        argv += ["-v", f"{src}:{dst}" + (":ro" if readonly else "")]
+    for key, value in env:
+        argv += ["-e", f"{key}={value}"]
+    if workdir:
+        argv += ["-w", workdir]
+    for host, inside in devices:
+        argv += ["--device", f"{host}:{inside}"]
+    return argv + [image, *cmd]
+
+
+class Output:
+    """A test run's output, capped."""
+
+    def __init__(self, cap=MAX_OUTPUT):
+        self.cap = cap
+        self.buf = bytearray()
+        self.truncated = False
+        self.lock = threading.Lock()
+
+    def add(self, data):
+        if isinstance(data, str):
+            data = data.encode()
+        with self.lock:
+            room = self.cap - len(self.buf)
+            if len(data) > room:
+                self.buf += data[:room]
+                self.truncated = True
+            else:
+                self.buf += data
+
+    def pump(self, stream):
+        try:
+            for chunk in iter(lambda: stream.read1(65536), b""):
+                self.add(chunk)
+        except (OSError, ValueError):
+            pass                        # closed under us: a process outlived its step
+
+    def text(self):
+        return self.buf.decode("utf-8", "replace")
+
+
+# ---------------------------------------------------------------- broker
+
+class Broker:
+    def __init__(self, config, devices, fixture, cache_dir=CACHE_DIR):
+        self.config = config
+        self.devices = devices
+        self.fixture = fixture
+        self.repo = os.path.join(cache_dir, "sca.git")
+        self.verified = {}          # Instance -> serial, learnt by a probe container
+        self.dev_lock = threading.Lock()
+        self.git_lock = threading.Lock()
+        self.busy = set()
+        self.busy_lock = threading.Lock()
+        self.containers = set()
+        self.workdirs = set()
+
+    # -- keys
+
+    def probe(self, inst):
+        """Learn a key's serial in a container that sees only that key."""
+        name = "sca-ykfx-probe-" + uuid.uuid4().hex[:12]
+        argv = container_argv(name, self.config.image, self.devices.device_args(inst),
+                              cmd=["probe"], pids=64)
+        self.containers.add(name)
+        try:
+            result = subprocess.run(argv, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                    timeout=PROBE_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            subprocess.run(["docker", "kill", name], capture_output=True)
+            log(f"probe of {inst.syspath} timed out")
+            return None
+        finally:
+            self.containers.discard(name)
+        serials = result.stdout.split()
+        if result.returncode != 0 or len(serials) != 1 or not serials[0].isdigit():
+            log(f"probe of {inst.syspath} failed ({result.returncode}): {result.stderr.strip()[-300:]}")
+            return None
+        return int(serials[0])
+
+    def scan(self, probe=True):
+        """Serial -> Instance for the identified keys on the fixture's hub, and the unidentified ones."""
+        with self.dev_lock:
+            keys = self.devices.keys()
+            self.verified = {inst: serial for inst, serial in self.verified.items() if inst in keys}
+            if probe:
+                for inst in keys:
+                    if inst not in self.verified:
+                        serial = self.probe(inst)
+                        if serial is not None:
+                            self.verified[inst] = serial
+            return ({serial: inst for inst, serial in self.verified.items()},
+                    [inst for inst in keys if inst not in self.verified])
+
+    def key_for(self, slot, probe=True):
+        """The slot's test key, checked against the config: the same verified device instance."""
+        serial = self.config.slots[slot]
+        inst = self.scan(probe)[0].get(serial)
+        if inst is None:
+            raise BrokerError(f"slot {slot}: test key {serial} is not present")
+        return inst
+
+    def power(self, slot, line, fresh):
+        """Send a power command; for on/cycle wait until the slot's key is back and verified.
+
+        fresh: the key must come back as a new device instance (a cycle).
+        """
+        serial = self.config.slots[slot]
+        before = set(self.devices.keys())
+        reply = self.fixture.send(line)
+        if line.endswith(" off"):
+            return reply
+        deadline = time.monotonic() + COMEBACK_S
+        while True:
+            by_serial, unknown = self.scan()
+            inst = by_serial.get(serial)
+            if inst is not None and not (fresh and inst in before):
+                return reply
+            strangers = [s for s, i in by_serial.items() if s != serial and i not in before]
+            if strangers:
+                self.fixture.send(f"power {slot} off")
+                raise BrokerError(f"slot {slot}: found key {strangers[0]} instead of test key {serial}; "
+                                  f"slot {slot} is switched off")
+            if time.monotonic() >= deadline:
+                why = " (a key came up but could not be identified)" if unknown else ""
+                raise BrokerError(f"slot {slot}: test key {serial} did not come back within {COMEBACK_S} s{why}")
+            time.sleep(0.5)
+
+    def claim(self, slot):
+        with self.busy_lock:
+            if slot in self.busy:
+                raise BrokerError(f"slot {slot} is busy")
+            self.busy.add(slot)
+
+    def release(self, slot):
+        with self.busy_lock:
+            self.busy.discard(slot)
+
+    # -- requests
+
+    def handle(self, req, run_slot=None):
+        """Serve one request. run_slot is set for the restricted socket inside a test run."""
+        req = validate(req, self.config)
+        op = req["op"]
+        if run_slot is not None:
+            if op not in RUN_OPS:
+                raise BrokerError(f"{op} is not allowed from inside a test (use a cycle step)")
+            if op != "status" and req["slot"] != run_slot:
+                raise BrokerError(f"slot {req['slot']} is not this test's slot")
+        if op == "status":
+            return self.status(only=run_slot)
+        slot = req["slot"]
+        if op == "run":
+            return self.run(req)
+        if op in ("touch", "hold"):
+            self.key_for(slot, probe=run_slot is None)
+            ms = f" {req['ms']}" if "ms" in req else ""
+            return {"ok": True, "reply": self.fixture.send(f"{op} {slot}{ms}")}
+        if op == "release":
+            return {"ok": True, "reply": self.fixture.send(f"release {slot}")}
+        self.claim(slot)
+        try:
+            if op == "power":
+                reply = self.power(slot, f"power {slot} {req['state']}", fresh=False)
+            else:
+                reply = self.power(slot, f"cycle {slot} {req.get('ms', 1000)}", fresh=True)
+            return {"ok": True, "reply": reply}
+        finally:
+            self.release(slot)
+
+    def status(self, only=None):
+        fixture = self.fixture.send("status")
+        by_serial, unknown = self.scan(probe=only is None)
+        slots = {}
+        for slot, serial in sorted(self.config.slots.items()):
+            if only is None or slot == only:
+                slots[str(slot)] = {"serial": serial, "present": serial in by_serial, "busy": slot in self.busy}
+        resp = {"ok": True, "fixture": fixture, "slots": slots}
+        if only is None:
+            configured = set(self.config.slots.values())
+            resp["other_keys"] = len(unknown) + len([s for s in by_serial if s not in configured])
+        return resp
+
+    # -- runs
+
+    def git(self, *args):
+        return subprocess.run(["git", "--git-dir", self.repo, *args], capture_output=True, text=True,
+                              env=GIT_ENV, timeout=300)
+
+    def fetch(self, sha):
+        """Fetch the configured repository's branches; the commit must be on one of them."""
+        with self.git_lock:
+            if not os.path.isdir(self.repo):
+                os.makedirs(os.path.dirname(self.repo), exist_ok=True)
+                subprocess.run(["git", "init", "--quiet", "--bare", self.repo], check=True,
+                               capture_output=True, env=GIT_ENV)
+            result = self.git("fetch", "--quiet", "--prune", "--no-tags", self.config.repository,
+                              "+refs/heads/*:refs/heads/*")
+            if result.returncode != 0:
+                raise BrokerError(f"cannot fetch {self.config.repository}: {result.stderr.strip()[-300:]}")
+            # GitHub serves any commit of the fork network by SHA, so only branch commits count.
+            if (self.git("cat-file", "-e", sha + "^{commit}").returncode != 0
+                    or not self.git("for-each-ref", "--contains", sha, "--format=%(refname)",
+                                    "refs/heads/").stdout.strip()):
+                raise BrokerError(f"commit {sha} is not on any branch of {self.config.repository} (push it first)")
+
+    def check_blob(self, sha, path):
+        result = self.git("ls-tree", "-z", sha, "--", path)
+        meta, _, name = result.stdout.rstrip("\0").partition("\t")
+        fields = meta.split()
+        if (result.returncode != 0 or name != path or len(fields) != 3 or fields[1] != "blob"
+                or fields[0] not in ("100644", "100755")):
+            raise BrokerError(f"{path} is not a file in commit {sha[:12]}")
+
+    def extract(self, sha, dest):
+        with self.git_lock:
+            archive = subprocess.Popen(["git", "--git-dir", self.repo, "archive", "--format=tar", sha],
+                                       stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, env=GIT_ENV)
+            tar = subprocess.run(["tar", "-x", "--no-same-owner", "-C", dest], stdin=archive.stdout,
+                                 capture_output=True, text=True)
+            archive.stdout.close()
+            if archive.wait() != 0 or tar.returncode != 0:
+                raise BrokerError(f"cannot extract commit {sha[:12]}: {tar.stderr.strip()[-300:]}")
+
+    def serve_run_socket(self, path, slot):
+        """The socket a test sees at /run/services/yubikey-fixture.sock: touches on its own slot only."""
+        server = socketserver.ThreadingUnixStreamServer(path, Handler)
+        os.chmod(path, 0o666)       # the container's root is not us; the work dir (0700) guards it on the host
+        server.daemon_threads = True
+        server.broker = self
+        server.run_slot = slot
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        return server
+
+    def run(self, req):
+        slot, sha, steps = req["slot"], req["sha"], req["steps"]
+        timeout = req.get("timeout", min(DEFAULT_TIMEOUT, self.config.max_timeout))
+        self.claim(slot)
+        work = server = None
+        try:
+            self.key_for(slot)
+            self.fetch(sha)
+            for step in steps:
+                if "test" in step:
+                    self.check_blob(sha, step["test"])
+            work = tempfile.mkdtemp(prefix="sca-ykfx-")
+            self.workdirs.add(work)
+            src, state, sock = (os.path.join(work, name) for name in ("src", "state", "fixture.sock"))
+            os.mkdir(src)
+            os.chmod(src, 0o755)
+            os.mkdir(state)
+            os.chmod(state, 0o777)  # the container's root may write here
+            self.extract(sha, src)
+            server = self.serve_run_socket(sock, slot)
+            out = Output()
+            deadline = time.monotonic() + timeout
+            results, code = [], 0
+            for n, step in enumerate(steps):
+                out.add(f"== step {n}: " + (step["test"] if "test" in step else f"cycle {step['cycle']} ms") + " ==\n")
+                if time.monotonic() >= deadline:
+                    out.add("broker: the run timed out\n")
+                    code = 124
+                elif "test" in step:
+                    code = self.run_test(slot, step["test"], src, state, sock, out, deadline)
+                else:
+                    code = self.run_cycle(slot, step["cycle"], out)
+                results.append({"step": n, "exit": code})
+                if code != 0:
+                    break
+            return {"ok": True, "exit": code, "output": out.text(), "truncated": out.truncated, "steps": results}
+        finally:
+            if server:
+                server.shutdown()
+                server.server_close()
+            if work:
+                self.cleanup(work)
+            self.release(slot)
+
+    def run_cycle(self, slot, ms, out):
+        try:
+            self.power(slot, f"cycle {slot} {ms}", fresh=True)
+        except BrokerError as e:
+            out.add(f"broker: {e}\n")
+            return 125
+        out.add(f"broker: slot {slot} test key {self.config.slots[slot]} is back\n")
+        return 0
+
+    def run_test(self, slot, path, src, state, sock, out, deadline):
+        try:
+            inst = self.key_for(slot)
+        except BrokerError as e:
+            out.add(f"broker: {e}\n")
+            return 125
+        name = "sca-ykfx-" + uuid.uuid4().hex[:12]
+        argv = container_argv(
+            name, self.config.image, self.devices.device_args(inst),
+            mounts=[(src, "/src", True), (state, "/state", False), (sock, SESSION_SOCK, False)],
+            env=[("YUBIKEY_FIXTURE_SLOT", slot), ("YUBIKEY_FIXTURE_SERIAL", self.config.slots[slot]),
+                 ("HOME", "/tmp")],
+            workdir="/src", cmd=["test", path])
+        self.containers.add(name)
+        try:
+            proc = subprocess.Popen(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            reader = threading.Thread(target=out.pump, args=(proc.stdout,), daemon=True)
+            reader.start()
+            try:
+                code = proc.wait(timeout=max(0, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                subprocess.run(["docker", "kill", name], capture_output=True)
+                try:
+                    proc.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                out.add("broker: the run timed out\n")
+                return 124
+            finally:
+                reader.join(5)
+                if not reader.is_alive():   # else a process outlived the step and holds the pipe
+                    proc.stdout.close()
+            return code
+        finally:
+            self.containers.discard(name)
+
+    def cleanup(self, work):
+        try:
+            shutil.rmtree(work)
+        except OSError:
+            # What the container's root left in /state isn't ours to delete: let a container do it.
+            subprocess.run(["docker", "run", "--rm", "--network", "none", "--cap-drop", "ALL",
+                            "--security-opt", "no-new-privileges", "-v", os.path.join(work, "state") + ":/state",
+                            "--entrypoint", "find", self.config.image, "/state", "-mindepth", "1", "-delete"],
+                           capture_output=True, timeout=120)
+            shutil.rmtree(work, ignore_errors=True)
+        self.workdirs.discard(work)
+
+    def stop(self):
+        for name in list(self.containers):
+            subprocess.run(["docker", "kill", name], capture_output=True)
+        for work in list(self.workdirs):
+            shutil.rmtree(work, ignore_errors=True)
+
+
+class Handler(socketserver.StreamRequestHandler):
+    def handle(self):
+        where = "test" if self.server.run_slot is not None else "session"
+        while True:
+            line = self.rfile.readline(MAX_LINE + 1)
+            if not line:
+                return
+            if len(line) > MAX_LINE:
+                self.reply({"ok": False, "error": "request line too long"})
+                return
+            req = None
+            try:
+                req = json.loads(line)
+                resp = self.server.broker.handle(req, self.server.run_slot)
+            except ValueError:
+                resp = {"ok": False, "error": "request is not valid JSON"}
+            except BrokerError as e:
+                resp = {"ok": False, "error": str(e)}
+            except Exception as e:      # keep serving; the journal gets the details
+                log(traceback.format_exc())
+                resp = {"ok": False, "error": f"internal error: {e}"}
+            result = (f"exit={resp['exit']}" if "exit" in resp else "ok") if resp["ok"] else f"error: {resp['error']}"
+            log(f"{where}: {summary(req)} -> {result}")
+            self.reply(resp)
+
+    def reply(self, resp):
+        try:
+            self.wfile.write((json.dumps(resp) + "\n").encode())
+        except OSError:
+            pass                        # the client went away
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="YubiKey fixture broker (see README.md, \"Fixture broker\")")
+    parser.add_argument("--config", default=DEFAULT_CONFIG, help=f"config file (default {DEFAULT_CONFIG})")
+    parser.add_argument("--socket", metavar="PATH", help="listen on PATH instead of the socket systemd passes in")
+    args = parser.parse_args(argv)
+    os.umask(0o022)
+    try:
+        config = load_config(args.config)
+    except BrokerError as e:
+        sys.exit(f"yubikey-fixture-broker: {e}")
+    devices = Devices()
+    broker = Broker(config, devices, Fixture(devices))
+    if args.socket:
+        if os.path.exists(args.socket):
+            os.unlink(args.socket)
+        server = socketserver.ThreadingUnixStreamServer(args.socket, Handler)
+        os.chmod(args.socket, 0o600)
+    elif os.environ.get("LISTEN_FDS") == "1" and os.environ.get("LISTEN_PID") == str(os.getpid()):
+        server = socketserver.ThreadingUnixStreamServer("", Handler, bind_and_activate=False)
+        server.socket.close()
+        server.socket = socket.socket(fileno=3)
+    else:
+        sys.exit("yubikey-fixture-broker: no socket: start it through sca-yubikey-fixture.socket, or pass --socket PATH")
+    server.daemon_threads = True
+    server.broker = broker
+    server.run_slot = None
+
+    def on_sigterm(*_):
+        broker.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGTERM, on_sigterm)
+    log("serving " + ", ".join(f"slot {s} = {serial}" for s, serial in sorted(config.slots.items())))
+    server.serve_forever()
+
+
+if __name__ == "__main__":
+    main()

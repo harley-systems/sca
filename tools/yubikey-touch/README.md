@@ -123,6 +123,8 @@ The parts above came to about $43. Tools used for this build:
 | `firmware/` | The RP2040-Zero program |
 | `yktouch` | Host script that sends commands to the RP2040 |
 | `70-yktouch.rules` | udev rule so your user can open the serial port |
+| `yubikey-fixture-broker`, `yubikey-fixture` | The fixture broker and its client, see [Fixture broker](#fixture-broker) |
+| `broker/` | The broker's systemd units, install script, test image, example config and tests |
 
 ## Print settings (Prusa, PLA)
 
@@ -313,6 +315,150 @@ Commands (one line each, every reply starts with `ok` or `err`):
 ./yktouch cycle 5 [ms]       # power off for ms (default 1000), then on
 ./yktouch status
 ```
+
+## Fixture broker
+
+The team's agents work in sandboxes with no USB devices. The broker is a small host daemon that lets them
+use the fixture anyway: a session gets one Unix socket, and through it can touch and power-cycle the test
+keys and run hardware tests against them. It never shows a test any other USB device, so the YubiKey you
+keep plugged into the same machine stays out of reach.
+
+- It only looks at YubiKeys on the fixture's own USB hub (the hub the RP2040 hangs off), and only acts for
+  the ones whose serials are in its config. It learns a key's serial with a short probe container that sees
+  only that key, and checks before every request that the slot's key is the same device it verified. A
+  power cycle gives the key new device nodes, so it is probed again when it comes back.
+- A test runs from a **pushed** commit: the broker fetches the configured repository's branches into
+  `~/.cache/sca-yubikey-fixture/sca.git`, refuses a commit that is on none of them, and unpacks it into a
+  scratch folder that is deleted afterwards. It never runs a path from the caller's machine.
+- Each test step runs in a throwaway container (`--network none`, all capabilities dropped,
+  `no-new-privileges`) with its own `pcscd`, the checkout read-only at `/src`, a `/state` folder shared by
+  the run's steps, and only the key's USB and hidraw nodes. It does not get the fixture's serial port: its
+  `/run/services/yubikey-fixture.sock` is a socket of its own that only takes `touch`, `hold`, `release` and
+  `status` for its slot. A power cycle is a step of the run, done by the broker, and the next step gets the
+  key's new nodes.
+
+> **The broker can do anything docker can, which is as much as root.** Keep its config to test keys,
+> and don't put a key that protects anything real on the fixture's hub.
+
+### Setup
+
+1. Flash the firmware and install the udev rule, see [Firmware](#firmware).
+2. Your user needs docker (`sudo usermod -aG docker $USER`, then log in again).
+3. Run the install script:
+
+   ```bash
+   broker/install.sh
+   ```
+
+   It writes `~/.config/sca/yubikey-fixture.conf` from `broker/yubikey-fixture.conf.example` if you have no
+   config yet (it never overwrites one), builds the test image `sca-yubikey-fixture` from `broker/Dockerfile`,
+   installs `sca-yubikey-fixture.socket` and `.service` into `~/.config/systemd/user/` (the service runs
+   the broker from this checkout), and starts the socket. Run it again after pulling a changed broker or
+   image.
+4. Check the config: one line per occupied slot, with the serial of the key in it (`ykman list --serials`):
+
+   ```ini
+   [slots]
+   4 = 38263298
+
+   [broker]                 # optional
+   # repository = https://github.com/harley-systems/sca.git
+   # image = sca-yubikey-fixture
+   # max_timeout = 1800     # longest run, in seconds
+   ```
+
+   Then `systemctl --user restart sca-yubikey-fixture.service`. A bad config stops the broker with a
+   message in `journalctl --user -u sca-yubikey-fixture`, which also logs every request.
+
+The socket is `$XDG_RUNTIME_DIR/sca-yubikey-fixture.sock`, mode 0600; minime mounts it into the developer's
+and QA's sessions at `/run/services/yubikey-fixture.sock`. systemd owns the socket, so a broker restart
+doesn't break the sessions' mounts.
+
+**Don't use `yktouch` while the broker runs**: they share the serial port, and the broker can't tell what
+`yktouch` did to a key. Stop it first (`systemctl --user stop sca-yubikey-fixture.socket
+sca-yubikey-fixture.service`).
+
+If the host's own `pcscd` grabs the test key, the test container's `pcscd` can't open it (the probe
+fails and the slot shows as not present). Stop the host's `pcscd` while tests run, or keep it off the
+fixture's keys.
+
+To try the broker by hand without systemd: `./yubikey-fixture-broker --socket /tmp/fx.sock`, and
+`YUBIKEY_FIXTURE_SOCK=/tmp/fx.sock ./yubikey-fixture status`. Its tests need neither hardware nor docker:
+`python3 broker/test_broker.py`.
+
+### Client
+
+`yubikey-fixture` is a single Python file (standard library only). It uses `$YUBIKEY_FIXTURE_SOCK`, else
+`/run/services/yubikey-fixture.sock` if it exists (in a session or a test container), else
+`$XDG_RUNTIME_DIR/sca-yubikey-fixture.sock`.
+
+```bash
+yubikey-fixture status                # the fixture's state and whether each test key is present
+yubikey-fixture touch 4 [ms]          # touch the key in slot 4 (default 500 ms, 10..10000)
+yubikey-fixture hold 4                # touch until released
+yubikey-fixture release 4
+yubikey-fixture power 4 on|off        # on waits until the key is back and verified
+yubikey-fixture cycle 4 [ms]          # power off for ms (default 1000, 100..10000), then on
+yubikey-fixture run tests/hw/piv_touch.sh <sha> 4
+yubikey-fixture run [--timeout S] tests/hw/cycle_before.sh <sha> 4 cycle[=ms] tests/hw/cycle_after.sh
+```
+
+A fixture command prints the firmware's reply and exits 0, or 1 if the fixture refused it. `run` prints the
+steps' output and exits with the first failing step's code (124 if the run timed out); later steps don't
+run. Errors from the broker (slot not configured, key not present, slot busy, commit not pushed) exit
+125 with the message on stderr. One run per slot at a time; touches from outside still work during a run.
+
+### Writing a hardware test
+
+A test is a bash script under `tests/hw/`, run as `bash /src/tests/hw/<name>.sh` with `/src` as the working
+directory. `tests/hw/lib.sh` has helpers (`yk` runs `ykman` against the test key, `start_touching`,
+`fail`). The container has `ykman`, `yubico-piv-tool`, `ykcs11`, `opensc` (`pkcs11-tool`), `openssl`,
+`make` and `python3`, no network, and these:
+
+| | |
+|---|---|
+| `YUBIKEY_FIXTURE_SLOT`, `YUBIKEY_FIXTURE_SERIAL` | The test key's slot and serial |
+| `/src` | The commit, read-only |
+| `/state` | Shared by the run's steps, e.g. across a `cycle` |
+| `/tmp` | Scratch, per step |
+| `yubikey-fixture touch\|hold\|release\|status` | Touches for this test's slot |
+
+Tests may reset the key or change its PIN: the keys in the fixture are test keys. `make check` doesn't run
+`tests/hw/`; only the broker does.
+
+### Protocol
+
+One JSON object per line each way, on the same connection, at most 64 KiB per request. Unknown ops or
+fields and wrong types are refused.
+
+```
+{"op":"status"}                          → {"ok":true,"fixture":"ok key4 power=on touch=released ...",
+                                            "slots":{"4":{"serial":38263298,"present":true,"busy":false}},
+                                            "other_keys":0}
+{"op":"touch","slot":4,"ms":500}         → {"ok":true,"reply":"ok touched key4 500 ms"}
+{"op":"hold","slot":4}                   (also "release")
+{"op":"power","slot":4,"state":"on"}     ("on" or "off")
+{"op":"cycle","slot":4,"ms":1000}
+{"op":"run","sha":"<40 hex>","slot":4,"timeout":300,
+ "steps":[{"test":"tests/hw/a.sh"},{"cycle":1000},{"test":"tests/hw/b.sh"}]}
+                                         → {"ok":true,"exit":0,"output":"== step 0: tests/hw/a.sh ==\n...",
+                                            "truncated":false,"steps":[{"step":0,"exit":0}, ...]}
+any failure                              → {"ok":false,"error":"slot 5 is not configured"}
+```
+
+`ms` is optional. `other_keys` counts the YubiKeys on the fixture's hub that aren't configured test keys
+(their serials aren't shown). `sha` must be a full 40-character SHA on a branch of the configured
+repository. A test path is relative, under `tests/hw/`, and a regular file in that commit (no symlinks).
+`timeout` defaults to 300 s, at most `max_timeout`. `output` is the steps' stdout and stderr, at most 1 MiB
+(`truncated` tells). A firmware `err` reply comes back as `{"ok":false,"error":"fixture: ..."}`.
+
+### What still needs a person
+
+- Putting keys into the fixture or taking them out, and adding a key's serial to the config.
+- Slot 5, until a key is in it.
+- NFC, and keys outside the fixture, including your own.
+- Flashing the firmware.
+- The air-gapped root-CA steps.
 
 ## Assembly order
 

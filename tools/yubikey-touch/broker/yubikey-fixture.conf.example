@@ -1,0 +1,14 @@
+# YubiKey fixture broker config: ~/.config/sca/yubikey-fixture.conf
+#
+# The broker only acts for the keys listed here. Any other YubiKey, including
+# your own, is never opened or shown to a test.
+
+[slots]
+# fixture slot = test-key serial (ykman list --serials)
+4 = 38263298
+# 5 =
+
+[broker]
+# repository = https://github.com/harley-systems/sca.git
+# image = sca-yubikey-fixture
+# max_timeout = 1800
