@@ -108,6 +108,44 @@ Or edit the file directly:
 vi ~/.sca/config/sca.config
 ```
 
+### Library Paths
+
+Signing with a YubiKey needs three libraries, each with a setting in
+`sca.config`:
+
+| Setting | Library | Package (Debian/Ubuntu) |
+|---------|---------|-------------------------|
+| `pkcs11_engine` | `engines-3/pkcs11.so` | `libengine-pkcs11-openssl` |
+| `opensc_pkcs11_module` | `opensc-pkcs11.so` | `opensc` |
+| `ykcs11_module` | `libykcs11.so` | `ykcs11` (yubico-piv-tool) |
+
+`sca config create` writes their defaults (`pkcs11_engine_default` and so on)
+when it creates `sca.config`. For each library it searches, in order:
+
+1. `/usr/lib/<triplet>`, where the triplet comes from `uname -m`:
+   `x86_64` → `x86_64-linux-gnu`, `aarch64`/`arm64` → `aarch64-linux-gnu`,
+   `armv7l`/`armv6l` → `arm-linux-gnueabihf`, anything else → `<machine>-linux-gnu`
+2. `/usr/lib64`, `/usr/lib`, `/usr/local/lib`
+3. `/opt/homebrew/lib`, `~/.nix-profile/lib`, `/run/current-system/sw/lib`
+
+The first file found is written, including versioned names such as
+`libykcs11.so.2` and, on macOS, `.dylib`. If a library isn't installed yet, the
+path in `/usr/lib/<triplet>/` is written, so on x86_64 Ubuntu the defaults are
+`/usr/lib/x86_64-linux-gnu/...`.
+
+To use a library somewhere else, set it in `sca.config`; an explicit setting
+wins over the default:
+
+```bash
+export opensc_pkcs11_module=/opt/opensc/lib/opensc-pkcs11.so
+```
+
+An existing `sca.config` is never rewritten, so one created by an older sca on
+an arm64 host may still hold x86_64 paths. Signing then stops with
+`opensc PKCS#11 module not found at '<path>'` and names the setting to fix. Set
+the path as above, or run `sca config create --recreate all` (it backs up the old
+files) to write the defaults for this host.
+
 ## Naming Conventions (conventions.sh)
 
 Controls how file paths are constructed from entity names.

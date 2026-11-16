@@ -41,7 +41,7 @@ list_services() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_services: finished (service_files_folder=${service_files_folder})"

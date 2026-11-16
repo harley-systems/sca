@@ -41,7 +41,7 @@ list_subcas() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_subcas: finished (subca_files_folder=${subca_files_folder})"

@@ -64,6 +64,7 @@ install() {
         ;;
     esac
   done
+  [ $# -gt 0 ] && error "sca install: unexpected argument '$1'. use sca install -h for help." 1
 
   log_detailed "install: start (mode=${mode}, force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
@@ -78,10 +79,11 @@ install() {
   # another platform is told what to install instead of getting half an install
   install_check_package_manager $mode $yubikey_support $exclude_pkcs11_support \
     $openpgp_support $fido2_support
+  local packages_folder="${SCA_INSTALL_ROOT}/opt/sca/packages/"
+  # the mode must fit the host: checked before touching ~/bin or running apt-get
+  install_check_mode $mode $packages_folder
   # every package that fails is added here, and reported once all were tried
   local -a install_failures=()
-  # if mode is not supplied, auto-detect by pinging a host?
-  local packages_folder='/opt/sca/packages/'
   if [ "$mode" = 'offline' ]; then
     install_offline $packages_folder $yubikey_support $exclude_pkcs11_support $force $sca_script_file_name
   else
@@ -141,7 +143,8 @@ install_check_package_manager() {
     { [ "$openpgp_support" = true ] || [ "$fido2_support" = true ]; }; then
     packages+=" $(install_package_list yubikey_manager)"
   fi
-  [ "$mode" != offline ] && packages+=" $(install_package_list iso_image_tools)"
+  [ "$mode" != offline ] && is_usb_stick_build_host && \
+    packages+=" $(install_package_list iso_image_tools)"
   >&2 echo "sca install: apt-get and dpkg-query are required for automatic installs,"
   >&2 echo "and only apt-based systems (Ubuntu, Debian) are supported."
   >&2 echo "install these packages (or your platform's equivalents) yourself:"
@@ -149,6 +152,72 @@ install_check_package_manager() {
   >&2 echo "see docs/ssh-yubikey-options.md (Packages) and docs/yubikey.md (Prerequisites)"
   >&2 echo "for the package names on other platforms."
   error "sca install: no supported package manager found. nothing was installed." 1
+}
+################################################################################
+# stops with an error when the mode does not fit the host: online with no
+# network, or offline on a host that was not booted from an sca image. offline
+# with a network only warns, as an air-gapped appliance should not reach one.
+# with --dry-run a failing check is printed as "would fail" and the run goes on.
+#
+# SCA_INSTALL_ROOT (empty by default) is a test hook: the tests point it at a
+# fake root holding /proc/net and /opt/sca.
+install_check_mode() {
+  local mode=$1
+  local packages_folder=$2
+
+  # not message: log_detailed and error set a global of that name
+  local failure=''
+  if [ "$mode" = offline ]; then
+    local sca_file="${SCA_INSTALL_ROOT}/opt/sca/bin/sca"
+    local -a missing=()
+    [ -f "$sca_file" ] || missing+=("$sca_file")
+    [ -d "$packages_folder" ] || missing+=("$packages_folder")
+    log_detailed "install_check_mode: offline layout missing='${missing[*]}'"
+    [ ${#missing[@]} -gt 0 ] && failure="sca install: this host was not booted "\
+"from an sca image: ${missing[*]} not found, so there is nothing to install "\
+"with --air-gapped. nothing was installed."
+    if install_network_reachable; then
+      >&2 echo "sca install: warning: this host can reach the network. an air-gapped sca appliance should not."
+    fi
+  elif ! install_network_reachable; then
+    failure="sca install: no network is reachable, so packages can't be "\
+"installed from the repositories. on an air-gapped sca image, run "\
+"'sca install --air-gapped' instead. nothing was installed."
+  fi
+  [ -z "$failure" ] && return
+  if [ "$dry_run" = true ]; then
+    echo "would fail: ${failure}"
+    return
+  fi
+  error "$failure" 1
+}
+################################################################################
+# returns 0 when the host can reach the network, 1 when it can't.
+#
+# a host with no default route can't, which is answered from /proc/net without
+# any traffic or dns. with a route, one tcp connect is tried, capped by timeout
+# so a dead dns or a black-holed route does not hang the install.
+install_network_reachable() {
+  local probe_host=archive.ubuntu.com
+  local probe_port=80
+  local probe_seconds=3
+
+  # ipv4: destination and mask 00000000. ipv6: ::/0 on an interface other than
+  # lo, as the kernel keeps an unreachable ::/0 route on lo
+  if ! awk 'NR > 1 && $2 == "00000000" && $8 == "00000000" { found = 1 }
+      END { exit !found }' "${SCA_INSTALL_ROOT}/proc/net/route" 2> /dev/null \
+    && ! awk '$1 == "00000000000000000000000000000000" && $2 == "00" && $10 != "lo" { found = 1 }
+      END { exit !found }' "${SCA_INSTALL_ROOT}/proc/net/ipv6_route" 2> /dev/null; then
+    log_detailed "install_network_reachable: no default route"
+    return 1
+  fi
+  log_detailed "install_network_reachable: default route found, connecting to ${probe_host}:${probe_port}"
+  if timeout $probe_seconds bash -c ": > /dev/tcp/${probe_host}/${probe_port}" 2> /dev/null; then
+    log_detailed "install_network_reachable: connected to ${probe_host}:${probe_port}"
+    return 0
+  fi
+  log_detailed "install_network_reachable: could not connect to ${probe_host}:${probe_port}"
+  return 1
 }
 install_help() {
   cat <<'SCA_HELP'
@@ -171,10 +240,6 @@ install_offline() {
   local force=$4
   local sca_script_file_name=$5
 
-  # TODO: validate that we are in offline mode by:
-  #     - pinging a host (make sure we are not online by a mistake)
-  #     - checking if packages are present in expected folders, if not, assume
-  #       we are not running from a sca usb stick, so show error and exit
   log_detailed "install_offline: start (packages_folder=${packages_folder}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "
@@ -190,7 +255,8 @@ install_offline() {
 ################################################################################
 # installs sca in online mode
 #
-# when online, we will need image related tooling
+# when online on an x86_64 host, we will need image related tooling. other
+# architectures cannot build the amd64 sca usb stick, so it is skipped there.
 install_online() {
   local force=$1
   local sca_script_file_name=$2
@@ -206,7 +272,11 @@ install_online() {
   install_core_online
   [ $exclude_pkcs11_support != true ] && install_pkcs11_packages_online
   [ $yubikey_support == true ] && install_yubico_piv_tool
-  install_iso_image_tools
+  if is_usb_stick_build_host; then
+    install_iso_image_tools
+  else
+    install_iso_image_tools_skipped
+  fi
   log_detailed "install_online: finish (force=${force}, "\
 "yubikey_support=${yubikey_support}, "\
 "exclude_pkcs11_support=${exclude_pkcs11_support}, "\
@@ -216,7 +286,8 @@ install_online() {
 # we use xorriso for creating the hybrid bios and uefi sca iso image,
 # squashfs-tools for reading and packing ubuntu live filesystem layers
 # (unsquashfs and mksquashfs), apt-mirror for mirroring apt repositories and
-# qemu for running the sca usb stick image in sca test
+# qemu for running the sca usb stick image in sca test. they are installed on
+# x86_64 hosts only, the only ones that build the sca usb stick.
 #
 install_iso_image_tools() {
   log_detailed "install_iso_image_tools: start"
@@ -225,6 +296,12 @@ install_iso_image_tools() {
     install_package_from_repos $package_name
   done
   log_detailed "install_iso_image_tools: finish"
+}
+################################################################################
+# says why the usb stick builder tools are not installed on this host. printed
+# the same way in a dry run and a real one.
+install_iso_image_tools_skipped() {
+  echo "  skipping the usb stick builder tools (xorriso, squashfs-tools, qemu, apt-mirror): they build the amd64 sca usb stick and this host is $(build_host_architecture)."
 }
 ################################################################################
 # in online mode, sca install is used to initialize the sca configuration.

@@ -66,7 +66,7 @@ sca config set subca admin
 sca security_key init subca
 ```
 
-Run `sca create key subca` after init, not before: with a security key configured, `create key` creates empty credential files, which init then refuses to overwrite.
+Run `sca create key subca` after init, not before: `create key` uploads the new key with the management key init saves, so for an entity on a YubiKey it stops with a pointer to `sca security_key init <entity>` until init has run.
 
 The `sca security_key init <entity>` command:
 - Generates a random management key, PIN (6 digits) and PUK (8 digits). Nothing is prompted for.
@@ -79,6 +79,8 @@ The `sca security_key init <entity>` command:
   ```
 
 It refuses to run if those files already exist. To replace existing credentials, use `sca security_key init --roll-keys <entity>`; the old files are kept as `*.bak`. Run init in an air-gapped environment.
+
+Init supports `security_key_type` `yubikey` only. For a `pkcs11` token it refuses and changes nothing: set the PIN, PUK and management key with the token's own tools and write them to these files yourself.
 
 **Back up the generated files offline!** You'll need:
 - **PIN** - For daily signing operations; SCA reads it from the PIN file
@@ -206,9 +208,11 @@ Note: Tools like `ykman piv info` may incorrectly report "Private key: Not prese
 even when keys exist - use `sca security_key verify` for reliable detection.
 
 `verify` loads the YubiKey PKCS#11 module from the `ykcs11_module` setting in
-`~/.sca/config/sca.config` (default `/usr/lib/x86_64-linux-gnu/libykcs11.so`).
-If that file is missing, it searches common locations (other `/usr/lib/*-linux-gnu`
-triplets, `/usr/lib64`, `/usr/lib`, `/usr/local/lib`, Homebrew and Nix profiles).
+`~/.sca/config/sca.config`. `sca config create` sets its default to the
+libykcs11 found on this host, or to `/usr/lib/<triplet>/libykcs11.so` for this
+host's architecture (see [Library Paths](configuration.md#library-paths)).
+If that file is missing, `verify` searches the same folders: `/usr/lib/<triplet>`,
+`/usr/lib64`, `/usr/lib`, `/usr/local/lib`, Homebrew and Nix profiles.
 If your libykcs11 is somewhere else, set `ykcs11_module` to its full path.
 Run with `-d` to see which module was used.
 
