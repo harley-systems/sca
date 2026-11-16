@@ -24,8 +24,6 @@ init_options:
 
 allowed values for the system are:
 
-  - yubikey        - initialize yubikey hardware security module - first time
-                     initialization
   - openssl_ca_db  - initialize OpenSSL database
   - sca_usb_stick  - initalize sca usb stick
   - demo           - initialize demo certificate authority
@@ -43,7 +41,6 @@ initialization.
 - [demo](#sca-init-demo) - initialize demo certificate authority
 - [openssl_ca_db](#sca-init-openssl_ca_db) - initialize OpenSSL database
 - [sca_usb_stick](#sca-init-sca_usb_stick) - initalize sca usb stick
-- [yubikey](#sca-init-yubikey) - initialize yubikey hardware security module - first time initialization
 
 ---
 
@@ -253,55 +250,3 @@ sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/s
 ```
 
 See [Air-Gapped Operations](../air-gapped-operations.md) for complete workflow documentation.
-
----
-
-## sca init yubikey
-
-```text
-The initialize yubikey command help
-
-The initialize yubikey command is used for initializing a security hardware device
-from Yubico company called yubikey.
-
-The initialization is necessary only in first time use of the key in case it was
-previously uninitialized. The key comes pre-initialized with publicly known
-credentials and therefore needs re-creating of all it's access keys:
-  - management key
-  - pin key
-  - puk key
-
-Those are automatically changed from default factory preset to randomly generated
-and saved values.
-
-It is recommended to issue init command every now and then with --roll-keys option
-so that you refresh the stale access passwords for a yubikey.
-
-IMPORTANT: In case you have already initialized yubikey, you will need to
-configure the above mentioned keys by setting the content of the related entity
-hw key configuration settings.
-```
-
-**Syntax**
-
-```text
-sca [<sca_options>] init [<init_options>] yubikey <yubikey_options>
-
-init_options:
-
-  -h, --help      - print this help
-
-yubikey_options:
-
-  -h, --help      - print this help
-  -r, --roll-keys - roll yubikey management key, pin and puk by changing the old
-                    values with newly randomized ones
-```
-
-**See also**
-
-```text
-See yubico web site for more information on their products.
-```
-
-See also [`sca security_key init`](security_key.md#sca-security_key-init), which also supports `--device`.

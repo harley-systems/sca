@@ -115,7 +115,7 @@ import: build/import/import.sh
 #------------------------------------------------------------------------------
 # INIT command and subcommands
 #------------------------------------------------------------------------------
-INIT_SUBCMDS := demo openssl_ca_db sca_usb_stick yubikey
+INIT_SUBCMDS := demo openssl_ca_db sca_usb_stick
 
 $(eval $(call build_help,init,))
 $(foreach s,$(INIT_SUBCMDS),$(eval $(call build_help,init,$(s))))
