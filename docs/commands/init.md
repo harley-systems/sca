@@ -204,8 +204,8 @@ ubuntu cd image signing key bundled in sca. An image already in ~/.sca/downloads
 is checked the same way. Any failed check stops the command before anything is
 mounted. Any other ubuntu version id is rejected.
 
-The sca usb stick image is built on, and only on, an ubuntu host of the same
-version, 26.04-resolute. On any other host the command fails before
+The sca usb stick image is built on, and only on, an x86_64 ubuntu host of the
+same version, 26.04-resolute. On any other host the command fails before
 downloading anything.
 
 The sca iso image is written to ~/.sca/downloads/ next to the original ubuntu
@@ -220,7 +220,7 @@ and its options file to build a new one. A test image (-t) is always rebuilt.
 Creates a bootable Ubuntu live USB with sca pre-installed for air-gapped root CA operations.
 
 **Ubuntu version:** `26.04-resolute` only (the default). The image is built on an
-Ubuntu 26.04 host only; any other version id or host fails with an error. The
+x86_64 Ubuntu 26.04 host only; any other version id or host fails with an error. The
 stick bundles OpenSSL 3.5, pkcs11-provider 1.2, OpenSC 0.27, pcscd/libccid,
 yubico-piv-tool and ykcs11 2.7, yubikey-manager 5.8, and GnuPG with scdaemon
 2.4, all from the Ubuntu 26.04 archive. See
