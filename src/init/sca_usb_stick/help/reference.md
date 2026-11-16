@@ -33,4 +33,23 @@ sca init sca_usb_stick --yubikey-support
 sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
 ```
 
+**ARM boards:** `--board rock64` builds the image for a PINE64 ROCK64 from
+the latest Armbian minimal image of the same Ubuntu release, checked against
+its published sha256 and its detached signature by the Armbian image signing
+key (`DF00 FAF1 C577 104B 50BF 1D00 93D6 889F 9F0E 78D5`, bundled in sca). The
+image boots from a microSD card as written; booting it from a USB stick needs
+U-Boot in the board's SPI flash first, see
+[USB Boot on ARM](../usb-boot-on-arm.md). The image also gets the appliance
+settings of [the air-gapped appliance](../air-gapped-appliance.md):
+`fake-hwclock` masked, a persistent journal and `armbian-ramlog` disabled.
+`--test-image` and `--include-apt-mirror` are not supported with it.
+
+```bash
+# Create the ROCK64 image with YubiKey support
+sca init sca_usb_stick --yubikey-support --board rock64
+
+# Write it to a microSD card (replace sdX with your card's device)
+sudo dd bs=4M if=~/.sca/downloads/Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.sca.img of=/dev/sdX conv=fdatasync
+```
+
 See [Air-Gapped Operations](../air-gapped-operations.md) for complete workflow documentation.

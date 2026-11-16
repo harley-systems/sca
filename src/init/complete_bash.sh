@@ -67,10 +67,21 @@ _sca_init_sca_usb_stick_complete() {
 
   while [[ ${COMP_WORDS[$ubuntu_version_id_index]} == -* ]]; do
     if [ $COMP_CWORD == $ubuntu_version_id_index ]; then
-      suggestions=($(compgen -W "-h -s -t -i -x -y -o -n --help --skip-cleanup --test-image --include-apt-mirror --exclude-pkcs11-support --yubikey-support --no-cache-iso --no-cache" -- "$current_word"))
+      suggestions=($(compgen -W "-h -s -t -i -x -y -o -n -b --help --skip-cleanup --test-image --include-apt-mirror --exclude-pkcs11-support --yubikey-support --no-cache-iso --no-cache --board" -- "$current_word"))
       COMPREPLY=("${suggestions[@]}")
       return
     fi
+    case "${COMP_WORDS[$ubuntu_version_id_index]}" in
+      -b | --board )
+        # the value of --board: the boards of get_sca_usb_stick_boards
+        ubuntu_version_id_index=$((ubuntu_version_id_index+1))
+        if [ $COMP_CWORD == $ubuntu_version_id_index ]; then
+          suggestions=($(compgen -W "pc rock64" -- "$current_word"))
+          COMPREPLY=("${suggestions[@]}")
+          return
+        fi
+        ;;
+    esac
     ubuntu_version_id_index=$((ubuntu_version_id_index+1))
   done
 

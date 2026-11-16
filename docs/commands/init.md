@@ -146,7 +146,7 @@ already available.
 **Syntax**
 
 ```text
-sca [<sca_options>] init [<init_options>] sca_usb_stick <sca_usb_stick_options> [<ubuntu_version_id>]
+sca [<sca_options>] init [<init_options>] sca_usb_stick <sca_usb_stick_options> [--board <board>] [<ubuntu_version_id>]
 
 init_options:
 
@@ -189,6 +189,17 @@ sca_usb_stick_options:
                                   per ubuntu_version_id in the ~/.sca/downloads/
                                   folder, and to reuse it in the next runs once
                                   it matches the signed SHA256SUMS.
+  -b, --board <board>           - optional, the board the image is for.
+                                  pc (the default): the ubuntu desktop iso
+                                  image for an x86 pc.
+                                  rock64: the armbian image for a PINE64
+                                  ROCK64, built on the same ubuntu release.
+                                  it boots from a microSD card as written; to
+                                  boot it from a usb stick, see
+                                  docs/usb-boot-on-arm.md. -t and -i are not
+                                  supported with it.
+                                  any other board fails, listing the supported
+                                  ones.
   -n, --no-cache                - optional flag.
                                   default value is false.
                                   switches off all caching. suitable for one
@@ -215,6 +226,21 @@ recorded options match the ones requested. Otherwise - including an image built
 before sca recorded its options - the command fails, printing the options the
 image has and the ones requested, and leaves the image alone. Remove the image
 and its options file to build a new one. A test image (-t) is always rebuilt.
+
+With --board rock64, the image is the latest armbian minimal image of the
+ROCK64 for the same ubuntu release, from https://dl.armbian.com/rock64/. It is
+checked against both its published sha256 (.sha) and its detached signature
+(.asc), which is over the .img.xz itself and is checked with gpgv against the
+armbian image signing key bundled in sca (DF00 FAF1 C577 104B 50BF 1D00 93D6
+889F 9F0E 78D5). A missing or bad signature, or a sha256 that does not match,
+stops the command. The packages are downloaded for arm64 from
+ports.ubuntu.com, and sca, its configuration and the packages are copied into
+the root file system of the image, which also gets the appliance settings of
+docs/air-gapped-appliance.md: the fake-hwclock units masked, the journal kept
+on disk and armbian-ramlog disabled. The sca image is written next to the
+armbian image as <armbian image>.sca.img, so its name carries the armbian
+build it was made from, for example
+Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.sca.img.
 ```
 
 Creates a bootable Ubuntu live USB with sca pre-installed for air-gapped root CA operations.
@@ -250,6 +276,25 @@ sca init sca_usb_stick --yubikey-support
 
 # Write to USB (replace sdX with your device)
 sudo dd bs=4M if=~/.sca/downloads/ubuntu-26.04.1-desktop-amd64.sca.iso of=/dev/sdX conv=fdatasync
+```
+
+**ARM boards:** `--board rock64` builds the image for a PINE64 ROCK64 from
+the latest Armbian minimal image of the same Ubuntu release, checked against
+its published sha256 and its detached signature by the Armbian image signing
+key (`DF00 FAF1 C577 104B 50BF 1D00 93D6 889F 9F0E 78D5`, bundled in sca). The
+image boots from a microSD card as written; booting it from a USB stick needs
+U-Boot in the board's SPI flash first, see
+[USB Boot on ARM](../usb-boot-on-arm.md). The image also gets the appliance
+settings of [the air-gapped appliance](../air-gapped-appliance.md):
+`fake-hwclock` masked, a persistent journal and `armbian-ramlog` disabled.
+`--test-image` and `--include-apt-mirror` are not supported with it.
+
+```bash
+# Create the ROCK64 image with YubiKey support
+sca init sca_usb_stick --yubikey-support --board rock64
+
+# Write it to a microSD card (replace sdX with your card's device)
+sudo dd bs=4M if=~/.sca/downloads/Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.sca.img of=/dev/sdX conv=fdatasync
 ```
 
 See [Air-Gapped Operations](../air-gapped-operations.md) for complete workflow documentation.

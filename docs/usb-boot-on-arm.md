@@ -331,27 +331,39 @@ The image used for this guide
 ([#108](https://github.com/harley-systems/sca/issues/108),
 [#136](https://github.com/harley-systems/sca/issues/136)) is
 `Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.img.xz`
-from the Armbian **community** nightly channel
-(`https://github.com/armbian/community/releases`). That channel publishes **no
-checksum and no signature** for its images, so the integrity of this image
-rests on the HTTPS download alone
-([#143](https://github.com/harley-systems/sca/issues/143)). A sha256 you
-compute yourself after the download attests to nothing.
+from the Armbian **community** nightly channel. Its GitHub release
+(`https://github.com/armbian/community/releases`) carries no checksum and no
+signature ([#143](https://github.com/harley-systems/sca/issues/143)), but
+`dl.armbian.com` publishes both next to the image it points to:
 
-Only Armbian's **stable** images (the `archive` channel) are signed. For the
-ROCK64 the latest is 25.5.1, for example
-`Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz` from
-`https://archive.armbian.com/rock64/archive/`, with a `.sha` and an `.asc`
-next to it. To check one:
+```
+https://dl.armbian.com/rock64/Resolute_current_minimal       the latest .img.xz
+https://dl.armbian.com/rock64/Resolute_current_minimal.sha   its sha256
+https://dl.armbian.com/rock64/Resolute_current_minimal.asc   its signature
+```
+
+For the trunk.108 image above, the `.sha` lists
+`5dde6b5fb6c74de046c46c197707d4d37fbcd1fe02fe0f960f799e2f2d705ab1` and the
+`.asc` is a good signature by the Armbian image signing key (checked with
+`gpgv` on 2026-11-07). `sca init sca_usb_stick --board rock64` downloads these
+three and checks both, with the key bundled in sca, before it uses the image.
+To check an image by hand:
 
 ```bash
 gpg --recv-keys DF00FAF1C577104B50BF1D0093D6889F9F0E78D5
 gpg --fingerprint DF00FAF1C577104B50BF1D0093D6889F9F0E78D5
 # must print DF00 FAF1 C577 104B 50BF  1D00 93D6 889F 9F0E 78D5
-sha256sum -c Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz.sha
-gpg --verify Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz.asc \
-    Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz
+sha256sum Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.img.xz
+# must print the sha256 in the .sha
+gpg --verify Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.img.xz.asc \
+    Armbian_community_26.11.0-trunk.108_Rock64_resolute_current_6.18.57_minimal.img.xz
 ```
+
+Armbian's **stable** images (the `archive` channel) are signed the same way.
+For the ROCK64 the latest is 25.5.1, for example
+`Armbian_25.5.1_Rock64_noble_current_6.12.28_minimal.img.xz` from
+`https://archive.armbian.com/rock64/archive/`, but it is **noble**, not
+resolute, and **(unverified)** on the board.
 
 The signature is by "Igor Pecovnik <igor@armbian.com>". Three things to watch:
 
@@ -364,9 +376,8 @@ The signature is by "Igor Pecovnik <igor@armbian.com>". Three things to watch:
 - The apt repository key (`apt.armbian.com/armbian.key`) is a **different key**
   and does not verify image signatures.
 
-The 25.5.1 image is **(unverified)** on the board: nobody has run the DS3231
-overlay or Route A on it. The steps in this guide were done on the community
-nightly above.
+Nobody has run the DS3231 overlay or Route A on the 25.5.1 image. The steps
+in this guide were done on the community nightly above.
 
 Armbian's own installer, `sudo armbian-install`, has an **"Install/Update the
 bootloader on SPI Flash"** entry on some boards. It installs from the same

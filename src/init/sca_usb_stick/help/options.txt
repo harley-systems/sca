@@ -35,6 +35,17 @@ sca_usb_stick_options:
                                   per ubuntu_version_id in the ~/.sca/downloads/
                                   folder, and to reuse it in the next runs once
                                   it matches the signed SHA256SUMS.
+  -b, --board <board>           - optional, the board the image is for.
+                                  pc (the default): the ubuntu desktop iso
+                                  image for an x86 pc.
+                                  rock64: the armbian image for a PINE64
+                                  ROCK64, built on the same ubuntu release.
+                                  it boots from a microSD card as written; to
+                                  boot it from a usb stick, see
+                                  docs/usb-boot-on-arm.md. -t and -i are not
+                                  supported with it.
+                                  any other board fails, listing the supported
+                                  ones.
   -n, --no-cache                - optional flag.
                                   default value is false.
                                   switches off all caching. suitable for one
