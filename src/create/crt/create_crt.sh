@@ -12,10 +12,8 @@
 #
 create_crt() {
   local force=false
-  local OPTS=`getopt -o hf --long help,force -n 'create crt' -- "$@"`
-  if [ $? != 0 ] ; then
-    error "failed parsing options. use sca create crt -h for help." 1;
-  fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force -n 'create crt' -- "$@") || error "failed parsing options. use sca create crt -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

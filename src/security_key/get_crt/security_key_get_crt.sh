@@ -1,7 +1,7 @@
 security_key_get_crt() {
   local device=''
-  local OPTS=`getopt -o h --long help,device: -n "sca security_key get_crt" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca security_key get_crt -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help,device: -n "sca security_key get_crt" -- "$@") || error "failed parsing options. use sca security_key get_crt -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

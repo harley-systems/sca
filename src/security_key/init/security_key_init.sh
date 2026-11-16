@@ -1,8 +1,8 @@
 security_key_init() {
   local roll_keys=false
   local device=''
-  OPTS=`getopt -o hr --long help,roll-keys,device: -n "sca security_key init" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca security_key init -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hr --long help,roll-keys,device: -n "sca security_key init" -- "$@") || error "failed parsing options. use sca security_key init -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

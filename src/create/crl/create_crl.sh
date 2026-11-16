@@ -7,10 +7,8 @@
 #       allowed values are 'ca' and 'subca'
 #
 create_crl() {
-  local OPTS=`getopt -o h --long help -n 'create crl' -- "$@"`
-  if [ $? != 0 ] ; then
-    error "failed parsing options. use sca create crl -h for help." 1;
-  fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'create crl' -- "$@") || error "failed parsing options. use sca create crl -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

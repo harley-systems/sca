@@ -9,8 +9,8 @@
 #
 completion() {
 
-  local OPTS=`getopt -o h --long help -n 'completion' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca completion -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'completion' -- "$@") || error "failed parsing options. use sca completion -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

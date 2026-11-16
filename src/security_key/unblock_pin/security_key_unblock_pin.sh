@@ -2,8 +2,8 @@ security_key_unblock_pin() {
   local keep_pin=false
   local device=''
   local OPTS
-  OPTS=`getopt -o hk --long help,keep-pin,device: -n "sca security_key unblock_pin" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca security_key unblock_pin -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hk --long help,keep-pin,device: -n "sca security_key unblock_pin" -- "$@") || error "failed parsing options. use sca security_key unblock_pin -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

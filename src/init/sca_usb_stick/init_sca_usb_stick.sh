@@ -42,8 +42,8 @@ init_sca_usb_stick() {
   local exclude_pkcs11_support=false
   local no_cache_iso=false
 
-  local OPTS=`getopt -o hstiyxon --long help,skip-cleanup,test-image,include-apt-mirror,yubikey-support,exclude-pkcs11-support,no-cache-iso,no-cache -n "init sca_usb_stick" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca init sca_usb_stick -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hstiyxon --long help,skip-cleanup,test-image,include-apt-mirror,yubikey-support,exclude-pkcs11-support,no-cache-iso,no-cache -n "init sca_usb_stick" -- "$@") || error "failed parsing options. use sca init sca_usb_stick -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

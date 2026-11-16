@@ -15,8 +15,8 @@
 init_yubikey() {
   local roll_keys=false
 
-  OPTS=`getopt -o hr --long help,roll-keys -n "init yubikey" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca init yubikey -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hr --long help,roll-keys -n "init yubikey" -- "$@") || error "failed parsing options. use sca init yubikey -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

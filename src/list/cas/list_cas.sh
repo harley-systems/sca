@@ -2,8 +2,8 @@ list_cas() {
   local output_format=$1
   shift;
 
-  local OPTS=`getopt -o h --long help -n 'sca list cas' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca list cas -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'sca list cas' -- "$@") || error "failed parsing options. use sca list cas -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

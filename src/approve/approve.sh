@@ -20,9 +20,9 @@ approve() {
 
   # read the options
   local force=false
-  local OPTS=`getopt -o hfs: --long help,force,sign-by: -n 'approve' -- "$@"`
   local sign_by_entity
-  if [ $? != 0 ] ; then error "failed parsing options. use sca approve -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hfs: --long help,force,sign-by: -n 'approve' -- "$@") || error "failed parsing options. use sca approve -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

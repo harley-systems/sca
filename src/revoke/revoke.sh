@@ -14,9 +14,9 @@
 revoke() {
 
   # read the options
-  local OPTS=`getopt -o hs: --long help,sign-by: -n 'revoke' -- "$@"`
   local sign_by_entity
-  if [ $? != 0 ] ; then error "failed parsing options. use sca revoke -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hs: --long help,sign-by: -n 'revoke' -- "$@") || error "failed parsing options. use sca revoke -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
