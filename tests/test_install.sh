@@ -211,8 +211,7 @@ fi
 # PATH is a folder linking every tool except those two.
 reset_home
 no_apt_bin="$(mktemp -d "${TMPDIR:-/tmp}/sca-test-bin.XXXXXX")" || exit 2
-# shellcheck disable=SC2154 # test_home is set by lib.sh
-trap 'rm -rf "${test_home}" "${no_apt_bin}"' EXIT
+test_cleanup+=("${no_apt_bin}")
 for dir in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin; do
   for tool in "${dir}"/*; do
     case "${tool##*/}" in apt-get | dpkg-query ) continue ;; esac
