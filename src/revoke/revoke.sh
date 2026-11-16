@@ -83,6 +83,7 @@ revoke() {
     # check if the signing entity is configured to use a hardware security key
     if [ $sign_by_entity_use_security_key = true ]; then
       log_detailed "revoke: signing with the security key configured for '$sign_by_entity'"
+      require_pkcs11_library opensc_pkcs11_module
       local sign_by_entity_security_key_type=$(eval echo \$${sign_by_entity}_security_key_type)
       local sign_by_entity_pkcs11_id=$(eval echo \${${sign_by_entity}_pkcs11_id})
       local security_key_opensc_reader_slot_number=$(security_key_wait_for $sign_by_entity)

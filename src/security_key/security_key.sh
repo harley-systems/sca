@@ -278,7 +278,7 @@ get_yubikey_pin_file_parameter() {
 ################################################################################
 # prints the path of the ykcs11 PKCS#11 module, the one that exposes every PIV
 # slot of a yubikey. the configured ykcs11_module wins; if that file is
-# missing, a few common install locations are searched before giving up.
+# missing, this host's library folders are searched before giving up.
 security_key_ykcs11_module() {
   local configured_ykcs11_module="${ykcs11_module:-$ykcs11_module_default}"
   if [ -f "$configured_ykcs11_module" ]; then
@@ -286,19 +286,11 @@ security_key_ykcs11_module() {
     return 0
   fi
   log_detailed "security_key_ykcs11_module: ykcs11 module not found at configured path '$configured_ykcs11_module', searching common locations"
-  local candidate
-  for candidate in \
-    /usr/lib/*-linux-gnu/libykcs11.so /usr/lib/*-linux-gnu/libykcs11.so.* \
-    /usr/lib64/libykcs11.so /usr/lib64/libykcs11.so.* \
-    /usr/lib/libykcs11.so /usr/lib/libykcs11.so.* \
-    /usr/local/lib/libykcs11.so /usr/local/lib/libykcs11.so.* \
-    /usr/local/lib/libykcs11.dylib /opt/homebrew/lib/libykcs11.dylib \
-    ~/.nix-profile/lib/libykcs11.so /run/current-system/sw/lib/libykcs11.so; do
-    if [ -f "$candidate" ]; then
-      echo "$candidate"
-      return 0
-    fi
-  done
+  local found
+  if found="$(find_pkcs11_library libykcs11.so)"; then
+    echo "$found"
+    return 0
+  fi
   error "ykcs11 module not found at '$configured_ykcs11_module' or in common locations. Install the YubiKey PKCS#11 module (ykcs11, part of yubico-piv-tool) and set ykcs11_module in ${config_file:-~/.sca/config/sca.config} to its full path." 1
 }
 warn_yubikey_touch_expected() {

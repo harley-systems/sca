@@ -173,6 +173,8 @@ export transfer_folder_default=~/.sca/transfer/
 export sca_conf_folder_default=~/.sca/config/
 ################################################
 # library files locations
+# sca config create replaces the three paths below with the libraries found on
+# this host, or with their path in the /usr/lib/<triplet>/ folder of this host
 # full path to pkcs11 engine library (libp11 engine_pkcs11.so)
 export pkcs11_engine_default=/usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so
 # full path to pkcs11 module library
