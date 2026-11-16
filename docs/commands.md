@@ -130,6 +130,21 @@ sca security_key upload subca crt
 sca security_key upload subca key
 ```
 
+### SSH Key on a YubiKey (FIDO2)
+
+```bash
+# 1. Set a FIDO2 PIN once, if none is set yet (sca does not set it)
+ykman fido access change-pin
+
+# 2. Create a resident ed25519-sk (or ecdsa-sk) key: ~/.ssh/id_ed25519_sk_rk_sca
+sca security_key fido2_ssh create
+
+# 3. On another machine, get it back from the YubiKey
+sca security_key fido2_ssh restore
+```
+
+See [security_key fido2_ssh](commands/security_key.md#sca-security_key-fido2_ssh).
+
 ---
 
 ## File Locations

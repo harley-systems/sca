@@ -478,12 +478,10 @@ install_ssh_methods() {
 # with FIDO2 (sk-*) key support
 install_check_openssh_version() {
   local version
-  version="$(ssh -V 2>&1 | sed -n 's/^OpenSSH_\([0-9]*\.[0-9]*\).*/\1/p')"
+  version="$(openssh_client_version)"
   log_detailed "install_check_openssh_version: version='${version}'"
   [ -z "$version" ] && return
-  local major=${version%%.*}
-  local minor=${version#*.}
-  if [ "$major" -lt 8 ] || { [ "$major" -eq 8 ] && [ "$minor" -lt 2 ]; }; then
+  if ! openssh_version_at_least "$version" 8.2; then
     >&2 echo "sca install: warning: OpenSSH ${version} is installed. FIDO2 keys"
     >&2 echo "(ssh-keygen -t ed25519-sk) need OpenSSH 8.2 or later."
   fi

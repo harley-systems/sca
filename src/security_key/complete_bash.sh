@@ -9,9 +9,12 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "fido2_ssh get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
+      fido2_ssh )
+        _sca_security_key_fido2_ssh_complete $subcommand_index
+      ;;
       get_crt )
         _sca_security_key_get_crt_complete $subcommand_index
       ;;
@@ -37,10 +40,45 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "fido2_ssh get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
       ;;
     esac
   fi
+}
+_sca_security_key_fido2_ssh_complete() {
+  local fido2_ssh_index=$1
+  local mode_index=$((fido2_ssh_index+1))
+  if [ $COMP_CWORD == $mode_index ]; then
+    suggestions=($(compgen -W "-h --help create restore" -- "$current_word"))
+    return
+  fi
+  local mode=${COMP_WORDS[$mode_index]}
+  local previous_word=${COMP_WORDS[$((COMP_CWORD-1))]}
+  case "$mode" in
+    create )
+      case "$previous_word" in
+        --output )
+          suggestions=($(compgen -f -- "$current_word"))
+        ;;
+        --application|--comment )
+          :
+        ;;
+        * )
+          suggestions=($(compgen -W "-h --help --non-resident --no-verify --application --comment --output" -- "$current_word"))
+        ;;
+      esac
+    ;;
+    restore )
+      case "$previous_word" in
+        --output-dir )
+          suggestions=($(compgen -d -- "$current_word"))
+        ;;
+        * )
+          suggestions=($(compgen -W "-h --help --output-dir" -- "$current_word"))
+        ;;
+      esac
+    ;;
+  esac
 }
 _sca_security_key_get_crt_complete() {
   local get_crt_index=$1

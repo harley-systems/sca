@@ -13,14 +13,16 @@ security_key() {
   shift
   log_detailed "security_key: start (security_key_command=${security_key_command})"
   case "$security_key_command" in
-    get_crt|id|info|init|unblock_pin|upload|verify|wait_for )
-      eval security_key_$security_key_command "$@"
+    fido2_ssh|get_crt|id|info|init|unblock_pin|upload|verify|wait_for )
+      # ${@@Q}: eval would split the arguments again, e.g. a --comment with a
+      # space in it. the command name itself is one of the values above.
+      eval security_key_$security_key_command "${@@Q}"
       ;;
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$security_key_command' for security_key_command (first) argument.
-        supported values are 'get_crt', 'id', 'info', 'init', 'unblock_pin', 'upload', 'verify',
-        and 'wait_for'.
+        supported values are 'fido2_ssh', 'get_crt', 'id', 'info', 'init', 'unblock_pin',
+        'upload', 'verify', and 'wait_for'.
         use sca security_key -h for help.
 ____EOM
       error "$message" 1
