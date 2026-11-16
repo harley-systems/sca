@@ -15,7 +15,8 @@
 #   @@@SCA OPTIONS@@@   - from src/help/options.txt
 #   @@@<PARENT> OPTIONS@@@ - from src/<parent>/help/options.txt (if parent specified)
 #   @@@OPTIONS@@@       - from help_dir/options.txt
-#   @@@FURTHER READ@@@  - from parent's further_read.txt or help_dir/further_read.txt
+#   @@@FURTHER READ@@@  - from help_dir/further_read.txt if it is non-empty,
+#                         otherwise from the parent's further_read.txt
 #
 # The template is build/common/help/help.txt, or the file named by HELP_TEMPLATE
 # (scripts/build-docs.sh uses this to render just the syntax).
@@ -34,8 +35,11 @@ fi
 # Ensure output directory exists
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 
-# Determine further_read location (use parent's if exists, otherwise own)
-if [ -n "$PARENT" ] && [ -f "src/${PARENT}/help/further_read.txt" ]; then
+# Determine further_read location: a subcommand's own non-empty file wins,
+# otherwise the parent's if there is one, otherwise the (empty) own file
+if [ -s "${HELP_DIR}/further_read.txt" ]; then
+    FURTHER_READ="${HELP_DIR}/further_read.txt"
+elif [ -n "$PARENT" ] && [ -f "src/${PARENT}/help/further_read.txt" ]; then
     FURTHER_READ="src/${PARENT}/help/further_read.txt"
 else
     FURTHER_READ="${HELP_DIR}/further_read.txt"

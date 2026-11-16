@@ -1,8 +1,8 @@
 security_key_upload() {
   local force=false
   local device=''
-  local OPTS=`getopt -o hf --long help,force,device: -n "sca security_key upload" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca security_key upload -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force,device: -n "sca security_key upload" -- "$@") || error "failed parsing options. use sca security_key upload -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

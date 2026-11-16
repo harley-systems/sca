@@ -9,7 +9,7 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "fido2_ssh get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "fido2_ssh get_crt id info init openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
       fido2_ssh )
@@ -27,6 +27,9 @@ _sca_security_key_complete() {
       init )
         _sca_security_key_init_complete $subcommand_index
       ;;
+      openpgp_ssh )
+        _sca_security_key_openpgp_ssh_complete $subcommand_index
+      ;;
       unblock_pin )
         _sca_security_key_unblock_pin_complete $subcommand_index
       ;;
@@ -40,7 +43,7 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "fido2_ssh get_crt id info init unblock_pin upload verify wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "fido2_ssh get_crt id info init openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
       ;;
     esac
   fi
@@ -198,6 +201,38 @@ _sca_security_key_init_complete() {
         ;;
     esac
   fi
+}
+_sca_security_key_openpgp_ssh_complete() {
+  local openpgp_ssh_index=$1
+  local mode_index=$((openpgp_ssh_index+1))
+  if [ $COMP_CWORD == $mode_index ]; then
+    suggestions=($(compgen -W "-h --help setup public_key" -- "$current_word"))
+    return
+  fi
+  local mode=${COMP_WORDS[$mode_index]}
+  local previous_word=${COMP_WORDS[$((COMP_CWORD-1))]}
+  case "$mode" in
+    setup )
+      case "$previous_word" in
+        --shell-rc )
+          suggestions=($(compgen -f -- "$current_word"))
+        ;;
+        * )
+          suggestions=($(compgen -W "-h --help -n --dry-run --shell-rc" -- "$current_word"))
+        ;;
+      esac
+    ;;
+    public_key )
+      case "$previous_word" in
+        -o|--output )
+          suggestions=($(compgen -f -- "$current_word"))
+        ;;
+        * )
+          suggestions=($(compgen -W "-h --help -o --output" -- "$current_word"))
+        ;;
+      esac
+    ;;
+  esac
 }
 _sca_security_key_unblock_pin_complete() {
   local unblock_pin_index=$1

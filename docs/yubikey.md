@@ -80,6 +80,8 @@ The `sca security_key init <entity>` command:
 
 It refuses to run if those files already exist. To replace existing credentials, use `sca security_key init --roll-keys <entity>`; the old files are kept as `*.bak`. Run init in an air-gapped environment.
 
+Init supports `security_key_type` `yubikey` only. For a `pkcs11` token it refuses and changes nothing: set the PIN, PUK and management key with the token's own tools and write them to these files yourself.
+
 **Back up the generated files offline!** You'll need:
 - **PIN** - For daily signing operations; SCA reads it from the PIN file
 - **PUK** - To unblock the PIN if it gets blocked

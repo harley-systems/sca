@@ -8,8 +8,8 @@
 #
 request() {
 
-  local OPTS=`getopt -o h --long help -n 'request' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca request -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'request' -- "$@") || error "failed parsing options. use sca request -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

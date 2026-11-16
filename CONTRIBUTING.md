@@ -254,7 +254,11 @@ test_done
 - `assert_eq EXPECTED ACTUAL [MESSAGE]` compares two strings.
 - `assert_file_exists FILE [MESSAGE]` checks a regular file exists.
 - `assert_succeeds CMD...` / `assert_fails CMD...` check a command's exit status.
+- `test_cleanup+=(PATH)` removes another temporary file or folder on exit, as
+  `HOME` is. Don't set your own `EXIT` trap: it would replace lib.sh's.
 - `test_done` must be the last line: it exits non-zero if any assertion failed.
+  A file that exits without calling `test_done` (forgotten, or an early
+  `exit`) fails too, with `exited without test_done`.
 
 A failed assertion is reported and the file keeps going, so one run shows every
 failure. Test files should pass `shellcheck`.

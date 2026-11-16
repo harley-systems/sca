@@ -51,20 +51,16 @@ for source in command_title abstract syntax options further_read; do
   check_rebuilds "src/display/help/${source}.txt" build/display/help/help.txt
 done
 
-# a subcommand's further_read.txt is only used when its parent has none, so it
-# is a prerequisite but its edit may not show up in the output
-up_to_date build/create/key/help/help.txt || fail "create key help out of date"
-touch "${tree}/src/create/key/help/further_read.txt"
-up_to_date build/create/key/help/help.txt \
-  && fail "create key help not invalidated by its further_read.txt"
-build
+# a subcommand's own non-empty further_read.txt replaces its parent's
+check_rebuilds src/create/key/help/further_read.txt build/create/key/help/help.txt
 
 # the parent's options.txt and further_read.txt are read for subcommands
 touch "${tree}/src/create/help/options.txt"
 up_to_date build/create/key/help/help.txt \
   && fail "create key help not invalidated by parent options.txt"
 build
-check_rebuilds src/create/help/further_read.txt build/create/key/help/help.txt
+# create csr has an empty further_read.txt, so it shows its parent's
+check_rebuilds src/create/help/further_read.txt build/create/csr/help/help.txt
 
 # src/help/options.txt is read for every command
 touch "${tree}/src/help/options.txt"

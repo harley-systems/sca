@@ -225,8 +225,7 @@ passing `-p`, which leaves the password in your shell history and the process li
 Give the password to the user over a different channel than the file.
 
 Use `-n alice-dashboards` to set the name the browser shows in its certificate
-picker, and `-o <file>` to choose the output path. The name can't contain spaces
-yet: `sca` splits it into separate arguments and the export fails.
+picker, and `-o <file>` to choose the output path.
 
 **When to use `--legacy`:** by default OpenSSL 3 encrypts the bundle with
 AES-256/PBKDF2. Current Chrome, Firefox and Windows import this fine. Older macOS
