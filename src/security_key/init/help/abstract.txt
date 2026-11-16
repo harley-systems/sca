@@ -16,5 +16,8 @@ file-system.
 Rolling (assigning new values to) the access keys is also performed by this
 command when ran with appropriate parameters.
 
+init supports security_key_type 'yubikey' only; for 'pkcs11' tokens set the
+pin, puk and management key with the token's own tools.
+
 IMPORTANT NOTE: this command shall be run in an air-gapped (offline,
 disconnected from the internet) environment.

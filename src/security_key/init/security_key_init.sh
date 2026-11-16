@@ -33,6 +33,24 @@ security_key_init() {
   [[ ! " ${allowed_values[@]} " =~ " ${entity} " ]] && \
     error "security_key_init: invalid value supplied for entity. use sca "\
 "security_key init -h for help." 1
+  local entity_management_key_file=$(eval echo \$${entity}_yubikey_key_file)
+  local entity_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
+  local entity_puk_file=$(eval echo \$${entity}_yubikey_puk_file)
+  # checked before the key is waited for and before anything is written: only
+  # yubikey can have its access keys set, and writing new values to the files
+  # without setting them on the token would leave the files wrong.
+  local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
+  case "$entity_security_key_type" in
+    yubikey ) ;;
+    pkcs11 )
+      error "security_key_init: setting the pin, puk and management key is not "\
+"supported for security_key_type 'pkcs11' yet. set them with your token's own "\
+"tools and write them to '$entity_pin_file', '$entity_puk_file' and "\
+"'$entity_management_key_file'. nothing was changed." 1 ;;
+    * )
+      error "security_key_init: unsupported security_key_type "\
+"'$entity_security_key_type' for '$entity'. nothing was changed." 1 ;;
+  esac
   # the key is waited for once, and then named on every yubico-piv-tool call:
   # left to itself, yubico-piv-tool uses the first reader it finds, which with
   # more than one key attached need not be the one just waited for.
@@ -42,13 +60,9 @@ security_key_init() {
   reader_slot_number=$(security_key_wait_for "${device_option[@]}" "$entity") || exit $?
   local reader_name
   reader_name=$(security_key_reader_name "$reader_slot_number") || exit $?
-  # TODO: default access keys depend on security_key_type - add case for it
   local default_management_key='010203040506070801020304050607080102030405060708'
   local default_pin='123456'
   local default_puk='12345678'
-  local entity_management_key_file=$(eval echo \$${entity}_yubikey_key_file)
-  local entity_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
-  local entity_puk_file=$(eval echo \$${entity}_yubikey_puk_file)
   local entity_private_folder=$(eval echo \$${entity}_private_folder)
   # check if the management key file already exists on the disk
   local old_management_key
@@ -116,7 +130,6 @@ security_key_init() {
   # set the management key, pin and puk
   local changed=()
   local failed=''
-  local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
   case "$entity_security_key_type" in
     yubikey )
       # quoted for eval: the reader name has spaces in it
@@ -141,13 +154,6 @@ security_key_init() {
         fi
       fi
     ;;
-    pkcs11 )
-      # TODO: implement setting the access keys using pkcs11 apis / pkcs15-init
-      changed=('management key' 'pin' 'puk')
-    ;;
-    * )
-      rm -f "$management_key_tmp" "$pin_tmp" "$puk_tmp"
-      error "security_key_init: Unsupported entity_security_key_type $entity_security_key_type." 1
   esac
   if [ ${#changed[@]} -eq 0 ]; then
     # nothing reached the key, so nothing on disk changes either

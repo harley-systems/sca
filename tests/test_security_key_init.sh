@@ -154,4 +154,37 @@ for entity in '' bogus; do
   [[ "$stderr" == *"wait_for"* ]] && fail "entity '$entity': error names wait_for: '$stderr'"
 done
 
+# --- pkcs11 is refused before the key is waited for, and nothing is written
+reset_state
+sca config set subca security_key_type pkcs11 >/dev/null 2>&1 || fail "set type pkcs11"
+for roll in '' --roll-keys; do
+  stderr="$(sca security_key init $roll subca 2>&1 >/dev/null)"
+  assert_eq 1 "$?" "pkcs11 init $roll exit code"
+  [[ "$stderr" == *"security_key_type 'pkcs11'"* ]] || \
+    fail "pkcs11 init $roll: stderr names the type: '$stderr'"
+  [[ "$stderr" == *"wait_for"* ]] && fail "pkcs11 init $roll: error names wait_for: '$stderr'"
+  assert_eq "" "$(credential_files)" "no files after pkcs11 init $roll"
+done
+
+# --- pkcs11 --roll-keys leaves the existing files and the key as they were
+reset_state
+sca security_key init subca >/dev/null 2>&1
+before="$(for f in $(credential_files); do echo "$f"; cat "$f"; echo; done)"
+sca config set subca security_key_type pkcs11 >/dev/null 2>&1 || fail "set type pkcs11"
+assert_fails sca security_key init --roll-keys subca
+after="$(for f in $(credential_files); do echo "$f"; cat "$f"; echo; done)"
+assert_eq "$before" "$after" "files unchanged after a pkcs11 roll"
+assert_files_match_device "after a pkcs11 roll"
+
+# --- an empty or unknown type is refused before anything is written
+for type in '' bogus; do
+  reset_state
+  sca config set subca security_key_type "$type" >/dev/null 2>&1
+  stderr="$(sca security_key init subca 2>&1 >/dev/null)"
+  assert_eq 1 "$?" "type '$type' init exit code"
+  [[ "$stderr" == *"unsupported security_key_type '$type' for 'subca'"* ]] || \
+    fail "type '$type': stderr names the type and entity: '$stderr'"
+  assert_eq "" "$(credential_files)" "no files after init with type '$type'"
+done
+
 test_done
