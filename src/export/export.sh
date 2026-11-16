@@ -34,7 +34,7 @@ export_() {
   case "$document_type" in
     crt_pub_ssh|csr|p12)
       shift
-      eval export_$document_type "$@"
+      export_"$document_type" "$@"
       rc=$?
       ;;
     *)

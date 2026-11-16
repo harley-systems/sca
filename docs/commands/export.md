@@ -26,6 +26,7 @@ allowed values for the document_type are:
 
   - crt_pub_ssh   - export certificate, public key and public key in OpenSSH form bundle archive
   - csr           - export certificate signing request
+  - p12           - export certificate, private key and CA chain as a PKCS#12 bundle
 
 allowed values for the entity are:
 
@@ -47,7 +48,7 @@ document_type of interest.
 
 - [crt_pub_ssh](#sca-export-crt_pub_ssh) - export certificate, public key and public key in OpenSSH form bundle archive
 - [csr](#sca-export-csr) - export certificate signing request
-- [p12](#sca-export-p12)
+- [p12](#sca-export-p12) - export certificate, private key and CA chain as a PKCS#12 bundle
 
 ---
 
@@ -160,8 +161,6 @@ Options:
   -o, --output        Output file path (default: transfer folder)
   -h, --help          Show this help message
 ```
-
-The friendly name (`-n`) must not contain spaces.
 
 **Examples:**
 

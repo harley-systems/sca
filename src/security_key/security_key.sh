@@ -15,9 +15,7 @@ security_key() {
   local rc=0
   case "$security_key_command" in
     get_crt|id|info|init|openpgp_ssh|unblock_pin|upload|verify|wait_for )
-      # ${@@Q}: eval would split the arguments again, e.g. a --comment with a
-      # space in it. the command name itself is one of the values above.
-      eval security_key_$security_key_command "${@@Q}"
+      security_key_"$security_key_command" "$@"
       rc=$?
       ;;
     *)

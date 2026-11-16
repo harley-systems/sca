@@ -34,6 +34,7 @@ allowed values for the list_entity are:
   - hosts           - for listing existing hosts
   - services        - for listing existing services
   - configs         - for listing existing sca configuration files
+  - all             - list all of the above
 ```
 
 **Examples:**

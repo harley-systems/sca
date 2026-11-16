@@ -27,10 +27,12 @@ The security key command is one of the following:
 
   get_crt   - retrieving certificate for the given entity from a security key
   id        - retrieving ids of the currently inserted security key
+  info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
+  verify    - test that an entity's private key on the security key can sign
   wait_for  - awaits for specific security key connection
 ```
 
@@ -62,12 +64,12 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 
 - [get_crt](#sca-security_key-get_crt) - retrieving certificate for the given entity from a security key
 - [id](#sca-security_key-id) - retrieving ids of the currently inserted security key
-- [info](#sca-security_key-info)
+- [info](#sca-security_key-info) - show the status of every PIV slot on the security key
 - [init](#sca-security_key-init) - first time initialization of security_key
 - [openpgp_ssh](#sca-security_key-openpgp_ssh) - set up SSH with the OpenPGP authentication key and gpg-agent
 - [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
-- [verify](#sca-security_key-verify)
+- [verify](#sca-security_key-verify) - test that an entity's private key on the security key can sign
 - [wait_for](#sca-security_key-wait_for) - awaits for specific security key connection
 
 ---
