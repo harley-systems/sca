@@ -10,6 +10,10 @@
 
 # one yubikey in reader 0, with the serial the default config expects for subca
 opensc-tool() {
+  if [ "$1" = "--info" ]; then
+    echo "OpenSC 0.23.0 [gcc  12.2.0]"
+    return 0
+  fi
   [ "$1" = "--list-readers" ] || return 1
   printf 'Nr.  Card  Features  Name\n'
   printf '0    Yes             Yubico YubiKey OTP+FIDO+CCID 00 00\n'
@@ -20,11 +24,17 @@ ykman() {
 # a minimal PIV device kept in $HOME/device: pin, puk, the puk retries left in
 # puk_tries, and a "blocked" file while the pin is blocked. the init actions
 # only record the new values. every unblock-pin call is logged in
-# $HOME/device/calls.
+# $HOME/device/calls. like the real tool, it reads the values that are not on
+# the command line from stdin when given --stdin-input: the management key
+# (bare -k) and the new one for set-mgm-key, the current and the new value for
+# the others.
 yubico-piv-tool() {
-  local action='' old='' new=''
+  local action='' old='' new='' key='' stdin_input=false
   while [ $# -gt 0 ]; do
     case "$1" in
+      --full-help ) echo '      --stdin-input        Read sensitive values from stdin'; return 0 ;;
+      --stdin-input ) stdin_input=true ;;
+      -k ) key='-' ;;
       -a ) action=$2; shift ;;
       -P ) old=$2; shift ;;
       -N ) new=$2; shift ;;
@@ -32,6 +42,14 @@ yubico-piv-tool() {
     esac
     shift
   done
+  if [ $stdin_input = true ]; then
+    case "$action" in
+      set-mgm-key ) [ "$key" = - ] && read -r key; read -r new ;;
+      * )
+        [ -z "$old" ] && read -r old
+        [ -z "$new" ] && read -r new ;;
+    esac
+  fi
   case "$action" in
     set-mgm-key ) return 0 ;;
     change-pin ) printf '%s' "$new" > "$HOME/device/pin"; return 0 ;;
@@ -56,10 +74,16 @@ yubico-piv-tool() {
 }
 # signs only with the pin on the device, and not while the pin is blocked
 pkcs11-tool() {
-  local pin='' out=''
+  local pin='' out='' pin_var=''
   while [ $# -gt 0 ]; do
     case "$1" in
-      --pin ) pin=$2; shift ;;
+      --pin )
+        pin=$2
+        if [[ "$pin" == env:* ]]; then
+          pin_var=${pin#env:}
+          pin=${!pin_var}
+        fi
+        shift ;;
       -o ) out=$2; shift ;;
     esac
     shift

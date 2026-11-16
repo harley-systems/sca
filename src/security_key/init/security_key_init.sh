@@ -33,6 +33,10 @@ security_key_init() {
   [[ ! " ${allowed_values[@]} " =~ " ${entity} " ]] && \
     error "security_key_init: invalid value supplied for entity. use sca "\
 "security_key init -h for help." 1
+  local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
+  # checked before anything is written or the key is touched
+  [ "$entity_security_key_type" = yubikey ] && \
+    security_key_require_stdin_input security_key_init
   # the key is waited for once, and then named on every yubico-piv-tool call:
   # left to itself, yubico-piv-tool uses the first reader it finds, which with
   # more than one key attached need not be the one just waited for.
@@ -116,23 +120,31 @@ security_key_init() {
   # set the management key, pin and puk
   local changed=()
   local failed=''
-  local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
   case "$entity_security_key_type" in
     yubikey )
       # quoted for eval: the reader name has spaces in it
       local reader_option=''
       [ -n "$reader_name" ] && reader_option='--reader "${reader_name}"'
-      eval yubico-piv-tool ${reader_option} -k ${old_management_key} -a set-mgm-key -n ${management_key} ${redirect_err_out}
+      # the values go on stdin, never on the command line (see
+      # security_key_require_stdin_input), in the order yubico-piv-tool reads
+      # them: set-mgm-key asks for the current management key (bare -k), then
+      # the new one; change-pin and change-puk for the current value, then the
+      # new one, and they need no management key. printf is a builtin, so the
+      # values are on no command line on their way there either.
+      printf '%s\n%s\n' "${old_management_key}" "${management_key}" | \
+        eval yubico-piv-tool ${reader_option} --stdin-input -k -a set-mgm-key ${redirect_err_out}
       if [ $? != 0 ]; then
         failed='management key'
       else
         changed+=('management key')
-        eval yubico-piv-tool ${reader_option} -k ${management_key} -a change-pin -P ${old_pin} -N ${pin} ${redirect_err_out}
+        printf '%s\n%s\n' "${old_pin}" "${pin}" | \
+          eval yubico-piv-tool ${reader_option} --stdin-input -a change-pin ${redirect_err_out}
         if [ $? != 0 ]; then
           failed='pin'
         else
           changed+=('pin')
-          eval yubico-piv-tool ${reader_option} -k ${management_key} -a change-puk -P ${old_puk} -N ${puk} ${redirect_err_out}
+          printf '%s\n%s\n' "${old_puk}" "${puk}" | \
+            eval yubico-piv-tool ${reader_option} --stdin-input -a change-puk ${redirect_err_out}
           if [ $? != 0 ]; then
             failed='puk'
           else

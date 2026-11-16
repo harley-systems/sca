@@ -223,6 +223,14 @@ Run with `-d` to see which module was used.
 > write the new PIN into the PIN file straight away (no trailing newline:
 > `printf '%s' <new-pin> > <pin-file>`).
 
+`sca security_key init`, `unblock_pin`, `upload` and `verify` never put the PIN,
+PUK or management key on a command line, where any local user could read it
+with `ps`. They pass them to `yubico-piv-tool` on stdin (`--stdin-input`, in
+yubico-piv-tool 1.4.3 and newer), and to `pkcs11-tool` in its environment
+(`--pin env:NAME`, in OpenSC 0.15.0 and newer), which only your user and root
+can read. With an older tool these commands stop with an error before they
+touch the key.
+
 ### Change PIN
 
 ```bash
