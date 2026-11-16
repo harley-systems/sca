@@ -335,7 +335,7 @@ completion: build/completion/completion.sh
 #------------------------------------------------------------------------------
 # COMMON utilities
 #------------------------------------------------------------------------------
-build/common/common.sh: src/common/sed.sh src/common/ubuntu_version.sh
+build/common/common.sh: src/common/sed.sh src/common/ubuntu_version.sh src/common/pkcs11_library.sh
 	@mkdir -p build/common
 	cat $^ > $@
 

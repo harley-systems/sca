@@ -72,6 +72,7 @@ create_crl() {
     # check if the entity is configured to use a hardware security key
     if [ $entity_use_security_key = true ]; then
       log_detailed "create_crl: signing with the security key configured for '$entity'"
+      require_pkcs11_library opensc_pkcs11_module
       local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
       local entity_pkcs11_id=$(eval echo \${${entity}_pkcs11_id})
       local security_key_opensc_reader_slot_number=$(security_key_wait_for $entity)
