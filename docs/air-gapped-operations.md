@@ -67,6 +67,10 @@ back to `old-releases.ubuntu.com`) and checked against the published
 `~/.sca/downloads/` is reused once it passes the same check. See
 [Verifying the Ubuntu ISO](#verifying-the-ubuntu-iso).
 
+`make check` does not build the image; a real build from a real ISO is tested
+only by `make integration`. See "Integration tests" in
+[CONTRIBUTING.md](../CONTRIBUTING.md#integration-tests).
+
 ### Verifying the Ubuntu ISO
 
 Every key generated on the stick is only as safe as the ISO it was built from,

@@ -67,6 +67,8 @@ make deploy       # Install to ~/bin with bash completion
 make deploy INSTALL_DIR=/usr/local/bin  # Custom install location
 make docs         # Regenerate docs/commands.md and docs/commands/ from the help files
 make docs-check   # Fail if the committed command reference is stale
+make check-ubuntu-key  # Live Ubuntu SHA256SUMS still signed by the pinned key (network)
+make integration  # Build the USB stick from a real ISO (privileged docker, ~15 GB)
 ```
 
 ## Configuration
