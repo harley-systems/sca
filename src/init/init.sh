@@ -36,7 +36,7 @@ init() {
       ;;
     openssl_ca_db|sca_usb_stick|demo)
       shift
-      eval init_$system "$@"
+      init_"$system" "$@"
       rc=$?
       ;;
     *)

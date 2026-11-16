@@ -15,7 +15,7 @@ security_key() {
   local rc=0
   case "$security_key_command" in
     get_crt|id|info|init|unblock_pin|upload|verify|wait_for )
-      eval security_key_$security_key_command "$@"
+      security_key_"$security_key_command" "$@"
       rc=$?
       ;;
     *)

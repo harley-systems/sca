@@ -162,8 +162,6 @@ Options:
   -h, --help          Show this help message
 ```
 
-The friendly name (`-n`) must not contain spaces.
-
 **Examples:**
 
 ```bash

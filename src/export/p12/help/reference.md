@@ -1,5 +1,3 @@
-The friendly name (`-n`) must not contain spaces.
-
 **Examples:**
 
 ```bash

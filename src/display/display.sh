@@ -40,7 +40,7 @@ display() {
   case "$document_type" in
     csr|crt|p12)
       shift
-      eval display_$document_type "$@"
+      display_"$document_type" "$@"
       rc=$?
     ;;
     key|pub|pub_ssh)
