@@ -26,6 +26,7 @@ sca create crt <entity>          # Create certificate from CSR
 sca create pub <entity>          # Extract public key
 sca create pub_ssh <entity>      # Extract SSH public key
 sca create crt_pub_ssh <entity>  # All-in-one: crt + pub + ssh
+sca create ssh_crt <user|host> [subca|ca]  # OpenSSH certificate (--pub <file> for any key)
 sca create crl <entity>          # Generate CRL (entity: ca or subca)
 
 # Revoke

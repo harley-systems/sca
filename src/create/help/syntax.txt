@@ -14,3 +14,4 @@ allowed values for the document_type are:
   - pub_ssh               - create public key in OpenSSH format
   - crt_pub_ssh           - batch creation of certificate, public key and public
                             key in ssh format
+  - ssh_crt               - sign an OpenSSH certificate for a user or host key

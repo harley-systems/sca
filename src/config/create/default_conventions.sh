@@ -129,6 +129,9 @@ export pkcs11_engine=${pkcs11_engine:-$pkcs11_engine_default}
 export opensc_pkcs11_module=${opensc_pkcs11_module:-$opensc_pkcs11_module_default}
 
 export ykcs11_module=${ykcs11_module:-$ykcs11_module_default}
+# validity of the OpenSSH certificates sca create ssh_crt signs, in the form
+# ssh-keygen -V takes (for example +52w)
+export ssh_crt_validity=${ssh_crt_validity:-$ssh_crt_validity_default}
 
 #################################################
 # derived settings
@@ -138,6 +141,8 @@ export ykcs11_module=${ykcs11_module:-$ykcs11_module_default}
 export full_domain=${name}${domain}
 # the service full dns name
 export service_dns_name=${service}.${fulldomain}
+# the host full dns name
+export host_dns_name=${host}.${full_domain}
 # prefix to use in certificates for generated common names
 export common_name_prefix="${caps_name} ${caps_suffix} "
 #################################################
@@ -375,6 +380,10 @@ export host_pub_filename=$(basename "${host_pub_file}")
 export host_pub_ssh_file=${host_filename_prefix}pub.ssh
 #
 export host_pub_ssh_filename=$(basename "${host_pub_ssh_file}")
+# name of the selected host OpenSSH certificate, signed by sca create ssh_crt
+export host_pub_ssh_cert_file=${host_filename_prefix}pub-ssh-cert.pub
+#
+export host_pub_ssh_cert_filename=$(basename "${host_pub_ssh_cert_file}")
 #
 export host_csr_file=${host_filename_prefix}csr.pem
 #
@@ -430,6 +439,10 @@ export user_pub_ssh_file=${user_filename_prefix}pub.ssh
 export user_transfer_files_folder=${transfer_folder}${user_files_folder_suffix}
 #
 export user_pub_ssh_filename=$(basename "${user_pub_ssh_file}")
+# name of the selected user OpenSSH certificate, signed by sca create ssh_crt
+export user_pub_ssh_cert_file=${user_filename_prefix}pub-ssh-cert.pub
+#
+export user_pub_ssh_cert_filename=$(basename "${user_pub_ssh_cert_file}")
 #
 export user_csr_file=${user_filename_prefix}csr.pem
 #

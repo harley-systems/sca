@@ -1,0 +1,18 @@
+ssh_crt_options:
+
+  -h, --help              - print this help
+  -f, --force             - if there is an existing certificate file, instead of
+                            reporting and failing - backup and sign a new one.
+  --validity <spec>       - how long the certificate is valid, in the form
+                            ssh-keygen -V takes (for example +52w, +1d, or
+                            20260101:20270101). default is the ssh_crt_validity
+                            setting (+52w).
+  --principals <a,b>      - comma separated principals the certificate is valid
+                            for. for a user these must match the login name on
+                            the server, for a host the name clients connect to.
+                            default for a user is its account id (the user
+                            setting), for a host its full dns name.
+  --pub <file>            - sign this OpenSSH public key instead of the entity's
+                            pub_ssh file. any key type works, including FIDO2
+                            (sk-ssh-ed25519@openssh.com) keys and keys exported
+                            with gpg --export-ssh-key.

@@ -12,7 +12,7 @@ _sca_create_complete() {
   done
 
   if [ -z "${COMP_WORDS[$document_type_index]}" ]; then
-    suggestions=($(compgen -W "key csr crt crl pub pub_ssh crt_pub_ssh" -- "$current_word"))
+    suggestions=($(compgen -W "key csr crt crl pub pub_ssh crt_pub_ssh ssh_crt" -- "$current_word"))
   else
     case "${COMP_WORDS[$document_type_index]}" in
       key)
@@ -36,8 +36,11 @@ _sca_create_complete() {
       crt_pub_ssh)
         _sca_create_crt_pub_ssh_complete $document_type_index
         ;;
+      ssh_crt)
+        _sca_create_ssh_crt_complete $document_type_index
+        ;;
       *)
-        suggestions=($(compgen -W "key csr crt crl pub pub_ssh crt_pub_ssh" -- "$current_word"))
+        suggestions=($(compgen -W "key csr crt crl pub pub_ssh crt_pub_ssh ssh_crt" -- "$current_word"))
         ;;
     esac
   fi
@@ -231,6 +234,49 @@ _sca_create_pub_ssh_complete() {
         ;;
       *)
         suggestions=($(compgen -W "ca subca host service user" -- "$current_word"))
+        ;;
+    esac
+  fi
+}
+_sca_create_ssh_crt_complete() {
+  local ssh_crt_index=$1
+  local entity_index=$((ssh_crt_index+1))
+
+  while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
+    if [ $COMP_CWORD == $entity_index ]; then
+      suggestions=($(compgen -W "-h -f --help --force --validity --principals --pub" -- "$current_word"))
+      COMPREPLY=("${suggestions[@]}")
+      return
+    fi
+    case "${COMP_WORDS[$entity_index]}" in
+      --pub)
+        entity_index=$((entity_index+1))
+        if [ $COMP_CWORD == $entity_index ]; then
+          suggestions=($(compgen -f -- "$current_word"))
+          COMPREPLY=("${suggestions[@]}")
+          return
+        fi
+        ;;
+      --validity|--principals)
+        entity_index=$((entity_index+1))
+        [ $COMP_CWORD == $entity_index ] && return
+        ;;
+    esac
+    entity_index=$((entity_index+1))
+  done
+
+  local sign_by_index=$((entity_index+1))
+  if [ -z "${COMP_WORDS[$entity_index]}" ]; then
+    suggestions=($(compgen -W "user host" -- "$current_word"))
+  else
+    case  "${COMP_WORDS[$entity_index]}" in
+      user|host)
+        if [ $COMP_CWORD == $sign_by_index ]; then
+          suggestions=($(compgen -W "ca subca" -- "$current_word"))
+        fi
+        ;;
+      *)
+        suggestions=($(compgen -W "user host" -- "$current_word"))
         ;;
     esac
   fi

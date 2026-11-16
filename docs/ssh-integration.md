@@ -88,31 +88,39 @@ Host *.sb.com
 
 ## Certificate-Based SSH (CA Trust)
 
-Instead of adding individual keys to each host, configure hosts to trust the CA.
+Instead of adding each user's key to every host's `authorized_keys`, configure
+the hosts to trust the CA, and give each user an **OpenSSH certificate** signed
+by it. sshd only accepts OpenSSH certificates (the kind `ssh-keygen -s` makes)
+here: an X.509 certificate, or a public key taken out of one, does not
+authenticate over SSH.
+
+`sca create ssh_crt` signs the OpenSSH certificates with the sub-CA key (or the
+CA key). When that key is on a YubiKey, sca signs through PKCS#11 (ykcs11), with
+the PIN read from the PIN file, and you touch the key if its touch policy asks
+for it.
+
+### The CA Line
+
+The public key servers and clients trust is the signing entity's `pub_ssh`
+file:
+
+```bash
+sca create pub_ssh subca
+# ~/.sca/keys/<ca>/<subca>/<ca>-<subca>-subca-pub.ssh
+```
 
 ### Server Configuration
 
-On each SSH server, edit `/etc/ssh/sshd_config`:
+Copy that file to each SSH server as `/etc/ssh/trusted-ca.pub`, and edit
+`/etc/ssh/sshd_config`:
 
 ```
-# Trust certificates signed by our CA
+# Trust user certificates signed by our CA
 TrustedUserCAKeys /etc/ssh/trusted-ca.pub
 
 # Disable password authentication
 PasswordAuthentication no
-ChallengeResponseAuthentication no
-```
-
-Create the trusted CA file:
-
-```bash
-# Extract public key from CA certificate
-openssl x509 -pubkey -noout \
-  -in ~/.sca/keys/sb/sb-ca-crt.pem \
-  > /tmp/ca-pub.pem
-
-# Convert to SSH format
-ssh-keygen -i -m PKCS8 -f /tmp/ca-pub.pem > /etc/ssh/trusted-ca.pub
+KbdInteractiveAuthentication no
 ```
 
 Restart SSH:
@@ -123,16 +131,58 @@ sudo systemctl restart sshd
 
 ### User Certificates
 
-Users with certificates signed by the trusted CA can now authenticate:
+Sign the user's OpenSSH public key:
 
 ```bash
-# Create SSH public key from user certificate
-sca create pub_ssh user
+# the user's own key, from sca create pub_ssh user
+sca create ssh_crt user
 
-# Or manually
-openssl x509 -pubkey -noout -in user-crt.pem > user-pub.pem
-ssh-keygen -i -m PKCS8 -f user-pub.pem > user.pub
+# or any OpenSSH public key: a FIDO2 key, a gpg-agent key, a YubiKey PIV key
+sca create ssh_crt --pub ~/.ssh/id_ed25519_sk.pub user
 ```
+
+The certificate is written to `<ca>-<subca>-<user>-pub-ssh-cert.pub` in the
+user's folder. Its principal is the user's account id (the `user` setting),
+which has to match the login name on the server; use `--principals a,b` to name
+others. It is valid for `ssh_crt_validity` (52 weeks by default), or for
+`--validity` (for example `+1w`).
+
+`ssh-keygen -L -f <certificate>` shows the key ID, principals, validity and the
+signing CA.
+
+On the client, put the certificate next to the private key as
+`<private key>-cert.pub` (for example `~/.ssh/id_ed25519_sk-cert.pub`), and ssh
+picks it up. For a key held by an agent or a token, point to it in
+`~/.ssh/config`:
+
+```
+Host *.example.com
+    CertificateFile ~/.ssh/user-cert.pub
+```
+
+### Host Certificates
+
+A host certificate lets clients trust the host without a `known_hosts` entry
+per host:
+
+```bash
+sca create ssh_crt host
+```
+
+Its principal is the host's full DNS name (`<host>.<name><domain>`). Copy the
+certificate to the host and add to its `sshd_config`:
+
+```
+HostCertificate /etc/ssh/<ca>-<subca>-<host>-pub-ssh-cert.pub
+```
+
+On each client, add the CA line to `~/.ssh/known_hosts`:
+
+```
+@cert-authority *.example.com <contents of the subca pub_ssh file>
+```
+
+`sca create ssh_crt` prints these lines, filled in, after signing.
 
 ## Agent Forwarding
 
