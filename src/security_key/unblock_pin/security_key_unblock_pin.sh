@@ -38,6 +38,7 @@ security_key_unblock_pin() {
   [ "$entity_security_key_type" != yubikey ] && \
     error "security_key_unblock_pin: unblocking the pin is supported for "\
 "security_key_type 'yubikey' only, '$entity' has '$entity_security_key_type'." 1
+  security_key_require_stdin_input security_key_unblock_pin
   local entity_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
   local entity_puk_file=$(eval echo \$${entity}_yubikey_puk_file)
   # every wrong puk spends one of its retries, and a blocked puk leaves only a
@@ -88,10 +89,14 @@ security_key_unblock_pin() {
   # quoted for eval: the reader name has spaces in it
   local reader_option=''
   [ -n "$reader_name" ] && reader_option='--reader "${reader_name}"'
+  # the puk and the pin go on stdin, never on the command line (see
+  # security_key_require_stdin_input): unblock-pin reads the puk, then the new
+  # pin. the names of its prompts, which it prints, are left out of the output.
   local unblock_output
-  unblock_output=$(eval yubico-piv-tool ${reader_option} -a unblock-pin \
-    -P '"${puk}"' -N '"${pin}"' 2>&1)
+  unblock_output=$(printf '%s\n%s\n' "${puk}" "${pin}" | \
+    eval yubico-piv-tool ${reader_option} --stdin-input -a unblock-pin 2>&1)
   local unblock_result=$?
+  unblock_output=$(printf '%s\n' "$unblock_output" | grep -v -x -e 'puk' -e 'new pin')
   log_detailed "security_key_unblock_pin: yubico-piv-tool exited $unblock_result: $unblock_output"
   if [ $unblock_result != 0 ]; then
     rm -f "$pin_tmp"

@@ -9,8 +9,12 @@
 # shellcheck source=tests/lib.sh
 . "$(dirname "$0")/lib.sh"
 
-# one yubikey in reader 0
+# one yubikey in reader 0, and an OpenSC new enough for verify's --pin env:
 opensc-tool() {
+  if [ "$1" = "--info" ]; then
+    echo "OpenSC 0.23.0 [gcc  12.2.0]"
+    return 0
+  fi
   [ "$1" = "--list-readers" ] || return 1
   printf 'Nr.  Card  Features  Name\n'
   printf '0    Yes             Yubico YubiKey OTP+FIDO+CCID 00 00\n'

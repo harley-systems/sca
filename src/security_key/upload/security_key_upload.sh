@@ -60,6 +60,10 @@ security_key_upload() {
       log_detailed "security_key_upload: the configured entity pkcs11 id '${entity_pkcs11_id}'. "
       log_detailed "security_key_upload: mapped yubikey slot id '${entity_yubikey_slot}'."
       log_detailed "security_key_upload: the management key file '${entity_management_key_file}'."
+      # a management key from the file goes to yubico-piv-tool on stdin; with
+      # none, yubico-piv-tool prompts for it on the terminal
+      [ -n "${entity_management_key}" ] && \
+        security_key_require_stdin_input security_key_upload
       # left unexpanded until eval, as the reader name has spaces in it
       local reader_option=''
       [ -n "$reader_name" ] && reader_option=' --reader "${reader_name}"'
@@ -101,7 +105,7 @@ security_key_upload() {
           fi
           local entity_crt_file=$(eval echo \$${entity}_crt_file)
           log_detailed "security_key_upload: uploading the certificate ${entity_crt_file} to yubikey."
-          yubico_piv_tool_command='<"${entity_crt_file}" yubico-piv-tool'"${reader_option}"' -a import-certificate -s "$entity_yubikey_slot"'
+          yubico_piv_tool_command='yubico-piv-tool'"${reader_option}"' -a import-certificate -s "$entity_yubikey_slot" -i "${entity_crt_file}"'
           run_yubico_piv_tool_command "${yubico_piv_tool_command}" "${entity_management_key}"
         ;;
         key )
@@ -114,7 +118,7 @@ security_key_upload() {
           # the entity_yubikey_slot. maybe it is possibly to determine by it's usage trial
           # in case it exists, we should err unless force is applied
           log_detailed "security_key_upload: uploading the key '${entity_key_file}' to yubikey."
-          yubico_piv_tool_command='<"${entity_key_file}" yubico-piv-tool'"${reader_option}"' --pin-policy="${entity_yubikey_pin_policy}" --touch-policy="${entity_yubikey_touch_policy}" -a import-key -s "${entity_yubikey_slot}"'
+          yubico_piv_tool_command='yubico-piv-tool'"${reader_option}"' --pin-policy="${entity_yubikey_pin_policy}" --touch-policy="${entity_yubikey_touch_policy}" -a import-key -s "${entity_yubikey_slot}" -i "${entity_key_file}"'
           run_yubico_piv_tool_command "${yubico_piv_tool_command}" "${entity_management_key}"
         ;;
         * )
@@ -147,14 +151,20 @@ run_yubico_piv_tool_command() {
   local cmd=$1
   local key=$2
 
+  # the input file is given with -i, so that stdin is free for the management
+  # key: it goes there with --stdin-input (see
+  # security_key_require_stdin_input), never on the command line. with no key
+  # in the file, a bare -k makes yubico-piv-tool prompt for it on the terminal.
   if [ ! "${key}" == "" ]; then
-    log_detailed "run_yubico_piv_tool_command: entity management key is set, so applying the --key parameter"
-    cmd="2>&1 ${yubico_piv_tool_command}"' --key="${entity_management_key}"'
+    log_detailed "run_yubico_piv_tool_command: entity management key is set, so it goes on stdin"
+    cmd="2>&1 ${yubico_piv_tool_command} --stdin-input -k"
+    log_verbose "run_yubico_piv_tool_command: running command ${cmd}"
+    command_output=$(eval "${cmd}" <<< "${key}")
   else
     cmd="2>&1 ${yubico_piv_tool_command} -k"
+    log_verbose "run_yubico_piv_tool_command: running command ${cmd}"
+    command_output=$(eval "${cmd}")
   fi
-  log_verbose "run_yubico_piv_tool_command: running command ${cmd}"
-  command_output=$(eval "${cmd}")
   command_result="$?"
   log_detailed "run_yubico_piv_tool_command: the command output was: '${command_output}'."
   if [ ! "${command_result}" == "0" ] || [[ "${command_output}" == *"Failed"* ]]; then

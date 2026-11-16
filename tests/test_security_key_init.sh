@@ -18,15 +18,21 @@ ykman() {
   echo "Serial number: 5414483"
 }
 # a minimal PIV device kept in $HOME/device. an action fails if it is named in
-# PIV_FAIL, or if the management key, pin or puk given does not match.
+# PIV_FAIL, or if the management key, pin or puk given does not match. like
+# the real tool, it reads a value that is not on the command line from stdin
+# when given --stdin-input, in the order the action asks for it, and a bare -k
+# means "read the management key".
 yubico-piv-tool() {
-  local key='' action='' old='' new='' slot=''
+  local key='' action='' old='' new='' slot='' input='' stdin_input=false
   while [ $# -gt 0 ]; do
     case "$1" in
-      -k ) key=$2; shift ;;
+      --full-help ) echo '      --stdin-input        Read sensitive values from stdin'; return 0 ;;
+      --stdin-input ) stdin_input=true ;;
+      -k ) key='-' ;;
       --key=* ) key=${1#--key=} ;;
       -a ) action=$2; shift ;;
       -s ) slot=$2; shift ;;
+      -i ) input=$2; shift ;;
       -P ) old=$2; shift ;;
       -n | -N ) new=$2; shift ;;
       --reader ) shift ;;
@@ -34,17 +40,33 @@ yubico-piv-tool() {
     esac
     shift
   done
+  # read_value VAR: the value of VAR from stdin, if it was not given
+  read_value() {
+    [ -n "${!1}" ] && [ "${!1}" != - ] && return 0
+    [ $stdin_input = true ] || return 1
+    read -r "$1"
+  }
   [ "$action" = "${PIV_FAIL:-}" ] && return 1
-  [ "$key" = "$(cat "$HOME/device/key")" ] || return 1
   case "$action" in
-    set-mgm-key ) printf '%s' "$new" > "$HOME/device/key" ;;
+    set-mgm-key | import-key )
+      # with no -k, the real tool uses the default management key
+      [ -z "$key" ] && key=010203040506070801020304050607080102030405060708
+      read_value key || return 1
+      [ "$key" = "$(cat "$HOME/device/key")" ] || return 1 ;;
+  esac
+  case "$action" in
+    set-mgm-key )
+      read_value new || return 1
+      printf '%s' "$new" > "$HOME/device/key" ;;
     change-pin )
+      read_value old && read_value new || return 1
       [ "$old" = "$(cat "$HOME/device/pin")" ] || return 1
       printf '%s' "$new" > "$HOME/device/pin" ;;
     change-puk )
+      read_value old && read_value new || return 1
       [ "$old" = "$(cat "$HOME/device/puk")" ] || return 1
       printf '%s' "$new" > "$HOME/device/puk" ;;
-    import-key ) cat > "$HOME/device/imported-$slot" ;;
+    import-key ) cat "${input:--}" > "$HOME/device/imported-$slot" ;;
     * ) return 1 ;;
   esac
 }

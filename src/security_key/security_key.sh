@@ -275,6 +275,65 @@ get_yubikey_pin_file_parameter() {
   fi
   echo "$pin_file"
 }
+################################################################################
+# the management key, pin and puk are never put on a yubico-piv-tool command
+# line, where any local user could read them with ps. they go on stdin, which
+# yubico-piv-tool reads with --stdin-input (since 1.4.3): one value per line,
+# in the order the action asks for them, printing each prompt's name (never
+# the value) on stdout.
+#
+# --stdin-input is a hidden option: --help leaves it out, --full-help lists it.
+# without it a value missing from the command line would be prompted for on
+# the terminal, so the commands that need it stop before touching anything.
+#
+# parameters
+#   caller - the name of the calling function, for the error message
+security_key_require_stdin_input() {
+  local caller="$1"
+  local full_help
+  full_help=$(yubico-piv-tool --full-help 2>/dev/null)
+  if [[ "$full_help" != *--stdin-input* ]]; then
+    error "$caller: this yubico-piv-tool has no --stdin-input option, which sca "\
+"needs to give it the management key, pin and puk without putting them on the "\
+"command line. install yubico-piv-tool 1.4.3 or newer. nothing was changed on "\
+"the security key." 1
+  fi
+}
+################################################################################
+# pkcs11-tool is given the pin as --pin env:NAME, so that the pin itself is not
+# on its command line. an OpenSC that does not know env: would send the text
+# 'env:NAME' as the pin and spend one of its retries, so the version is checked
+# first and an unknown version is refused as well.
+#
+# parameters
+#   caller - the name of the calling function, for the error message
+security_key_require_pkcs11_tool_pin_env() {
+  local caller="$1"
+  # pkcs11-tool reads --pin env:NAME through util_get_pin in
+  # src/tools/util.c, which first appears in the OpenSC 0.15.0 tag (it is not
+  # in 0.14.0).
+  local -r min_opensc_version=0.15.0
+  local opensc_version
+  opensc_version=$(opensc-tool --info 2>/dev/null | \
+    sed -n 's/^OpenSC \([0-9][0-9]*\.[0-9][0-9.]*\).*/\1/p' | head -n 1)
+  log_detailed "$caller: OpenSC version '$opensc_version'"
+  local -a have need
+  IFS=. read -r -a have <<< "$opensc_version"
+  IFS=. read -r -a need <<< "$min_opensc_version"
+  local i new_enough=true
+  [ -z "$opensc_version" ] && new_enough=false
+  for i in 0 1 2; do
+    [ $new_enough = true ] || break
+    (( 10#${have[i]:-0} > 10#${need[i]} )) && break
+    (( 10#${have[i]:-0} < 10#${need[i]} )) && new_enough=false
+  done
+  if [ $new_enough = false ]; then
+    error "$caller: OpenSC ${min_opensc_version} or newer is needed to give "\
+"pkcs11-tool the pin without putting it on the command line, and 'opensc-tool "\
+"--info' reports '${opensc_version:-no version}'. install a newer OpenSC. the "\
+"pin was not tried on the security key." 1
+  fi
+}
 warn_yubikey_touch_expected() {
   local entity=$1
   local entity_yubikey_touch_policy=$(eval echo \$${entity}_yubikey_touch_policy)

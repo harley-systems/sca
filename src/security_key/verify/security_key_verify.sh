@@ -48,6 +48,9 @@ security_key_verify() {
   if ! command -v pkcs11-tool &> /dev/null; then
     error "pkcs11-tool not found. Install with: sudo apt install opensc" 1
   fi
+  # the pin goes to pkcs11-tool as --pin env:NAME, which needs a recent enough
+  # OpenSC; checked before the pin is used, as a wrong pin spends a retry
+  security_key_require_pkcs11_tool_pin_env security_key_verify
 
   # pkcs11-tool signs with the first token it finds unless told which one, so
   # more than one key attached is refused unless --device names one. ykcs11
@@ -124,11 +127,15 @@ security_key_verify() {
   # simply stopped with no hint that it was waiting for a finger.
   warn_yubikey_touch_expected $entity
 
-  # Attempt to sign with the provided PIN
+  # Attempt to sign with the provided PIN. the pin is passed in the
+  # environment of pkcs11-tool alone, not on its command line, where any local
+  # user could read it with ps; the environment of a process is readable only
+  # by its own user and root.
   local sign_output
-  sign_output=$(pkcs11-tool --module "$ykcs11_module" "${token_option[@]}" \
-    --sign --mechanism RSA-PKCS \
-    --id "$entity_pkcs11_id" --pin "$pin" -i "$test_file" -o "$sig_file" 2>&1)
+  sign_output=$(SCA_YUBIKEY_PIN="$pin" pkcs11-tool --module "$ykcs11_module" \
+    "${token_option[@]}" --sign --mechanism RSA-PKCS \
+    --id "$entity_pkcs11_id" --pin env:SCA_YUBIKEY_PIN -i "$test_file" \
+    -o "$sig_file" 2>&1)
   local sign_result=$?
 
   # Clean up test file
