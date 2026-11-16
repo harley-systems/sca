@@ -65,6 +65,7 @@ install() {
         ;;
     esac
   done
+  [ $# -gt 0 ] && error "sca install: unexpected argument '$1'. use sca install -h for help." 1
 
   log_detailed "install: start (mode=${mode}, force=${force}, "\
 "yubikey_support=${yubikey_support}, "\

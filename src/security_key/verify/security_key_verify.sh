@@ -33,26 +33,12 @@ security_key_verify() {
   fi
 
   # Resolve the ykcs11 module: the configured ykcs11_module wins; if that file
-  # is missing, look in a few common install locations before giving up
+  # is missing, look in this host's library folders before giving up
   local configured_ykcs11_module="${ykcs11_module:-$ykcs11_module_default}"
   local ykcs11_module="$configured_ykcs11_module"
   if [ ! -f "$ykcs11_module" ]; then
     log_detailed "security_key_verify: ykcs11 module not found at configured path '$configured_ykcs11_module', searching common locations"
-    ykcs11_module=""
-    local candidate
-    for candidate in \
-      /usr/lib/*-linux-gnu/libykcs11.so /usr/lib/*-linux-gnu/libykcs11.so.* \
-      /usr/lib64/libykcs11.so /usr/lib64/libykcs11.so.* \
-      /usr/lib/libykcs11.so /usr/lib/libykcs11.so.* \
-      /usr/local/lib/libykcs11.so /usr/local/lib/libykcs11.so.* \
-      /usr/local/lib/libykcs11.dylib /opt/homebrew/lib/libykcs11.dylib \
-      ~/.nix-profile/lib/libykcs11.so /run/current-system/sw/lib/libykcs11.so; do
-      if [ -f "$candidate" ]; then
-        ykcs11_module="$candidate"
-        break
-      fi
-    done
-    if [ -z "$ykcs11_module" ]; then
+    if ! ykcs11_module="$(find_pkcs11_library libykcs11.so)"; then
       error "ykcs11 module not found at '$configured_ykcs11_module' or in common locations. Install the YubiKey PKCS#11 module (ykcs11, part of yubico-piv-tool) and set ykcs11_module in ${config_file:-~/.sca/config/sca.config} to its full path." 1
     fi
   fi

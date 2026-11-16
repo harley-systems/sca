@@ -103,8 +103,13 @@ sca() {
 
   # fail if sca_config is not present, otherwise load it
   if [ ! -f ${config_file} ]; then
-    if [ ! -z $verb ] && [ $verb != config ] && [ $verb != scrub_log ] && [ $verb != appliance ] && [ ! -z $2 ] && [ $2 != create ]; then
-      error "the sca configuration file ${config_file} doesn't
+    # install (the bootstrap command) and completion (only prints a script)
+    # need no configuration, whatever their options
+    case "$verb" in
+      config|scrub_log|appliance|install|completion ) ;;
+      * )
+        if [ -n "$verb" ] && [ -n "$2" ] && [ "$2" != create ]; then
+          error "the sca configuration file ${config_file} doesn't
 exist. if this is the first time run, make sure to run
 
   sca config create all
@@ -116,7 +121,9 @@ otherwise,
 exiting.
 
 " 1
-    fi
+        fi
+        ;;
+    esac
     log_detailed "sca: configuration file ${config_file} doesn't exist but creating it now."
   else
     log_detailed "sca: ${config_file} found. loading config from it."
