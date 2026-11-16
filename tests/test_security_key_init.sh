@@ -20,14 +20,17 @@ ykman() {
 # a minimal PIV device kept in $HOME/device. an action fails if it is named in
 # PIV_FAIL, or if the management key, pin or puk given does not match.
 yubico-piv-tool() {
-  local key='' action='' old='' new=''
+  local key='' action='' old='' new='' slot=''
   while [ $# -gt 0 ]; do
     case "$1" in
       -k ) key=$2; shift ;;
+      --key=* ) key=${1#--key=} ;;
       -a ) action=$2; shift ;;
+      -s ) slot=$2; shift ;;
       -P ) old=$2; shift ;;
       -n | -N ) new=$2; shift ;;
       --reader ) shift ;;
+      --pin-policy=* | --touch-policy=* ) ;;
     esac
     shift
   done
@@ -41,6 +44,7 @@ yubico-piv-tool() {
     change-puk )
       [ "$old" = "$(cat "$HOME/device/puk")" ] || return 1
       printf '%s' "$new" > "$HOME/device/puk" ;;
+    import-key ) cat > "$HOME/device/imported-$slot" ;;
     * ) return 1 ;;
   esac
 }
@@ -83,6 +87,10 @@ assert_files_match_device() {
     assert_eq "$(cat "$HOME/device/$name")" "$(cat "$(file_of "$name")" 2>/dev/null)" \
       "$1: $name file matches the key"
   done
+}
+
+subca_key_files() {
+  find "$HOME/.sca" -name '*-subca-key.pem*'
 }
 
 perm() {
@@ -144,6 +152,48 @@ export PIV_FAIL=change-pin
 assert_fails sca security_key init --roll-keys subca
 assert_files_match_device "after change-pin failed on roll"
 assert_eq 6 "$(credential_files | wc -l)" "three files and three backups after partial roll"
+
+# --- create key before init: it stops without touching anything, then works
+# once init has run
+reset_state
+stderr="$(sca create key subca 2>&1 >/dev/null)"
+assert_eq 1 "$?" "create key before init exit code"
+[[ "$stderr" == *"run 'sca security_key init subca' first"* ]] || \
+  fail "create key before init: stderr points to init: '$stderr'"
+assert_eq "" "$(credential_files)" "no credential files after create key before init"
+assert_eq "" "$(subca_key_files)" "no subca key after create key before init"
+assert_succeeds sca security_key init subca
+assert_succeeds sca create key subca
+assert_file_exists "$HOME/device/imported-9c" "subca key imported to slot 9c"
+assert_files_match_device "after init then create key"
+
+# --- init before create key: the credential files are left as they are
+reset_state
+sca security_key init subca >/dev/null 2>&1
+before="$(for f in $(credential_files); do echo "$f"; cat "$f"; echo; done)"
+assert_succeeds sca create key subca
+after="$(for f in $(credential_files); do echo "$f"; cat "$f"; echo; done)"
+assert_eq "$before" "$after" "credential files unchanged by create key"
+assert_eq 700 "$(perm "$(dirname "$(file_of key)")")" "private folder mode after create key"
+
+# --- create key --force without credentials keeps the existing key
+reset_state
+sca security_key init subca >/dev/null 2>&1
+sca create key subca >/dev/null 2>&1
+assert_file_exists "$(subca_key_files)" "subca key file"
+key_before="$(cat "$(subca_key_files)")"
+find "$HOME/.sca" -name '*yubikey-*.txt*' -delete
+assert_fails sca create key --force subca
+assert_eq "$key_before" "$(cat "$(subca_key_files)")" "subca key kept after create key --force before init"
+assert_eq "" "$(find "$HOME/.sca" -name '*.bak')" "no key backup after create key --force before init"
+
+# --- an entity without a security key needs no init, and its folder is 0700
+reset_state
+assert_succeeds sca create key service
+service_key_file="$(find "$HOME/.sca/keys" -name '*-key.pem')"
+assert_file_exists "$service_key_file" "service key file"
+assert_eq 700 "$(perm "$(dirname "$service_key_file")")" "service private folder mode"
+assert_eq "" "$(credential_files)" "no credential files for a service key"
 
 # --- a missing or invalid entity names the right command
 reset_state
