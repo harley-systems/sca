@@ -36,7 +36,7 @@ create() {
   case "$document_type" in
     key|csr|crt|crl|pub|pub_ssh|crt_pub_ssh)
       shift
-      eval create_$document_type "$@"
+      create_"$document_type" "$@"
       rc=$?
       ;;
     *)

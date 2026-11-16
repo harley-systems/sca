@@ -22,7 +22,7 @@ config() {
   case "$config_verb" in
     create|resolve|set|get|load|save|reset)
       shift
-      eval config_$config_verb "$@"
+      config_"$config_verb" "$@"
       rc=$?
       ;;
     *)
