@@ -217,7 +217,10 @@ make check
 
 This builds `build/sca.sh` and runs every `tests/test_*.sh`. It prints a
 summary and exits non-zero if any test fails. The tests run offline and need no
-YubiKey; YubiKey checks stay manual (see `docs/yubikey.md`).
+YubiKey. `tests/test_ca_flow.sh` runs the software-key CA path end to end (root
+CA, sub-CA, service certificate, p12) and checks the result with openssl; it is
+the baseline for the hardware tests. If a hardware test fails while this one
+passes, look at the key or PKCS#11 side first.
 
 To run a single test file: `make && bash tests/test_smoke.sh`.
 
