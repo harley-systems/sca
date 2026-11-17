@@ -17,6 +17,8 @@
 #           public key in format suitable for OpenSSH.
 #         'crt_pub_ssh'
 #           macro for referring to certificate, public key and public key in ssh form.
+#         'ssh_crt'
+#           OpenSSH certificate for a user or host public key.
 #   entity
 #     the entity for which to export public documents
 #     allowed values are 'ca' 'subca' 'user' 'host' and 'service'
@@ -34,7 +36,7 @@ create() {
   log_detailed "create: start (document_type=${document_type})"
   local rc=0
   case "$document_type" in
-    key|csr|crt|crl|pub|pub_ssh|crt_pub_ssh)
+    key|csr|crt|crl|pub|pub_ssh|crt_pub_ssh|ssh_crt)
       shift
       create_"$document_type" "$@"
       rc=$?
@@ -42,7 +44,7 @@ create() {
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$document_type' for document_type (first) argument.
-        supported values are 'key' 'csr' 'crt' 'crl' 'pub' 'pub_ssh' 'crt_pub_ssh'.
+        supported values are 'key' 'csr' 'crt' 'crl' 'pub' 'pub_ssh' 'crt_pub_ssh' 'ssh_crt'.
 ____EOM
       error "$message" 1
       ;;

@@ -52,7 +52,7 @@ build/help/help.txt: build/common/help/help.txt src/help/command_title.txt \
 #------------------------------------------------------------------------------
 # CREATE command and subcommands
 #------------------------------------------------------------------------------
-CREATE_SUBCMDS := key csr crt crl pub pub_ssh crt_pub_ssh
+CREATE_SUBCMDS := key csr crt crl pub pub_ssh crt_pub_ssh ssh_crt
 
 $(eval $(call build_help,create,))
 $(foreach s,$(CREATE_SUBCMDS),$(eval $(call build_help,create,$(s))))

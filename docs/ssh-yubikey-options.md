@@ -8,8 +8,8 @@ A YubiKey can hold an SSH key in three different ways. SCA covers two of them
 | Method | YubiKey applet | Agent | Covered by SCA |
 |--------|----------------|-------|----------------|
 | **PIV via PKCS#11** | PIV | `ssh-agent` with `ykcs11`/OpenSC | Yes, see [SSH Integration](ssh-integration.md) |
-| **OpenPGP authentication subkey** | OpenPGP | `gpg-agent` | Yes, `sca security_key openpgp_ssh`, see [below](#openpgp-gpg-agent-ssh) |
-| **FIDO2 security key (`-sk`)** | FIDO2 / U2F | `ssh-agent` (OpenSSH built in) | No, manual steps below |
+| **OpenPGP authentication subkey** | OpenPGP | `gpg-agent` | Key setup: yes, `sca security_key openpgp_ssh`, see [below](#openpgp-gpg-agent-ssh). SSH certificates: yes, `sca create ssh_crt --pub` |
+| **FIDO2 security key (`-sk`)** | FIDO2 / U2F | `ssh-agent` (OpenSSH built in) | Key setup: no, manual steps below. SSH certificates: yes, `sca create ssh_crt --pub` |
 
 > **Testing status.** The commands on this page were checked against the
 > OpenSSH, GnuPG and `ykman` documentation. They have **not yet been run on
@@ -39,7 +39,7 @@ A YubiKey can hold an SSH key in three different ways. SCA covers two of them
 |----------|----------------|-----|
 | **One developer laptop** | **FIDO2, non-resident `ed25519-sk`** (or `ecdsa-sk` on older firmware) with a second YubiKey enrolled as backup. If you already sign Git commits with GPG, the **OpenPGP** subkey is fine too | Simplest setup: no extra daemons or PKCS#11 modules, and touch is required by default |
 | **Several machines** | **FIDO2 resident `ed25519-sk`** with `-O verify-required`, recovered with `ssh-keygen -K` on each machine. Fall back to **PIV** if a server runs OpenSSH older than 8.2 | The key comes with the YubiKey, and nothing has to be copied between machines |
-| **Organisation with an SSH CA** | **PIV** if users already have a YubiKey set up with SCA, otherwise **FIDO2**. OpenPGP also works, but is the least convenient choice here | All three work with OpenSSH certificates through `CertificateFile`. PIV reuses the YubiKey and PIN users already have for SCA, and FIDO2 needs no extra daemon; OpenPGP needs `gpg-agent` in place of `ssh-agent`, which is one more daemon to configure and has no tie-in with SCA's PIV workflow. **Not yet automated:** SCA does not sign OpenSSH certificates today (see [below](#openssh-certificates-not-yet-automated)) |
+| **Organisation with an SSH CA** | **PIV** if users already have a YubiKey set up with SCA, otherwise **FIDO2**. OpenPGP also works, but is the least convenient choice here | All three work with OpenSSH certificates through `CertificateFile`. PIV reuses the YubiKey and PIN users already have for SCA, and FIDO2 needs no extra daemon; OpenPGP needs `gpg-agent` in place of `ssh-agent`, which is one more daemon to configure and has no tie-in with SCA's PIV workflow. `sca create ssh_crt` signs the certificates for any of the three (see [below](#openssh-certificates-sca-create-ssh_crt)) |
 | **Security Key series (FIDO-only) device** | **FIDO2** | It is the only applet these devices have |
 
 ## Packages
@@ -252,11 +252,27 @@ ssh-add -K
 
 `ykman fido credentials list` shows the resident keys stored on the device.
 
-## OpenSSH Certificates (Not Yet Automated)
+## OpenSSH Certificates (`sca create ssh_crt`)
 
-The SCA "approve" workflow issues X.509 certificates. It does **not** issue
-OpenSSH certificates (`ssh-keygen -s`), for any of the three methods. An
-organisation that wants an SSH CA signs keys by hand today, for example:
+The SCA "approve" workflow issues X.509 certificates, which do not authenticate
+over SSH. `sca create ssh_crt` issues the OpenSSH certificates (`ssh-keygen
+-s`), for any of the three methods, signed by the sub-CA key on its YubiKey (or
+by a key file):
+
+```bash
+# the CA line for TrustedUserCAKeys
+sca create pub_ssh subca
+
+# a FIDO2 key, a gpg-agent key (gpg --export-ssh-key <id> > gpg.pub) or a PIV key
+sca create ssh_crt --pub ~/.ssh/id_ed25519_sk.pub user
+```
+
+The certificate's principal is the `user` setting (or `--principals`), and it is
+valid for 52 weeks (or `--validity`). See
+[SSH Integration](ssh-integration.md#certificate-based-ssh-ca-trust) for the
+server side.
+
+Done by hand, the same signing is:
 
 ```bash
 # CA key in a file
@@ -267,7 +283,9 @@ ssh-keygen -s ssh_ca.pub -D /usr/lib/x86_64-linux-gnu/libykcs11.so \
   -I alice -n alice -V +52w id_ed25519_sk.pub
 ```
 
-This writes `id_ed25519_sk-cert.pub` next to the public key. `ssh` picks it up
+`ssh-keygen -s` writes `id_ed25519_sk-cert.pub` next to the public key; `sca
+create ssh_crt` writes it to the user's folder, so copy it next to the key as
+`<key>-cert.pub`. `ssh` picks it up
 automatically for file-based keys. For keys that live only in an agent (PIV
 via `ssh-agent`, or OpenPGP via `gpg-agent`), point at it in `~/.ssh/config`:
 
@@ -283,9 +301,6 @@ order to use this certificate either from an IdentityFile directive or -i flag
 to ssh(1), via ssh-agent(1), or via a PKCS11Provider or SecurityKeyProvider."
 Loading a certificate into the agent with `ssh-add` works with OpenSSH's
 `ssh-agent` but not with `gpg-agent`.
-
-Signing `-sk` and PIV SSH keys with an SCA-managed SSH CA is **not yet
-automated**.
 
 ## Tested On
 

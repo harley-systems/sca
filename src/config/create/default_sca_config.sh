@@ -181,3 +181,8 @@ export pkcs11_engine_default=/usr/lib/x86_64-linux-gnu/engines-3/pkcs11.so
 export opensc_pkcs11_module_default=/usr/lib/x86_64-linux-gnu/opensc-pkcs11.so
 #
 export ykcs11_module_default=/usr/lib/x86_64-linux-gnu/libykcs11.so
+################################################
+# OpenSSH certificates
+# validity of the certificates sca create ssh_crt signs, in the form ssh-keygen
+# -V takes: +52w is 52 weeks from now
+export ssh_crt_validity_default=+52w

@@ -85,6 +85,7 @@ sca [options] <command> [subcommand] [entity] [options]
 | `pub` | `sca create pub <entity>` | Extract public key from private key |
 | `pub_ssh` | `sca create pub_ssh <entity>` | Extract SSH-format public key |
 | `crt_pub_ssh` | `sca create crt_pub_ssh <entity>` | Create crt + pub + ssh in one step |
+| `ssh_crt` | `sca create ssh_crt [--pub <file>] <user\|host> [subca\|ca]` | Sign an OpenSSH user/host certificate (`-pub-ssh-cert.pub`) for `TrustedUserCAKeys` / `@cert-authority` |
 
 **Entity**: `ca`, `subca`, `service`, `host`, `user`
 
@@ -94,6 +95,7 @@ sca create key service           # Create service private key
 sca create csr service           # Create CSR for service
 sca create crt service           # Sign CSR to create certificate
 sca create crt_pub_ssh service   # All-in-one: crt + pub + ssh key
+sca create ssh_crt user          # OpenSSH user certificate signed by the SubCA
 sca create key service --force   # Overwrite existing key
 sca create crl subca             # Generate CRL for SubCA
 sca create crl ca                # Generate CRL for root CA

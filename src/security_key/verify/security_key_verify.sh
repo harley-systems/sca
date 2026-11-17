@@ -32,17 +32,9 @@ security_key_verify() {
     error "security_key_verify: invalid entity '$entity'. Supported: ca, subca, user, service, host" 1
   fi
 
-  # Resolve the ykcs11 module: the configured ykcs11_module wins; if that file
-  # is missing, look in this host's library folders before giving up
-  local configured_ykcs11_module="${ykcs11_module:-$ykcs11_module_default}"
-  local ykcs11_module="$configured_ykcs11_module"
-  if [ ! -f "$ykcs11_module" ]; then
-    log_detailed "security_key_verify: ykcs11 module not found at configured path '$configured_ykcs11_module', searching common locations"
-    if ! ykcs11_module="$(find_pkcs11_library libykcs11.so)"; then
-      error "ykcs11 module not found at '$configured_ykcs11_module' or in common locations. Install the YubiKey PKCS#11 module (ykcs11, part of yubico-piv-tool) and set ykcs11_module in ${config_file:-~/.sca/config/sca.config} to its full path." 1
-    fi
-  fi
-  log_detailed "security_key_verify: using ykcs11 module '$ykcs11_module'"
+  local ykcs11_module_path
+  ykcs11_module_path=$(security_key_ykcs11_module) || exit $?
+  log_detailed "security_key_verify: using ykcs11 module '$ykcs11_module_path'"
 
   # Check if pkcs11-tool is available
   if ! command -v pkcs11-tool &> /dev/null; then
@@ -126,7 +118,7 @@ security_key_verify() {
 
   # Attempt to sign with the provided PIN
   local sign_output
-  sign_output=$(pkcs11-tool --module "$ykcs11_module" "${token_option[@]}" \
+  sign_output=$(pkcs11-tool --module "$ykcs11_module_path" "${token_option[@]}" \
     --sign --mechanism RSA-PKCS \
     --id "$entity_pkcs11_id" --pin "$pin" -i "$test_file" -o "$sig_file" 2>&1)
   local sign_result=$?

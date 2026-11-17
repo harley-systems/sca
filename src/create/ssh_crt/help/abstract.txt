@@ -1,0 +1,8 @@
+Sign the OpenSSH public key of a user or a host with the ca or subca key, so
+that an sshd trusting that CA (TrustedUserCAKeys) accepts the user, and a client
+trusting it (@cert-authority in known_hosts) accepts the host. When the signing
+key is on a security key, it is used through PKCS#11 (ykcs11), with the PIN read
+from the PIN file; the PIN is never put on the command line or in the log.
+
+The certificate is written next to the entity's other files as
+<entity file prefix>pub-ssh-cert.pub.

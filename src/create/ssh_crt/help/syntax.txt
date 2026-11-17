@@ -1,0 +1,19 @@
+sca [<sca_options>] create [<create_options>] ssh_crt [<ssh_crt_options>] <entity> [<sign_by_entity>]
+
+@@@SCA OPTIONS@@@
+
+@@@CREATE OPTIONS@@@
+
+@@@OPTIONS@@@
+
+allowed values for the entity are:
+
+  - user          - for current user, signs a user certificate
+  - host          - for current host, signs a host certificate
+
+allowed values for the sign_by_entity (optional parameter) are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+
+default value for sign_by_entity is subca

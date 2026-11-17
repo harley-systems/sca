@@ -31,6 +31,7 @@ allowed values for the document_type are:
   - pub_ssh               - create public key in OpenSSH format
   - crt_pub_ssh           - batch creation of certificate, public key and public
                             key in ssh format
+  - ssh_crt               - sign an OpenSSH certificate for a user or host key
 ```
 
 **See also**
@@ -49,6 +50,7 @@ document_type of interest.
 - [key](#sca-create-key) - create new private key
 - [pub](#sca-create-pub) - create public key by extracting it from certificate
 - [pub_ssh](#sca-create-pub_ssh) - create public key in OpenSSH format
+- [ssh_crt](#sca-create-ssh_crt) - sign an OpenSSH certificate for a user or host key
 
 ---
 
@@ -368,3 +370,79 @@ allowed values for the entity are:
   - host          - for current host
   - service       - for current service
 ```
+
+---
+
+## sca create ssh_crt
+
+```text
+The create OpenSSH certificate command help
+
+Sign the OpenSSH public key of a user or a host with the ca or subca key, so
+that an sshd trusting that CA (TrustedUserCAKeys) accepts the user, and a client
+trusting it (@cert-authority in known_hosts) accepts the host. When the signing
+key is on a security key, it is used through PKCS#11 (ykcs11), with the PIN read
+from the PIN file; the PIN is never put on the command line or in the log.
+
+The certificate is written next to the entity's other files as
+<entity file prefix>pub-ssh-cert.pub.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] create [<create_options>] ssh_crt [<ssh_crt_options>] <entity> [<sign_by_entity>]
+
+create_options:
+
+  -h, --help             - print this help
+
+ssh_crt_options:
+
+  -h, --help              - print this help
+  -f, --force             - if there is an existing certificate file, instead of
+                            reporting and failing - backup and sign a new one.
+  --validity <spec>       - how long the certificate is valid, in the form
+                            ssh-keygen -V takes (for example +52w, +1d, or
+                            20260101:20270101). default is the ssh_crt_validity
+                            setting (+52w).
+  --principals <a,b>      - comma separated principals the certificate is valid
+                            for. for a user these must match the login name on
+                            the server, for a host the name clients connect to.
+                            default for a user is its account id (the user
+                            setting), for a host its full dns name.
+  --pub <file>            - sign this OpenSSH public key instead of the entity's
+                            pub_ssh file. any key type works, including FIDO2
+                            (sk-ssh-ed25519@openssh.com) keys and keys exported
+                            with gpg --export-ssh-key.
+
+allowed values for the entity are:
+
+  - user          - for current user, signs a user certificate
+  - host          - for current host, signs a host certificate
+
+allowed values for the sign_by_entity (optional parameter) are:
+
+  - ca            - for current certificate authority
+  - subca         - for current sub-ordinate certificate authority
+
+default value for sign_by_entity is subca
+```
+
+**Examples:**
+
+```bash
+# the CA line for sshd's TrustedUserCAKeys and known_hosts' @cert-authority
+sca create pub_ssh subca
+
+# certify the current user's key, valid for the default 52 weeks
+sca create ssh_crt user
+
+# certify a host key for a week, under two names
+sca create ssh_crt --validity +1w --principals black.harley.systems,black host
+
+# certify a FIDO2 key made with ssh-keygen -t ed25519-sk
+sca create ssh_crt --pub ~/.ssh/id_ed25519_sk.pub user
+```
+
+See [SSH integration](../ssh-integration.md#certificate-based-ssh-ca-trust).
