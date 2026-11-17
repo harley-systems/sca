@@ -39,8 +39,8 @@ export_() {
       ;;
     *)
     read -r -d '' message <<- ____EOM
-      invalid value '$document_type' for document_type (first) argument.
-      supported values are crt_pub_ssh|csr|p12.
+invalid value '$document_type' for document_type (first) argument.
+supported values are crt_pub_ssh|csr|p12.
 ____EOM
     error "$message" 1
     ;;

@@ -41,9 +41,9 @@ init() {
       ;;
     *)
     read -r -d '' message <<- ____EOM
-      invalid value for '$system' system (first) argument.
-      supported values are 'openssl_ca_db' 'sca_usb_stick' and 'demo'.
-      use sca init -h for help.
+invalid value for '$system' system (first) argument.
+supported values are 'openssl_ca_db' 'sca_usb_stick' and 'demo'.
+use sca init -h for help.
 ____EOM
     error "$message" 1
     ;;

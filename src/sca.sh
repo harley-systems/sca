@@ -149,10 +149,10 @@ exiting.
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$verb' for first argument - the command.
-        supported commands are 'create' 'display' 'export' 'import' 'init' 'install'
-        'request' 'security_key' 'appliance' 'approve' 'revoke' 'scrub_log' 'completion'
-        'test'.
+invalid value '$verb' for first argument - the command.
+supported commands are 'create' 'display' 'export' 'import' 'init' 'install'
+'request' 'security_key' 'appliance' 'approve' 'revoke' 'scrub_log' 'completion'
+'test'.
 ____EOM
       error "$message" 1
       ;;
@@ -172,15 +172,16 @@ SCA_HELP
 #
 # parameters
 #   message
-#     message to display
+#     message to print on stderr, verbatim (line breaks, spacing and glob
+#     characters kept), followed by a newline
 #   exit_code
 #     exit code to use when exiting the program
 #
 error() {
-  message=$1
-  exit_code=$2
-  >&2 echo $1
-  exit $2
+  local message=$1
+  local exit_code=$2
+  printf '%s\n' "$message" >&2
+  exit "$exit_code"
 }
 ################################################################################
 # resolve relative subfolder
@@ -208,15 +209,15 @@ get_relative_subfolder() {
    log_extreemly_detailed "get_relative_subfolder finish (__resultvar=${__resultvar},__ref_parent_folder=${__ref_parent_folder},__file_fullpath=${__file_fullpath})"
 }
 log_extreemly_detailed() {
-  message="${@}"
+  local message="${@}"
   [[ $verbosity == vvv* ]] && log "${message}" || true
 }
 log_detailed() {
-  message="${@}"
+  local message="${@}"
   [[ $verbosity == vv* ]] && log "${message}" || true
 }
 log_verbose() {
-  message="${@}"
+  local message="${@}"
   [[ $verbosity == v* ]] && log "${message}" || true
 }
 # a credential must never reach the log. the redaction happens here rather than
@@ -241,7 +242,7 @@ redact_secrets() {
     -e 's/(export_: start \(document_type=p12, entity=(--p[a-z]*=|-[hl]*p)).+\)$/\1<REDACTED>)/'
 }
 log() {
-  message="${@}"
+  local message="${@}"
   case "${message}" in
     *pin-value=*|*"pass:"*|*OPENSSL_PKCS11_PIN=*|*--key=*|*"-k "*|*"key is set"*)
       message=$(printf '%s' "${message}" | redact_secrets)

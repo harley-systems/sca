@@ -67,10 +67,10 @@ list() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$list_entity' for list_entity (first) argument.
-        supported values are 'cas', 'subcas', 'users', 'hosts', 'services',
-        'configs' and 'all'.
-        use sca list -h for help.
+invalid value '$list_entity' for list_entity (first) argument.
+supported values are 'cas', 'subcas', 'users', 'hosts', 'services',
+'configs' and 'all'.
+use sca list -h for help.
 ____EOM
       error "$message" 1
       ;;

@@ -39,8 +39,8 @@ completion() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-      invalid value '$shell' for shell (first) argument.
-      supported valueis 'bash'.
+invalid value '$shell' for shell (first) argument.
+supported valueis 'bash'.
 ____EOM
     error "$message" 1
     ;;

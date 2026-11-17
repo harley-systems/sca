@@ -27,9 +27,9 @@ config() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-      invalid value '$config_verb' for config_verb (first) argument.
-      supported values are 'create', 'resolve', 'set', 'get', 'load', 'save' and
-      'reset'.
+invalid value '$config_verb' for config_verb (first) argument.
+supported values are 'create', 'resolve', 'set', 'get', 'load', 'save' and
+'reset'.
 ____EOM
     error "$message" 1
     ;;

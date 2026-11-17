@@ -55,8 +55,8 @@ config_set() {
       ;;
     *)
     read -r -d '' message <<- ____EOM
-      invalid value '$setting_name' for setting_name (first) argument.
-      supported values are 'ca' 'subca' 'user' 'host' 'service'.
+invalid value '$setting_name' for setting_name (first) argument.
+supported values are 'ca' 'subca' 'user' 'host' 'service'.
 ____EOM
     error "$message" 1
     ;;

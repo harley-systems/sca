@@ -41,8 +41,8 @@ create() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$document_type' for document_type (first) argument.
-        supported values are 'key' 'csr' 'crt' 'crl' 'pub' 'pub_ssh' 'crt_pub_ssh'.
+invalid value '$document_type' for document_type (first) argument.
+supported values are 'key' 'csr' 'crt' 'crl' 'pub' 'pub_ssh' 'crt_pub_ssh'.
 ____EOM
       error "$message" 1
       ;;

@@ -21,6 +21,17 @@ output="$(sca security_key info 2>&1)"
 [[ "${output}" == *"sca config create -h"* ]] \
   || fail "message does not point to 'sca config create -h'"
 
+# the message keeps its line breaks: the advice is on its own line, indented
+# as written, rather than flattened into one long line
+output="$(sca create key user 2>&1 >/dev/null)" \
+  && fail "sca create key user exits 0 without a config"
+[ "$(printf '%s\n' "${output}" | wc -l)" -gt 1 ] \
+  || fail "the missing config message is on a single line: ${output}"
+printf '%s\n' "${output}" | grep -qxF '  sca config create all' \
+  || fail "'  sca config create all' is not on its own line in: ${output}"
+printf '%s\n' "${output}" | grep -qx 'exiting\.' \
+  || fail "'exiting.' is not on its own line in: ${output}"
+
 # other commands are refused the same way, with a non-zero exit
 for command in "create key ca" "test --skip-air-gapped-tests"; do
   # shellcheck disable=SC2086 # split the command into its words
