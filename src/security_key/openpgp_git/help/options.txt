@@ -1,0 +1,14 @@
+setup_options:
+
+  -h, --help          - print this help
+  --local             - set up the current repository only (git config
+                        --local), rather than every repository (git config
+                        --global, the default)
+  --no-tags           - sign commits only: leave tag.gpgSign alone
+  -n, --dry-run       - print what would change, and change nothing
+
+public_key_options:
+
+  -h, --help          - print this help
+  -o, --output FILE   - write the public key to FILE rather than stdout. an
+                        existing FILE is never overwritten

@@ -1,0 +1,18 @@
+The security key openpgp_git command sets up Git to sign commits and tags with
+the signature key of the YubiKey's OpenPGP applet, and prints that key's public
+key for the Git host. It needs no sca configuration.
+
+setup reads the signature key's fingerprint from the card (gpg --card-status),
+checks that its public key is in the local GnuPG keyring, and sets
+user.signingkey to <fingerprint>!, commit.gpgsign and tag.gpgSign to true, in
+the global git config (or, with --local, the current repository's). Settings
+that already have the right value are left alone. If any setting has another
+value, gpg.format included, setup lists each one with the command that accepts
+the new value, and changes nothing. It prints the GPG_TTY line for the shell
+startup file, but edits no shell files.
+
+public_key prints the armored public key (gpg --armor --export) for the GPG
+keys page of GitHub or GitLab, so signed commits show as verified.
+
+gpg runs with --batch: sca never asks for, reads or logs the OpenPGP PIN. If gpg
+is missing, install the OpenPGP packages with sca install --openpgp.

@@ -29,6 +29,7 @@ The security key command is one of the following:
   id        - retrieving ids of the currently inserted security key
   info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
+  openpgp_git - set up Git commit and tag signing with the OpenPGP signature key
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
@@ -45,7 +46,7 @@ security key related commands.
 
 ### Choosing a key: `--device SERIAL`
 
-Every `security_key` subcommand except `openpgp_ssh` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
+Every `security_key` subcommand except `openpgp_ssh` and `openpgp_git` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
 
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
@@ -66,6 +67,7 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 - [id](#sca-security_key-id) - retrieving ids of the currently inserted security key
 - [info](#sca-security_key-info) - show the status of every PIV slot on the security key
 - [init](#sca-security_key-init) - first time initialization of security_key
+- [openpgp_git](#sca-security_key-openpgp_git) - set up Git commit and tag signing with the OpenPGP signature key
 - [openpgp_ssh](#sca-security_key-openpgp_ssh) - set up SSH with the OpenPGP authentication key and gpg-agent
 - [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
@@ -267,6 +269,79 @@ storage device (a security key) to each of the declared default entity types
   record the new values for what changed, and the error says which ones
 
 **Important:** Save the generated credentials! You'll need the PUK if you forget your PIN.
+
+---
+
+## sca security_key openpgp_git
+
+```text
+The security key openpgp_git command help
+
+The security key openpgp_git command sets up Git to sign commits and tags with
+the signature key of the YubiKey's OpenPGP applet, and prints that key's public
+key for the Git host. It needs no sca configuration.
+
+setup reads the signature key's fingerprint from the card (gpg --card-status),
+checks that its public key is in the local GnuPG keyring, and sets
+user.signingkey to <fingerprint>!, commit.gpgsign and tag.gpgSign to true, in
+the global git config (or, with --local, the current repository's). Settings
+that already have the right value are left alone. If any setting has another
+value, gpg.format included, setup lists each one with the command that accepts
+the new value, and changes nothing. It prints the GPG_TTY line for the shell
+startup file, but edits no shell files.
+
+public_key prints the armored public key (gpg --armor --export) for the GPG
+keys page of GitHub or GitLab, so signed commits show as verified.
+
+gpg runs with --batch: sca never asks for, reads or logs the OpenPGP PIN. If gpg
+is missing, install the OpenPGP packages with sca install --openpgp.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] openpgp_git setup [<setup_options>]
+sca [<sca_options>] security_key [<security_key_options>] openpgp_git public_key [<public_key_options>]
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+setup_options:
+
+  -h, --help          - print this help
+  --local             - set up the current repository only (git config
+                        --local), rather than every repository (git config
+                        --global, the default)
+  --no-tags           - sign commits only: leave tag.gpgSign alone
+  -n, --dry-run       - print what would change, and change nothing
+
+public_key_options:
+
+  -h, --help          - print this help
+  -o, --output FILE   - write the public key to FILE rather than stdout. an
+                        existing FILE is never overwritten
+```
+
+**What it does:**
+- `setup`: reads the signature key's fingerprint from `gpg --card-status --with-colons` and checks with `gpg --list-keys` that its public key is in the keyring
+- `setup` then sets `user.signingkey <fingerprint>!`, `commit.gpgsign true` and `tag.gpgSign true` (not with `--no-tags`) with `git config --global`, which honours `GIT_CONFIG_GLOBAL`, or with `git config --local` given `--local`. Only that scope is read and written, and `gpg.program` is never set
+- Settings already right are left alone (`yes`, `on` and `1` count as true; the key is compared ignoring case). If any setting has another value, or `gpg.format` is set to something other than `openpgp` (e.g. SSH signing), `setup` lists them all with the `git config` command that accepts each, writes nothing and exits 1. `-n`, `--dry-run` prints what would change and changes nothing
+- `setup` warns when `user.email` is not a user ID of the key (the Git host would show commits as Unverified), prints the `export GPG_TTY="$(tty)"` line for the shell startup file, and edits no shell files
+- `public_key`: runs `gpg --armor --export <fingerprint>`, the primary key with all its subkeys. `-o FILE` writes it to FILE instead of stdout, and never overwrites an existing file
+- Neither mode needs `sca config`, and gpg runs with `--batch`, so sca never asks for or sees the OpenPGP PIN
+
+**Example:**
+```bash
+sca install --openpgp                         # gnupg, scdaemon, ykman
+sca security_key openpgp_git setup --dry-run
+sca security_key openpgp_git setup
+echo 'export GPG_TTY="$(tty)"' >> ~/.bashrc
+sca security_key openpgp_git public_key -o ~/gpg-signing.asc   # for GitHub or GitLab
+git commit --allow-empty -m test && git log --show-signature -1
+```
+
+See [GPG with a YubiKey](../gpg-yubikey.md#54-git-commit-and-tag-signing) for the manual steps, and [section 3](../gpg-yubikey.md#3-keys) to put a signature key on the card.
 
 ---
 
