@@ -63,17 +63,12 @@ display() {
         esac
       done
       local current_entity_id=$(get_current_entity_id $entity)
-      local old_entity=''
-      if ! [ -z "$entity_id" ] && [[ "$entity_id" != $current_entity_id ]]; then
-        old_entity=$(config_get $entity)
-        old_entity="${old_entity//[$'\t\r\n']}}"
-        #old_entity=${old_entity//\"/\\\"}
-        log_detailed "display: old_entity saved ${old_entity}"
-        new_entity=$(config_get $entity $entity_id)
-        new_entity="${new_entity//[$'\t\r\n']}}"
-        new_entity=${new_entity@Q}
-        log_detailed "display: temporarily setting configuration for ${entity} to ${new_entity}"
-        config_set $entity ${new_entity}
+      local -a old_entity=()
+      if ! [ -z "$entity_id" ] && [[ "$entity_id" != "$current_entity_id" ]]; then
+        mapfile -d '' -t old_entity < <(config_get_values "$entity")
+        log_detailed "display: old_entity saved ${old_entity[*]@Q}"
+        log_detailed "display: temporarily setting configuration for ${entity} to ${entity_id}"
+        config_set "$entity" "$entity_id"
       fi
       local entity_document_file=$(eval echo \$${entity}_${document_type}_file)
       if [ ! -f "${entity_document_file}" ]; then
@@ -95,9 +90,9 @@ display() {
       fi
       cat $entity_document_file
       rc=$?
-      if ! [ -z "$old_entity" ]; then
-        log_detailed "display: setting entity back for ${entity} to ${old_entity}"
-        config_set ${entity} ${old_entity}
+      if [ ${#old_entity[@]} -gt 0 ]; then
+        log_detailed "display: setting entity back for ${entity} to ${old_entity[*]@Q}"
+        config_set "${entity}" "${old_entity[@]}"
       fi
     ;;
     *)

@@ -29,8 +29,7 @@ request() {
 
   local entity=$1
   local entity_id=$2
-  local old_entity
-  local new_entity
+  local -a old_entity=()
 
   log_detailed "request: start (entity=${entity}, entity_id=${entity_id})"
   eval OPENSSL_CONF=${sca_conf_folder}${entity}.ini
@@ -51,17 +50,12 @@ request() {
       current_entity_value=$(eval "echo \$$entity")
       ;;
   esac
-  old_entity=''
-  if [[ ! -z $entity_id ]] && [[ "$entity_id" != $current_entity_value ]]; then
+  if [[ ! -z $entity_id ]] && [[ "$entity_id" != "$current_entity_value" ]]; then
     log_detailed "request: temporarily switching entity"
-    old_entity=$(config_get "${entity}")
-    old_entity="${old_entity//[$'\t\r\n']}"
-    #old_entity=${old_entity@Q}
-    log_detailed "request: old_entity saved ${old_entity}"
-    new_entity=""
-    log_detailed "request: new_entity ${@@Q}"
+    mapfile -d '' -t old_entity < <(config_get_values "${entity}")
+    log_detailed "request: old_entity saved ${old_entity[*]@Q}"
     log_detailed "request: temporarily setting configuration for ${entity} to ${@@Q}"
-    config_set $entity ${@@Q}
+    config_set "$entity" "$@"
   fi
 
   create_key ${entity}
@@ -74,9 +68,9 @@ request() {
     export_ csr ${entity}
   fi
 
-  if ! [ -z "$old_entity" ]; then
-    log_detailed "request: setting entity back for ${entity} to ${old_entity}"
-    config_set ${entity} ${old_entity}
+  if [ ${#old_entity[@]} -gt 0 ]; then
+    log_detailed "request: setting entity back for ${entity} to ${old_entity[*]@Q}"
+    config_set "${entity}" "${old_entity[@]}"
   fi
 
   log_detailed "request:  finish (entity=${entity})"

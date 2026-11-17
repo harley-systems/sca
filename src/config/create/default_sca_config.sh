@@ -9,7 +9,7 @@ export verbosity_default=none
 #
 export name_default=harley
 #
-export caps_name_default=Harley Systems
+export caps_name_default="Harley Systems"
 #
 export domain_default=.systems
 #
