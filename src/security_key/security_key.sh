@@ -20,10 +20,10 @@ security_key() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$security_key_command' for security_key_command (first) argument.
-        supported values are 'get_crt', 'id', 'info', 'init', 'openpgp_git', 'openpgp_ssh',
-        'unblock_pin', 'upload', 'verify', and 'wait_for'.
-        use sca security_key -h for help.
+invalid value '$security_key_command' for security_key_command (first) argument.
+supported values are 'get_crt', 'id', 'info', 'init', 'openpgp_git', 'openpgp_ssh',
+'unblock_pin', 'upload', 'verify', and 'wait_for'.
+use sca security_key -h for help.
 ____EOM
       error "$message" 1
       ;;

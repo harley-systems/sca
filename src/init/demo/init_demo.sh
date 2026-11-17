@@ -251,8 +251,8 @@ init_demo_switch_to () {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$user_kind' for user_kind (first) argument.
-        supported values are 'ca' 'subca' 'user'.
+invalid value '$user_kind' for user_kind (first) argument.
+supported values are 'ca' 'subca' 'user'.
 ____EOM
       error "$message" 1
       ;;

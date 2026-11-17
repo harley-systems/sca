@@ -99,8 +99,8 @@ approve() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-      invalid value '$entity' for entity (first) argument.
-      supported values are 'ca' 'subca', 'user', 'host', 'service'.
+invalid value '$entity' for entity (first) argument.
+supported values are 'ca' 'subca', 'user', 'host', 'service'.
 ____EOM
       ;;
   esac

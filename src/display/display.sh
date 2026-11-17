@@ -99,9 +99,9 @@ display() {
     ;;
     *)
       read -r -d '' message <<- ____EOM
-      invalid value '$document_type' for document_type (first) argument.
-      supported values are 'key' 'csr' 'crt' 'pub' 'pub_ssh' 'p12'.
-      use sca display -h for help.
+invalid value '$document_type' for document_type (first) argument.
+supported values are 'key' 'csr' 'crt' 'pub' 'pub_ssh' 'p12'.
+use sca display -h for help.
 ____EOM
       error "$message" 1
     ;;

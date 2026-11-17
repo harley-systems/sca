@@ -106,8 +106,8 @@ config_create() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$entity' for first argument - the entity.
-        supported entities are 'ca' 'subca' 'user' 'host' 'service' and 'all'.
+invalid value '$entity' for first argument - the entity.
+supported entities are 'ca' 'subca' 'user' 'host' 'service' and 'all'.
 ____EOM
       error "$message" 1
       ;;

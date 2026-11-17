@@ -20,9 +20,9 @@ appliance() {
       ;;
     *)
       read -r -d '' message <<- ____EOM
-        invalid value '$appliance_command' for appliance_command (first) argument.
-        supported values are 'info' and 'verify'.
-        use sca appliance -h for help.
+invalid value '$appliance_command' for appliance_command (first) argument.
+supported values are 'info' and 'verify'.
+use sca appliance -h for help.
 ____EOM
       error "$message" 1
       ;;
