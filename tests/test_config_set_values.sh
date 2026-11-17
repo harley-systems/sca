@@ -26,13 +26,13 @@ step() {
   test_done
 }
 
-# assert_sourced VAR EXPECTED - sourcing the config (set -u, in a subshell)
-# gives VAR_default exactly EXPECTED
+# assert_sourced VAR EXPECTED [FILE] - sourcing FILE (the config by default;
+# set -u, in a subshell) gives VAR_default exactly EXPECTED
 assert_sourced() {
-  local actual
+  local actual file="${3:-${config}}"
   # shellcheck source=/dev/null
-  actual="$(set -u; . "${config}" > /dev/null 2>&1; v="$1_default"; printf '%s.' "${!v}")"
-  assert_eq "$2." "${actual}" "sourced $1_default"
+  actual="$(set -u; . "${file}" > /dev/null 2>&1; v="$1_default"; printf '%s.' "${!v}")"
+  assert_eq "$2." "${actual}" "sourced $1_default from ${file##*/}"
 }
 
 step config create all
@@ -80,6 +80,28 @@ assert_sourced user_surname "${nasty}"
 [ -e "${HOME}/pwned2" ] && fail "a backtick command in a value ran"
 assert_succeeds bash -n "${config}"
 assert_succeeds bash -c "set -u; . '${config}'"
+
+# config save writes the same values, quoted, to a file that sources back to
+# exactly them. the path has spaces, and is new: with stdin closed the
+# overwrite prompt would return without writing
+step config set user name "Test  Inc *"
+saved_dir="${HOME}/saved dir"
+saved="${saved_dir}/s a.config"
+mkdir -p "${saved_dir}"
+step config save "${saved}"
+assert_file_exists "${saved}"
+assert_eq "s a.config" "$(ls "${saved_dir}")" "config save writes exactly the given path"
+assert_succeeds bash -n "${saved}"
+assert_eq "" "$(bash -c "set -u; . \"\$1\"" _ "${saved}" 2>&1)" "sourcing the saved config prints nothing"
+assert_sourced name test "${saved}"
+assert_sourced caps_name "${nasty}" "${saved}"
+assert_sourced subca_surname "Van Der Berg" "${saved}"
+assert_sourced user_name "Test  Inc *" "${saved}"
+assert_sourced user_surname "${nasty}" "${saved}"
+assert_sourced user_given_name "Alice B" "${saved}"
+assert_sourced caps_suffix "" "${saved}"
+[ -e "${HOME}/pwned" ] && fail "a \$(...) in a saved value ran"
+[ -e "${HOME}/pwned2" ] && fail "a backtick command in a saved value ran"
 
 # switching to another user for a moment puts the spaced values back. openssl
 # reads '$' in its config as a variable, so issue with plain spaced names
