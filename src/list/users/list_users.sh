@@ -2,8 +2,8 @@ list_users() {
   local output_format=$1
   shift;
 
-  local OPTS=`getopt -o h --long help -n 'list users' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca list users -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'list users' -- "$@") || error "failed parsing options. use sca list users -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -41,7 +41,7 @@ list_users() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_users: finished (user_files_folder=${user_files_folder})"

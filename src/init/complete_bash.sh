@@ -13,12 +13,9 @@ _sca_init_complete() {
 
 
   if [ -z "${COMP_WORDS[$system_index]}" ]; then
-    suggestions=($(compgen -W "yubikey openssl_ca_db sca_usb_stick demo" -- "$current_word"))
+    suggestions=($(compgen -W "openssl_ca_db sca_usb_stick demo" -- "$current_word"))
   else
     case "${COMP_WORDS[$system_index]}" in
-      yubikey)
-        _sca_init_yubikey_complete $system_index
-        ;;
       openssl_ca_db)
         _sca_init_openssl_ca_db_complete $system_index
         ;;
@@ -29,24 +26,11 @@ _sca_init_complete() {
         _sca_init_demo_complete $system_index
         ;;
       *)
-        suggestions=($(compgen -W "yubikey openssl_ca_db sca_usb_stick demo" -- "$current_word"))
+        suggestions=($(compgen -W "openssl_ca_db sca_usb_stick demo" -- "$current_word"))
         ;;
     esac
   fi
 
-}
-_sca_init_yubikey_complete() {
-  local yubikey_index=$1
-  local options_index=$((yubikey_index+1))
-
-  while [[ ${COMP_WORDS[$options_index]} == -* ]]; do
-    if [ $COMP_CWORD == $options_index ]; then
-      suggestions=($(compgen -W "-h -r --help --roll_keys" -- "$current_word"))
-      COMPREPLY=("${suggestions[@]}")
-      return
-    fi
-    options_index=$((options_index+1))
-  done
 }
 _sca_init_openssl_ca_db_complete() {
   local openssl_ca_db_index=$1

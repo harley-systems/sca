@@ -115,7 +115,7 @@ import: build/import/import.sh
 #------------------------------------------------------------------------------
 # INIT command and subcommands
 #------------------------------------------------------------------------------
-INIT_SUBCMDS := demo openssl_ca_db sca_usb_stick yubikey
+INIT_SUBCMDS := demo openssl_ca_db sca_usb_stick
 
 $(eval $(call build_help,init,))
 $(foreach s,$(INIT_SUBCMDS),$(eval $(call build_help,init,$(s))))
@@ -154,7 +154,7 @@ request: build/request/request.sh
 #------------------------------------------------------------------------------
 # SECURITY_KEY command and subcommands
 #------------------------------------------------------------------------------
-SECURITY_KEY_SUBCMDS := get_crt id info init unblock_pin upload verify wait_for
+SECURITY_KEY_SUBCMDS := get_crt id info init openpgp_ssh unblock_pin upload verify wait_for
 
 $(eval $(call build_help,security_key,))
 $(foreach s,$(SECURITY_KEY_SUBCMDS),$(eval $(call build_help,security_key,$(s))))
@@ -335,7 +335,7 @@ completion: build/completion/completion.sh
 #------------------------------------------------------------------------------
 # COMMON utilities
 #------------------------------------------------------------------------------
-build/common/common.sh: src/common/sed.sh src/common/ubuntu_version.sh
+build/common/common.sh: src/common/sed.sh src/common/ubuntu_version.sh src/common/pkcs11_library.sh
 	@mkdir -p build/common
 	cat $^ > $@
 

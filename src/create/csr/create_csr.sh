@@ -8,8 +8,8 @@
 #
 create_csr() {
   local force=false
-  local OPTS=`getopt -o hf --long help,force -n 'create csr' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca create csr -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force -n 'create csr' -- "$@") || error "failed parsing options. use sca create csr -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -79,7 +79,10 @@ create_csr() {
       local entity_pkcs11_id=$(eval echo \$${entity}_pkcs11_id)
       # if not already connected, prompt and wait for the relevant security key
       # to be inserted
-      local security_key_opensc_reader_slot_number=$(security_key_wait_for $entity | tail -n 1)
+      # local on its own line: on the same line it would mask wait_for's exit
+      # status, and a timeout would run on with an empty reader number.
+      local security_key_opensc_reader_slot_number
+      security_key_opensc_reader_slot_number=$(security_key_wait_for "$entity") || exit $?
       local sign_by_entity_pkcs11_id=$(eval echo \${${entity}_pkcs11_id})
       # check if entity key is protected by pin
       entity_pin=$(get_yubikey_pin_parameter $entity)

@@ -14,9 +14,9 @@
 revoke() {
 
   # read the options
-  local OPTS=`getopt -o hs: --long help,sign-by: -n 'revoke' -- "$@"`
   local sign_by_entity
-  if [ $? != 0 ] ; then error "failed parsing options. use sca revoke -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hs: --long help,sign-by: -n 'revoke' -- "$@") || error "failed parsing options. use sca revoke -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -83,9 +83,13 @@ revoke() {
     # check if the signing entity is configured to use a hardware security key
     if [ $sign_by_entity_use_security_key = true ]; then
       log_detailed "revoke: signing with the security key configured for '$sign_by_entity'"
+      require_pkcs11_library opensc_pkcs11_module
       local sign_by_entity_security_key_type=$(eval echo \$${sign_by_entity}_security_key_type)
       local sign_by_entity_pkcs11_id=$(eval echo \${${sign_by_entity}_pkcs11_id})
-      local security_key_opensc_reader_slot_number=$(security_key_wait_for $sign_by_entity)
+      # local on its own line: on the same line it would mask wait_for's exit
+      # status, and a timeout would run on with an empty reader number.
+      local security_key_opensc_reader_slot_number
+      security_key_opensc_reader_slot_number=$(security_key_wait_for "$sign_by_entity") || exit $?
       readarray slot_map < <( p11tool --list-tokens | grep -oP "(?<=URL: ).*" )
       log_detailed "revoke: slot_map retrieved. there are ${#slot_map[@]} items."
       log_detailed "revoke: opensc reader slot number '${security_key_opensc_reader_slot_number}' mapped to pkcs11 id is '${slot_map[${security_key_opensc_reader_slot_number}]::-1}'."

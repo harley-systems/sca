@@ -1,8 +1,8 @@
 security_key_id() {
   local security_key_type=''
   local device=''
-  local OPTS=`getopt -o ht: --long help,security-key-type:,device: -n "sca security_key id" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca security_key id -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o ht: --long help,security-key-type:,device: -n "sca security_key id" -- "$@") || error "failed parsing options. use sca security_key id -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

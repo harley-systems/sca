@@ -8,8 +8,8 @@
 #
 create_pub() {
   local force=false
-  local OPTS=`getopt -o hf --long help,force -n 'create pub' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca create pub -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force -n 'create pub' -- "$@") || error "failed parsing options. use sca create pub -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

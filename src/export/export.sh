@@ -30,10 +30,12 @@ export_() {
   local document_type=$1
   local entity=$2
   log_detailed "export_: start (document_type=${document_type}, entity=${entity})"
+  local rc=0
   case "$document_type" in
     crt_pub_ssh|csr|p12)
       shift
-      eval export_$document_type "$@"
+      export_"$document_type" "$@"
+      rc=$?
       ;;
     *)
     read -r -d '' message <<- ____EOM
@@ -43,7 +45,8 @@ ____EOM
     error "$message" 1
     ;;
   esac
-  log_detailed "export_: finish (document_type=${document_type}, entity=${entity})"
+  log_detailed "export_: finish (document_type=${document_type}, entity=${entity}, rc=${rc})"
+  return $rc
 }
 export_help() {
   cat <<'SCA_HELP'

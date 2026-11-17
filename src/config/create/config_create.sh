@@ -9,8 +9,8 @@
 config_create() {
   local recreate=false
 
-  local OPTS=`getopt -o hr --long help,recreate -n 'config create' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca config create -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hr --long help,recreate -n 'config create' -- "$@") || error "failed parsing options. use sca config create -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -39,6 +39,7 @@ config_create() {
   sca_config_content='
 @@@DEFAULT SCA CONFIG@@@
 '
+  config_create_set_library_defaults
   [ -z "${sca_conf_folder}" ] && sca_conf_folder=~/.sca/config/
   mkdir -p "${sca_conf_folder}"
   local random_number="$RANDOM"
@@ -156,6 +157,26 @@ ____EOM
   done
 
   log_detailed "config_create: finish (entity='${entity}')"
+}
+################################################################################
+# sets the pkcs11 library *_default lines in sca_config_content to the
+# libraries found on this host, or to their path in this host's multiarch
+# folder when they aren't installed yet
+config_create_set_library_defaults() {
+  local setting relative_path library line
+  for setting in pkcs11_engine:engines-3/pkcs11.so \
+    opensc_pkcs11_module:opensc-pkcs11.so ykcs11_module:libykcs11.so; do
+    relative_path="${setting#*:}"
+    setting="${setting%%:*}"
+    if ! library="$(find_pkcs11_library "${relative_path}")"; then
+      log_detailed "config_create: ${relative_path} not found on this host. defaulting ${setting} to '${library}'."
+    fi
+    # quoted for sourcing, in case the path holds spaces
+    line="export ${setting}_default=$(printf %q "${library}")"
+    # the trailing '.' keeps the content's trailing newlines
+    sca_config_content="$(sed -e "s/^export ${setting}_default=.*/$(common_sed_escape_for_substitute "${line}")/" <<<"${sca_config_content}"; echo .)"
+    sca_config_content="${sca_config_content%$'\n.'}"
+  done
 }
 config_create_help() {
   cat <<'SCA_HELP'

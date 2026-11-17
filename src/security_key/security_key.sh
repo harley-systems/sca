@@ -12,22 +12,25 @@ security_key() {
   local security_key_command=$1
   shift
   log_detailed "security_key: start (security_key_command=${security_key_command})"
+  local rc=0
   case "$security_key_command" in
-    get_crt|id|info|init|unblock_pin|upload|verify|wait_for )
-      eval security_key_$security_key_command "$@"
+    get_crt|id|info|init|openpgp_ssh|unblock_pin|upload|verify|wait_for )
+      security_key_"$security_key_command" "$@"
+      rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$security_key_command' for security_key_command (first) argument.
-        supported values are 'get_crt', 'id', 'info', 'init', 'unblock_pin', 'upload', 'verify',
-        and 'wait_for'.
+        supported values are 'get_crt', 'id', 'info', 'init', 'openpgp_ssh', 'unblock_pin',
+        'upload', 'verify', and 'wait_for'.
         use sca security_key -h for help.
 ____EOM
       error "$message" 1
       ;;
   esac
 
-  log_detailed "security_key: finished (security_key_command=${security_key_command})"
+  log_detailed "security_key: finished (security_key_command=${security_key_command}, rc=${rc})"
+  return $rc
 }
 security_key_help() {
   cat <<'SCA_HELP'

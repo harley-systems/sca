@@ -36,14 +36,16 @@ display() {
 
   log_detailed "display: start (document_type=${document_type}, entity=${entity}, entity_id=${entity_id})"
 
+  local rc=0
   case "$document_type" in
     csr|crt|p12)
       shift
-      eval display_$document_type "$@"
+      display_"$document_type" "$@"
+      rc=$?
     ;;
     key|pub|pub_ssh)
-      OPTS=`getopt -o h --long help -n "display $document_type" -- "$@"`
-      if [ $? != 0 ] ; then error "failed parsing options. use sca display $document_type -h for help." 1; fi
+      local OPTS
+      OPTS=$(getopt -o h --long help -n "display $document_type" -- "$@") || error "failed parsing options. use sca display $document_type -h for help." 1
       eval set -- "$OPTS"
       while true; do
         case "$1" in
@@ -92,6 +94,7 @@ display() {
         fi
       fi
       cat $entity_document_file
+      rc=$?
       if ! [ -z "$old_entity" ]; then
         log_detailed "display: setting entity back for ${entity} to ${old_entity}"
         config_set ${entity} ${old_entity}
@@ -108,7 +111,8 @@ ____EOM
   esac
 
 
-  log_detailed "display: finish (document_type=${document_type}, entity=${entity})"
+  log_detailed "display: finish (document_type=${document_type}, entity=${entity}, rc=${rc})"
+  return $rc
 
 }
 display_help() {

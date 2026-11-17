@@ -14,8 +14,8 @@
 create_key() {
   local force=false
   local format=""
-  local OPTS=`getopt -o hf --long help,force,format: -n 'create key' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca create key -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hf --long help,force,format: -n 'create key' -- "$@") || error "failed parsing options. use sca create key -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -48,7 +48,25 @@ create_key() {
       error "create_key: unsupported key format '${format}'. allowed values are 'pkcs1' and 'pkcs8'." 1
     ;;
   esac
-  eval mkdir -p \${${entity}_private_folder}
+  local entity_use_security_key=$(eval echo \$${entity}_use_security_key)
+  local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
+  # the key is uploaded to the yubikey with the management key that
+  # 'sca security_key init' writes. check for it before changing anything, so
+  # a missing init leaves no key, backup or credential files behind.
+  if [ "$entity_use_security_key" = true ] && [ "${entity_security_key_type}" == "yubikey" ]; then
+    local entity_yubikey_key_file=$(eval echo \$${entity}_yubikey_key_file)
+    log_detailed "create_key: entity yubikey key file is ${entity_yubikey_key_file}."
+    [ -f "${entity_yubikey_key_file}" ] || \
+      error "create_key: no YubiKey credentials for '${entity}'. run 'sca security_key "\
+"init ${entity}' first (see sca security_key init --help)." 1
+  fi
+  # the private folder holds the key and the security key credentials, so it is
+  # kept to its owner, as 'sca security_key init' does.
+  local entity_private_folder=$(eval echo \$${entity}_private_folder)
+  [ -z "$entity_private_folder" ] && \
+    error "create_key: no private folder is configured for '$entity'." 1
+  mkdir -p "$entity_private_folder" && chmod 700 "$entity_private_folder" || \
+    error "create_key: could not create the private folder '$entity_private_folder'." 1
   local entity_key_file=$(eval echo \$${entity}_key_file)
   local entity_bits=$(eval echo \$${entity}_bits)
   # check if the key file exists
@@ -96,80 +114,6 @@ create_key() {
     # TODO: continue initializing and handing existing ca/subca files and folders below
 
   fi
-  # store the key in hardware key device if configured to do so
-  local entity_use_security_key=$(eval echo \$${entity}_use_security_key)
-  local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
-  # if the entity is configured to use the security key
-  if [ $entity_use_security_key = true ] && [ "${entity_security_key_type}" == "yubikey" ]; then
-    # we are creating yubikey security key. initialize it's files if they are not present
-
-    # check if the entity yubikey management key file exists
-    local entity_yubikey_key_file=$(eval echo \$${entity}_yubikey_key_file)
-    local entity_yubikey_key=""
-    log_detailed "create_key: entity yubikey key file is ${entity_yubikey_key_file}."
-    if [ -f "${entity_yubikey_key_file}" ]; then
-      log_detailed "create_key: entity yubikey key file exists."
-      entity_yubikey_key=$(cat ${entity_yubikey_key_file})
-    else
-      log_detailed "create_key: entity yubikey key file doesn't exist. "\
-"initializing an empty one at configured location. if this is the first security "\
-"key use, consider using 'sca security_key init' - see output of 'sca security_key init "\
-"--help' to read further in that case."
-      touch "${entity_yubikey_key_file}"
-    fi
-    if [ "${entity_yubikey_key}" == "" ]; then
-      log_detailed "create_key: entity yubikey key file doesn't exist or is empty ."\
-"either type it in each time or add it to the file '${entity_yubikey_key_file}'."
-    else
-      log_detailed "create_key: entity yubikey key file is set. will use it to "\
-"upload the yubikey key to the security key."
-    fi
-
-    # check if the entity yubikey pin file exists
-    local entity_yubikey_pin_file=$(eval echo \$${entity}_yubikey_pin_file)
-    local entity_yubikey_pin=""
-    log_detailed "create_key: entity yubikey pin file is ${entity_yubikey_pin_file}."
-    if [ -f "${entity_yubikey_pin_file}" ]; then
-      log_detailed "create_key: entity yubikey pin file exists."
-      entity_yubikey_pin=$(cat ${entity_yubikey_pin_file})
-    else
-      log_detailed "create_key: entity yubikey pin file doesn't exist. "\
-"initializing an empty one at configured location. if this is the first security "\
-"key use, consider using 'sca security_key init' - see output of 'sca security_key init "\
-"--help' to read further in that case."
-      touch "${entity_yubikey_pin_file}"
-    fi
-    if [ "${entity_yubikey_pin}" == "" ]; then
-      log_detailed "create_key: entity yubikey pin file doesn't exist or is empty ."\
-"either type it in each time or add it to the file '${entity_yubikey_pin_file}'."
-    else
-      log_detailed "create_key: entity yubikey pin file is set. will use it to "\
-"upload the yubikey key to the security key."
-    fi
-
-    # check if the entity yubikey puk file exists
-    local entity_yubikey_puk_file=$(eval echo \$${entity}_yubikey_puk_file)
-    local entity_yubikey_puk=""
-    log_detailed "create_key: entity yubikey puk file is ${entity_yubikey_puk_file}."
-    if [ -f "${entity_yubikey_puk_file}" ]; then
-      log_detailed "create_key: entity yubikey puk file exists."
-      entity_yubikey_puk=$(cat ${entity_yubikey_puk_file})
-    else
-      log_detailed "create_key: entity yubikey puk file doesn't exist. "\
-"initializing an empty one at configured location. if this is the first security "\
-"key use, consider using 'sca security_key init' - see output of 'sca security_key init "\
-"--help' to read further in that case."
-      touch "${entity_yubikey_puk_file}"
-    fi
-    if [ "${entity_yubikey_puk}" == "" ]; then
-      log_detailed "create_key: entity yubikey puk file dosn't exist or is empty ."\
-"either type it in each time or add it to the file '${entity_yubikey_puk_file}'."
-    else
-      log_detailed "create_key: entity yubikey puk file is set. will use it to "\
-"upload the yubikey key to the security key."
-    fi
-    # end of yubikey files initialization
-  fi # of if the entity is configured to use the security key
   local openssl_command="$redirect_err openssl genrsa -out ${entity_key_file} ${entity_bits}"
   log_verbose "$openssl_command"
   # generate the key for the entity

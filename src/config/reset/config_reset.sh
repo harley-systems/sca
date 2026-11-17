@@ -1,6 +1,6 @@
 config_reset() {
-  local OPTS=`getopt -o h --long help -n 'config reset' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca config reset -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'config reset' -- "$@") || error "failed parsing options. use sca config reset -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

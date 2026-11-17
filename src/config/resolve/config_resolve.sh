@@ -3,8 +3,8 @@
 # variables
 config_resolve() {
 
-  local OPTS=`getopt -o h --long help -n 'config resolve' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca config resolve -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'config resolve' -- "$@") || error "failed parsing options. use sca config resolve -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

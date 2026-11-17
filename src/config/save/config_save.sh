@@ -1,6 +1,6 @@
 config_save() {
-  local OPTS=`getopt -o h --long help -n 'config save' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca config save -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'config save' -- "$@") || error "failed parsing options. use sca config save -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

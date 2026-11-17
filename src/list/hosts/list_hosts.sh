@@ -2,8 +2,8 @@ list_hosts() {
   local output_format=$1
   shift;
 
-  local OPTS=`getopt -o h --long help -n 'list hosts' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca list hosts -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'list hosts' -- "$@") || error "failed parsing options. use sca list hosts -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -41,7 +41,7 @@ list_hosts() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_hosts: finished (host_files_folder=${host_files_folder})"

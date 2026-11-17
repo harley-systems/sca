@@ -1,6 +1,13 @@
 wait_for_options:
 
-  -h, --help      - print this help
-  --device SERIAL - use the security key with this serial instead of the one
-                    configured for the entity. needed to reach a second
-                    (backup) key of the same entity.
+  -h, --help        - print this help
+  --device SERIAL   - use the security key with this serial instead of the one
+                      configured for the entity. needed to reach a second
+                      (backup) key of the same entity.
+  --timeout SECONDS - give up and fail after SECONDS when the key is not
+                      attached. 0 waits forever. when not given, the
+                      security_key_wait_timeout variable (from the environment
+                      or an export line in sca.config) is used; when that is
+                      not set either, there is no limit if stdin is a
+                      terminal, and the limit is 10 seconds if it is not (a
+                      script, ci, a pipe).

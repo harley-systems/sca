@@ -7,8 +7,8 @@
 #     allowed values are 'subca' 'user' 'host' and 'service'
 #
 display_csr() {
-  local OPTS=`getopt -o h --long help -n "display csr" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca display csr -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n "display csr" -- "$@") || error "failed parsing options. use sca display csr -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

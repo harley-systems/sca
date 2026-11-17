@@ -42,8 +42,8 @@ init_sca_usb_stick() {
   local exclude_pkcs11_support=false
   local no_cache_iso=false
 
-  local OPTS=`getopt -o hstiyxon --long help,skip-cleanup,test-image,include-apt-mirror,yubikey-support,exclude-pkcs11-support,no-cache-iso,no-cache -n "init sca_usb_stick" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca init sca_usb_stick -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o hstiyxon --long help,skip-cleanup,test-image,include-apt-mirror,yubikey-support,exclude-pkcs11-support,no-cache-iso,no-cache -n "init sca_usb_stick" -- "$@") || error "failed parsing options. use sca init sca_usb_stick -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -248,12 +248,17 @@ get_test_results_disk_label() {
   echo "sca-test-results"
 }
 ################################################################################
-# fails unless the tools used for building the sca usb stick image are present
+# fails unless this host can build the sca usb stick image, an x86_64 host,
+# and the tools used for building it are present
 #
 # parameters
 #   include_apt_mirror - whether apt-mirror is needed as well
 check_iso_image_tools() {
   local include_apt_mirror=$1
+
+  if ! is_usb_stick_build_host; then
+    error "init sca_usb_stick: this host is $(build_host_architecture). the sca usb stick is amd64 and can only be built on an ${sca_usb_stick_build_architecture} host." 1
+  fi
 
   local tools=(wget gpgv base64 sha256sum md5sum xorriso mksquashfs unsquashfs apt-get)
   [ "$include_apt_mirror" = true ] && tools+=(apt-mirror)

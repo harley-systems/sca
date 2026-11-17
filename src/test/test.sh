@@ -4,8 +4,8 @@ test() {
   local mode=online
   local skip_offline=false
 
-  local OPTS=`getopt -o has --long help,air-gapped,skip-air-gapped-tests -n 'sca test' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca test -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o has --long help,air-gapped,skip-air-gapped-tests -n 'sca test' -- "$@") || error "failed parsing options. use sca test -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

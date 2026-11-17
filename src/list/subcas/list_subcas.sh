@@ -2,8 +2,8 @@ list_subcas() {
   local output_format=$1
   shift;
 
-  local OPTS=`getopt -o h --long help -n 'list subcas' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca list subcas -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'list subcas' -- "$@") || error "failed parsing options. use sca list subcas -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -41,7 +41,7 @@ list_subcas() {
 
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_subcas: finished (subca_files_folder=${subca_files_folder})"

@@ -33,8 +33,13 @@ not change the other.
 |---------------|--------|------------------|
 | `sudo apt install gnupg scdaemon yubikey-manager` | `sudo dnf install gnupg2 pcsc-lite yubikey-manager` | `brew install gnupg pinentry-mac ykman` |
 
-`sca install` installs the PIV packages only. Installing the OpenPGP packages
-is **not yet automated**.
+On Ubuntu/Debian, `sca install --openpgp` installs these packages. Add
+`--configure-scdaemon` to have `scdaemon` share the YubiKey with the PIV tools
+through `pcscd` (see [Coexistence with PIV and SCA](#8-coexistence-with-piv-and-sca)):
+
+```bash
+sca install --openpgp [--configure-scdaemon]
+```
 
 On macOS, tell `gpg-agent` to use the graphical PIN prompt:
 
@@ -356,6 +361,12 @@ export GPG_TTY="$(tty)"
 The authentication subkey can also be used for SSH through `gpg-agent`. See
 [OpenPGP (gpg-agent) SSH](ssh-yubikey-options.md#openpgp-gpg-agent-ssh); you
 can skip its step 1, since the `[A]` subkey is already on the card.
+In short:
+
+```bash
+sca security_key openpgp_ssh setup --shell-rc ~/.bashrc
+sca security_key openpgp_ssh public_key      # for ~/.ssh/authorized_keys
+```
 
 ## 6. Backup YubiKey
 

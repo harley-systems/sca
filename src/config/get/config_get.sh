@@ -8,8 +8,8 @@
 #
 config_get() {
 
-  OPTS=`getopt -o h --long help -n 'config get' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca config get -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'config get' -- "$@") || error "failed parsing options. use sca config get -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

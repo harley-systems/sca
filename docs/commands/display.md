@@ -27,7 +27,12 @@ allowed values for the document_type are:
   - crt           - display certificate
   - key           - display private key
   - pub           - display public key
-  - pub_ssh       - display
+  - pub_ssh       - display public key in OpenSSH format
+  - p12           - display the contents of a PKCS#12 bundle
+
+p12 takes the path to the .p12 file to display instead of an entity:
+
+  sca display p12 [options] <file>
 
 allowed values for the entity are:
 
@@ -53,7 +58,7 @@ document_type of interest.
 
 - [crt](#sca-display-crt) - display certificate
 - [csr](#sca-display-csr) - display certificate signing request
-- [p12](#sca-display-p12)
+- [p12](#sca-display-p12) - display the contents of a PKCS#12 bundle
 
 ---
 
@@ -175,6 +180,9 @@ Arguments:
 
 Options:
   -p, --password      Password for the p12 file (prompted if not provided)
+                      Other local users can read a password given here in
+                      the process list, and it is saved in shell history;
+                      leave it out and type it at the prompt instead
   -h, --help          Show this help message
 ```
 
@@ -184,6 +192,7 @@ Options:
 # Display PKCS#12 bundle contents
 sca display p12 ~/.sca/transfer/aharon.p12
 
-# Display p12 with password
+# Display p12 with the password on the command line
+# (fine for tests; for a real password leave out -p and type it at the prompt)
 sca display p12 -p mypassword certificate.p12
 ```

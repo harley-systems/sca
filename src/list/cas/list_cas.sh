@@ -2,8 +2,8 @@ list_cas() {
   local output_format=$1
   shift;
 
-  local OPTS=`getopt -o h --long help -n 'sca list cas' -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca list cas -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'sca list cas' -- "$@") || error "failed parsing options. use sca list cas -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -39,7 +39,7 @@ list_cas() {
     esac
   else
     # parent folder doesn't exist. possibly missconfiguration. existing
-    return
+    return 0
   fi
 
   log_detailed "list_cas: finished (ca_files_folder=${ca_files_folder},output_format=${output_format})"

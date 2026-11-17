@@ -14,8 +14,8 @@ scrub_log() {
 
   # read the options
   local OPTS
-  OPTS=$(getopt -o h --long help -n 'scrub_log' -- "$@")
-  if [ $? != 0 ] ; then error "failed parsing options. use sca scrub_log -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n 'scrub_log' -- "$@") || error "failed parsing options. use sca scrub_log -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

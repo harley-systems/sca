@@ -26,6 +26,7 @@ allowed values for the document_type are:
 
   - crt_pub_ssh   - export certificate, public key and public key in OpenSSH form bundle archive
   - csr           - export certificate signing request
+  - p12           - export certificate, private key and CA chain as a PKCS#12 bundle
 
 allowed values for the entity are:
 
@@ -47,7 +48,7 @@ document_type of interest.
 
 - [crt_pub_ssh](#sca-export-crt_pub_ssh) - export certificate, public key and public key in OpenSSH form bundle archive
 - [csr](#sca-export-csr) - export certificate signing request
-- [p12](#sca-export-p12)
+- [p12](#sca-export-p12) - export certificate, private key and CA chain as a PKCS#12 bundle
 
 ---
 
@@ -155,13 +156,14 @@ Arguments:
 
 Options:
   -p, --password      Password to protect the p12 file (prompted if not provided)
+                      Other local users can read a password given here in
+                      the process list, and it is saved in shell history;
+                      leave it out and type it at the prompt instead
   -n, --friendly-name Friendly name for the certificate in the p12 bundle
   -l, --legacy        Use legacy encryption algorithms for compatibility
   -o, --output        Output file path (default: transfer folder)
   -h, --help          Show this help message
 ```
-
-The friendly name (`-n`) must not contain spaces.
 
 **Examples:**
 
@@ -169,7 +171,8 @@ The friendly name (`-n`) must not contain spaces.
 # Export PKCS#12 bundle for mobile VPN client
 sca export p12 user
 
-# Export p12 with custom password and friendly name
+# Export p12 with a password on the command line and a friendly name
+# (fine for tests; for a real password leave out -p and type it at the prompt)
 sca export p12 -p mypassword -n My-VPN-Certificate user
 
 # Export p12 with legacy encryption for older software

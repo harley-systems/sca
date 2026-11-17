@@ -8,8 +8,8 @@
 #
 init_openssl_ca_db() {
 
-  local OPTS=`getopt -o h --long help -n "init openssl_ca_db" -- "$@"`
-  if [ $? != 0 ] ; then error "failed parsing options. use sca init openssl_ca_db -h for help." 1; fi
+  local OPTS
+  OPTS=$(getopt -o h --long help -n "init openssl_ca_db" -- "$@") || error "failed parsing options. use sca init openssl_ca_db -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in

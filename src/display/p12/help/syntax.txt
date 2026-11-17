@@ -5,4 +5,7 @@ Arguments:
 
 Options:
   -p, --password      Password for the p12 file (prompted if not provided)
+                      Other local users can read a password given here in
+                      the process list, and it is saved in shell history;
+                      leave it out and type it at the prompt instead
   -h, --help          Show this help message
