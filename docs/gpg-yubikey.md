@@ -79,6 +79,31 @@ Each has a retry counter (3 by default). When the user PIN counter reaches 0
 the user PIN is blocked; when the admin PIN counter reaches 0 the only way out
 is to [reset the applet](#reset-the-openpgp-applet).
 
+### With sca
+
+```bash
+sca security_key openpgp_init --reset-code     # retries 5 5 5, then the new PINs
+```
+
+`sca security_key openpgp_init` needs no `sca` configuration. On a card that
+still has the default admin PIN it sets the retry counters (5, or
+`--retries N`) first, then asks for a new user PIN, reset code (only with
+`--reset-code`) and admin PIN, each typed twice, and changes the admin PIN
+last. A card whose admin PIN is no longer the default is refused, and nothing
+is changed; finding that out costs one admin PIN try. To change the PINs again
+later, add `--roll`: it asks for the current admin PIN and leaves the retry
+counters alone. With more than one YubiKey attached, pick one with
+`--device SERIAL`.
+
+The PINs never go on a command line or into `~/.sca/log`, and `sca` does not
+store them: write the admin PIN and reset code down and keep them with your
+offline backup. For unattended use the PINs can be read from files
+(`--user-pin-file`, `--admin-pin-file`, `--reset-code-file`,
+`--current-admin-pin-file`); see
+[the command reference](commands/security_key.md#sca-security_key-openpgp_init).
+
+The rest of this section is the manual alternative.
+
 ### Retries
 
 Set the retry counters **first**: on firmware before 4.0, changing them puts

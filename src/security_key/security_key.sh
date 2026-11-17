@@ -14,15 +14,15 @@ security_key() {
   log_detailed "security_key: start (security_key_command=${security_key_command})"
   local rc=0
   case "$security_key_command" in
-    get_crt|id|info|init|openpgp_git|openpgp_ssh|unblock_pin|upload|verify|wait_for )
+    get_crt|id|info|init|openpgp_git|openpgp_init|openpgp_ssh|unblock_pin|upload|verify|wait_for )
       security_key_"$security_key_command" "$@"
       rc=$?
       ;;
     *)
       read -r -d '' message <<- ____EOM
         invalid value '$security_key_command' for security_key_command (first) argument.
-        supported values are 'get_crt', 'id', 'info', 'init', 'openpgp_git', 'openpgp_ssh',
-        'unblock_pin', 'upload', 'verify', and 'wait_for'.
+        supported values are 'get_crt', 'id', 'info', 'init', 'openpgp_git', 'openpgp_init',
+        'openpgp_ssh', 'unblock_pin', 'upload', 'verify', and 'wait_for'.
         use sca security_key -h for help.
 ____EOM
       error "$message" 1
@@ -378,4 +378,77 @@ security_key_select_device() {
   local reader_name
   reader_name=$(security_key_reader_name "$reader_slot_number") || exit $?
   printf '%s\t%s\n' "$serial" "$reader_name"
+}
+################################################################################
+# exits, naming the first missing one, unless all the given tools are found.
+# shared by the security_key openpgp_* commands.
+#
+# parameters
+#   command - the command name the messages start with, e.g.
+#             security_key_openpgp_ssh
+#   tool... - gpg, gpgconf, git, ykman, ...
+security_key_openpgp_need_tools() {
+  local command="$1"
+  shift
+  local tool
+  for tool in "$@"; do
+    command -v "$tool" >/dev/null 2>&1 && continue
+    if [ "$tool" = git ]; then
+      error "$command: git not found. install git (e.g. "\
+"sudo apt install git)." 1
+    fi
+    error "$command: $tool not found. install the OpenPGP "\
+"packages with sca install --openpgp." 1
+  done
+}
+################################################################################
+# reads gpg's current OpenPGP card into security_key_openpgp_card_status
+# (gpg --card-status --with-colons), or exits with what to do.
+# shared by the security_key openpgp_* commands.
+#
+# parameters
+#   command - the command name the message starts with, e.g.
+#             security_key_openpgp_ssh
+#   mode    - the mode (setup, public_key), or empty for a command without one
+security_key_openpgp_read_card() {
+  local command="$1"
+  local mode="$2"
+  security_key_openpgp_card_status=$(gpg --batch --card-status --with-colons 2>/dev/null) || \
+    error "$command${mode:+ $mode}: no OpenPGP card found. plug in "\
+"the YubiKey, check that pcscd or scdaemon can reach it ('gpg --card-status'), "\
+"and that the OpenPGP packages are installed (sca install --openpgp)." 1
+}
+################################################################################
+# selects the yubikey an OpenPGP command acts on with ykman alone, and prints
+# its serial. it follows security_key_select_device, but doesn't need the
+# opensc and PIV tools, which an OpenPGP-only setup may not have: no key found
+# is an error, more than one without --device is refused with the serials
+# listed, and --device must name an attached key.
+#
+# parameters
+#   command - the command name the messages start with
+#   device  - the serial asked for with --device, or empty
+security_key_openpgp_select_device() {
+  local command="$1"
+  local device="$2"
+  local attached
+  attached=$(ykman list --serials 2>/dev/null | awk 'NF { print $1 }')
+  local serials=$(printf '%s\n' "$attached" | awk 'NF { printf "%s%s", sep, $1; sep=", " }')
+  log_detailed "security_key_openpgp_select_device: device:'$device' attached:'$serials'"
+  local count=$(printf '%s\n' "$attached" | awk 'NF' | wc -l)
+  [ "$count" -eq 0 ] && \
+    error "$command: no YubiKey found ('ykman list --serials' lists none). "\
+"plug one in and retry." 1
+  if [ -z "$device" ]; then
+    if [ "$count" -gt 1 ]; then
+      error "$command: more than one security key is attached (serials: "\
+"$serials). choose one with --device SERIAL." 1
+    fi
+    printf '%s\n' "$attached"
+    return 0
+  fi
+  printf '%s\n' "$attached" | grep -qxF -- "$device" || \
+    error "$command: no security key with serial '$device' is attached "\
+"(attached: $serials)." 1
+  printf '%s\n' "$device"
 }

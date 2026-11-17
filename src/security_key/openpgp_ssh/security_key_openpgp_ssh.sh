@@ -56,7 +56,7 @@ security_key_openpgp_ssh_setup() {
   done
   [ $# -gt 0 ] && error "security_key_openpgp_ssh setup: unexpected argument '$1'. "\
 "use sca security_key openpgp_ssh -h for help." 1
-  security_key_openpgp_ssh_need_tools gpgconf
+  security_key_openpgp_need_tools security_key_openpgp_ssh gpgconf
   log_detailed "security_key_openpgp_ssh_setup: started (shell_rc='$shell_rc', dry_run=$dry_run)"
   local homedir
   homedir=$(gpgconf --list-dirs homedir)
@@ -168,19 +168,15 @@ security_key_openpgp_ssh_public_key() {
   done
   [ $# -gt 0 ] && error "security_key_openpgp_ssh public_key: unexpected argument '$1'. "\
 "use sca security_key openpgp_ssh -h for help." 1
-  security_key_openpgp_ssh_need_tools gpg gpgconf
+  security_key_openpgp_need_tools security_key_openpgp_ssh gpg gpgconf
   log_detailed "security_key_openpgp_ssh_public_key: started (output='$output')"
   [ -n "$output" ] && [ -e "$output" ] && \
     error "security_key_openpgp_ssh public_key: '$output' already exists and is "\
 "never overwritten. choose another file with -o FILE." 1
-  local card_status
-  card_status=$(gpg --batch --card-status --with-colons 2>/dev/null) || \
-    error "security_key_openpgp_ssh public_key: no OpenPGP card found. plug in "\
-"the YubiKey, check that pcscd or scdaemon can reach it ('gpg --card-status'), "\
-"and that the OpenPGP packages are installed (sca install --openpgp)." 1
+  security_key_openpgp_read_card security_key_openpgp_ssh public_key
   # fpr:<signature>:<encryption>:<authentication>:
   local fingerprint
-  fingerprint=$(printf '%s\n' "$card_status" | awk -F: '$1 == "fpr" { print $4; exit }')
+  fingerprint=$(printf '%s\n' "$security_key_openpgp_card_status" | awk -F: '$1 == "fpr" { print $4; exit }')
   log_detailed "security_key_openpgp_ssh_public_key: authentication key='$fingerprint'"
   [[ "$fingerprint" =~ ^[0-9A-Fa-f]+$ ]] || \
     error "security_key_openpgp_ssh public_key: the card has no authentication "\
@@ -219,19 +215,6 @@ security_key_openpgp_ssh_export_failed() {
 "authentication key $1. its public key is probably not in this machine's "\
 "keyring: import it with 'gpg --import <file>', or run 'gpg --card-edit' and "\
 "'fetch' if the card has a URL set, then retry." 1
-}
-################################################################################
-# exits, naming the first missing one, unless all the given tools are found
-#
-# parameters
-#   tool... - gpg, gpgconf
-security_key_openpgp_ssh_need_tools() {
-  local tool
-  for tool in "$@"; do
-    command -v "$tool" >/dev/null 2>&1 || \
-      error "security_key_openpgp_ssh: $tool not found. install the OpenPGP "\
-"packages with sca install --openpgp." 1
-  done
 }
 ################################################################################
 # appends lines to a file, adding a newline first if the file doesn't end with
