@@ -30,6 +30,7 @@ The security key command is one of the following:
   info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
   openpgp_git - set up Git commit and tag signing with the OpenPGP signature key
+  openpgp_init - replace the factory default PINs of the OpenPGP applet
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
@@ -51,6 +52,7 @@ Every `security_key` subcommand except `openpgp_ssh` and `openpgp_git` accepts `
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
 - `id`: lists only the named key, and fails if it is not attached.
+- `openpgp_init`: finds the keys with `ykman list --serials` alone, and refuses, as `info` does, when more than one is attached and no `--device` is given. It then makes gpg act on that key, and refuses if it can not.
 
 ```bash
 sca security_key id                         # 12345678 0
@@ -68,6 +70,7 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 - [info](#sca-security_key-info) - show the status of every PIV slot on the security key
 - [init](#sca-security_key-init) - first time initialization of security_key
 - [openpgp_git](#sca-security_key-openpgp_git) - set up Git commit and tag signing with the OpenPGP signature key
+- [openpgp_init](#sca-security_key-openpgp_init) - replace the factory default PINs of the OpenPGP applet
 - [openpgp_ssh](#sca-security_key-openpgp_ssh) - set up SSH with the OpenPGP authentication key and gpg-agent
 - [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
@@ -342,6 +345,95 @@ git commit --allow-empty -m test && git log --show-signature -1
 ```
 
 See [GPG with a YubiKey](../gpg-yubikey.md#54-git-commit-and-tag-signing) for the manual steps, and [section 3](../gpg-yubikey.md#3-keys) to put a signature key on the card.
+
+---
+
+## sca security_key openpgp_init
+
+```text
+The security key openpgp_init command help
+
+The security key openpgp_init command replaces the factory default PINs of the
+YubiKey's OpenPGP applet (user PIN 123456, admin PIN 12345678), which sca
+security_key openpgp_ssh and openpgp_git rely on. It needs no sca
+configuration, and leaves the PIV PIN, PUK and management key alone.
+
+On a card that still has the default admin PIN, it sets the user PIN, reset
+code and admin PIN retry counters (5 unless --retries says otherwise), then a
+new user PIN, the reset code if asked for, and last a new admin PIN. Each new
+PIN is typed twice. If the card's admin PIN is no longer the default, it stops
+and changes nothing, unless --roll is given: then it asks for the current admin
+PIN and changes the PINs with it. --roll leaves the retry counters alone.
+
+Telling whether the admin PIN is still the default costs one admin PIN try when
+it isn't; the right admin PIN resets the counter. With one try or none left,
+nothing is tried.
+
+No PIN is ever put on a command line, in the log or in a file: gpg gets them on
+its stdin. The one exception is the public factory default 12345678, which
+ykman needs as an argument to set the retry counters. sca does not store the
+PINs: write the admin PIN and reset code down.
+
+The admin PIN is changed last, so if a run fails part way, the error says what
+was already done, and rerunning the same command finishes the job.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] openpgp_init [<openpgp_init_options>]
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+openpgp_init_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - use the YubiKey with this serial. needed when more
+                        than one is attached
+  --retries N         - set the three retry counters to N (1 to 99) instead of
+                        5. not with --roll
+  --roll              - the PINs were changed before: ask for the current
+                        admin PIN and change them again
+  --reset-code        - set a reset code too, which unblocks the user PIN
+                        without the admin PIN
+
+  for unattended use, each PIN can be read from a file instead of the
+  terminal (one line; a trailing newline is dropped). /dev/fd/N and <(...)
+  work. PINs are never taken as option values:
+
+  --user-pin-file FILE          - the new user PIN (6 to 127 characters)
+  --admin-pin-file FILE         - the new admin PIN (8 to 127 characters)
+  --reset-code-file FILE        - the new reset code (8 to 127 characters);
+                                  implies --reset-code
+  --current-admin-pin-file FILE - the current admin PIN, with --roll only
+```
+
+**What it does:**
+- Picks the YubiKey with `ykman list --serials` (`--device SERIAL` when more than one is attached), and checks that gpg's current OpenPGP card has that serial, switching to it if it can; otherwise it refuses, so the PINs of another key are never touched
+- Asks for every PIN first (each new one twice), or reads it from the `--*-file` options, and checks them before touching the card: user PIN 6 to 127 characters, admin PIN and reset code 8 to 127, a single line, the user PIN not `123456`, the new admin PIN not the current one, and the user and admin PINs different
+- Without `--roll`: `ykman openpgp access set-retries N N N` (N is 5, or `--retries N`), first, because on firmware before 4.0 it puts the PINs back to their defaults. It also tells whether the admin PIN is still `12345678`: if the card rejects it, nothing is changed, and one admin PIN try is spent
+- Then, with `gpg --change-pin` under `--pinentry-mode loopback`, the PINs on its stdin: the user PIN (set with the admin PIN, so `--roll` doesn't need the current user PIN), the reset code (with `--reset-code` or `--reset-code-file`), and the admin PIN, last
+- With `--roll`, the current admin PIN is asked for (or read from `--current-admin-pin-file`) and the retry counters are left alone; set them by hand with `ykman openpgp access set-retries`, which asks for the admin PIN
+- With the admin PIN retry counter at 1 or 0, nothing is tried
+- Prints the retry counters read back from the card. sca stores no PIN: write the admin PIN and reset code down
+
+**Example:**
+```bash
+sca install --openpgp                          # gnupg, scdaemon, ykman
+sca security_key openpgp_init --reset-code     # asks for the new PINs
+gpg --card-status                              # "PIN retry counter : 5 5 5"
+sca security_key openpgp_init --roll           # change them again later
+```
+
+Unattended, with the PINs in files:
+```bash
+sca security_key openpgp_init --device 12345678 --retries 5 \
+  --user-pin-file user.pin --admin-pin-file admin.pin --reset-code-file reset.pin
+```
+
+See [GPG with a YubiKey](../gpg-yubikey.md#2-set-up-the-card) for the manual steps.
 
 ---
 

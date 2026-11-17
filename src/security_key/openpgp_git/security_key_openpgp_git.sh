@@ -61,7 +61,7 @@ security_key_openpgp_git_setup() {
   done
   [ $# -gt 0 ] && error "security_key_openpgp_git setup: unexpected argument '$1'. "\
 "use sca security_key openpgp_git -h for help." 1
-  security_key_openpgp_git_need_tools gpg git
+  security_key_openpgp_need_tools security_key_openpgp_git gpg git
   log_detailed "security_key_openpgp_git_setup: started (scope=$scope, tags=$tags, dry_run=$dry_run)"
   if [ "$scope" = --local ] && ! git rev-parse --git-dir >/dev/null 2>&1; then
     error "security_key_openpgp_git setup: --local must be run inside a git "\
@@ -211,7 +211,7 @@ security_key_openpgp_git_public_key() {
   done
   [ $# -gt 0 ] && error "security_key_openpgp_git public_key: unexpected argument '$1'. "\
 "use sca security_key openpgp_git -h for help." 1
-  security_key_openpgp_git_need_tools gpg
+  security_key_openpgp_need_tools security_key_openpgp_git gpg
   log_detailed "security_key_openpgp_git_public_key: started (output='$output')"
   [ -n "$output" ] && [ -e "$output" ] && \
     error "security_key_openpgp_git public_key: '$output' already exists and is "\
@@ -254,13 +254,9 @@ security_key_openpgp_git_public_key() {
 #   mode - setup or public_key, for the error messages
 security_key_openpgp_git_read_card() {
   local mode="$1"
-  local card_status
-  card_status=$(gpg --batch --card-status --with-colons 2>/dev/null) || \
-    error "security_key_openpgp_git $mode: no OpenPGP card found. plug in "\
-"the YubiKey, check that pcscd or scdaemon can reach it ('gpg --card-status'), "\
-"and that the OpenPGP packages are installed (sca install --openpgp)." 1
+  security_key_openpgp_read_card security_key_openpgp_git "$mode"
   # fpr:<signature>:<encryption>:<authentication>:
-  security_key_openpgp_git_fingerprint=$(printf '%s\n' "$card_status" | awk -F: '$1 == "fpr" { print $2; exit }')
+  security_key_openpgp_git_fingerprint=$(printf '%s\n' "$security_key_openpgp_card_status" | awk -F: '$1 == "fpr" { print $2; exit }')
   log_detailed "security_key_openpgp_git_read_card: signature key='$security_key_openpgp_git_fingerprint'"
   [[ "$security_key_openpgp_git_fingerprint" =~ ^[0-9A-Fa-f]+$ ]] || \
     error "security_key_openpgp_git $mode: the card has no signature key. put "\
@@ -277,23 +273,6 @@ security_key_openpgp_git_no_public_key() {
   error "security_key_openpgp_git $1: the public key of the signature key "\
 "$2 is not in this machine's keyring: import it with 'gpg --import <file>', "\
 "or run 'gpg --card-edit' and 'fetch' if the card has a URL set, then retry." 1
-}
-################################################################################
-# exits, naming the first missing one, unless all the given tools are found
-#
-# parameters
-#   tool... - gpg, git
-security_key_openpgp_git_need_tools() {
-  local tool
-  for tool in "$@"; do
-    command -v "$tool" >/dev/null 2>&1 && continue
-    if [ "$tool" = git ]; then
-      error "security_key_openpgp_git: git not found. install git (e.g. "\
-"sudo apt install git)." 1
-    fi
-    error "security_key_openpgp_git: $tool not found. install the OpenPGP "\
-"packages with sca install --openpgp." 1
-  done
 }
 security_key_openpgp_git_help() {
   cat <<'SCA_HELP'

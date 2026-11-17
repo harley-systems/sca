@@ -1,0 +1,21 @@
+openpgp_init_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - use the YubiKey with this serial. needed when more
+                        than one is attached
+  --retries N         - set the three retry counters to N (1 to 99) instead of
+                        5. not with --roll
+  --roll              - the PINs were changed before: ask for the current
+                        admin PIN and change them again
+  --reset-code        - set a reset code too, which unblocks the user PIN
+                        without the admin PIN
+
+  for unattended use, each PIN can be read from a file instead of the
+  terminal (one line; a trailing newline is dropped). /dev/fd/N and <(...)
+  work. PINs are never taken as option values:
+
+  --user-pin-file FILE          - the new user PIN (6 to 127 characters)
+  --admin-pin-file FILE         - the new admin PIN (8 to 127 characters)
+  --reset-code-file FILE        - the new reset code (8 to 127 characters);
+                                  implies --reset-code
+  --current-admin-pin-file FILE - the current admin PIN, with --roll only

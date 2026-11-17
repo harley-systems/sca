@@ -1,0 +1,23 @@
+The security key openpgp_init command replaces the factory default PINs of the
+YubiKey's OpenPGP applet (user PIN 123456, admin PIN 12345678), which sca
+security_key openpgp_ssh and openpgp_git rely on. It needs no sca
+configuration, and leaves the PIV PIN, PUK and management key alone.
+
+On a card that still has the default admin PIN, it sets the user PIN, reset
+code and admin PIN retry counters (5 unless --retries says otherwise), then a
+new user PIN, the reset code if asked for, and last a new admin PIN. Each new
+PIN is typed twice. If the card's admin PIN is no longer the default, it stops
+and changes nothing, unless --roll is given: then it asks for the current admin
+PIN and changes the PINs with it. --roll leaves the retry counters alone.
+
+Telling whether the admin PIN is still the default costs one admin PIN try when
+it isn't; the right admin PIN resets the counter. With one try or none left,
+nothing is tried.
+
+No PIN is ever put on a command line, in the log or in a file: gpg gets them on
+its stdin. The one exception is the public factory default 12345678, which
+ykman needs as an argument to set the retry counters. sca does not store the
+PINs: write the admin PIN and reset code down.
+
+The admin PIN is changed last, so if a run fails part way, the error says what
+was already done, and rerunning the same command finishes the job.

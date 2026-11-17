@@ -9,7 +9,7 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_init openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
       get_crt )
@@ -27,6 +27,9 @@ _sca_security_key_complete() {
       openpgp_git )
         _sca_security_key_openpgp_git_complete $subcommand_index
       ;;
+      openpgp_init )
+        _sca_security_key_openpgp_init_complete $subcommand_index
+      ;;
       openpgp_ssh )
         _sca_security_key_openpgp_ssh_complete $subcommand_index
       ;;
@@ -43,7 +46,7 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_init openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
       ;;
     esac
   fi
@@ -189,6 +192,23 @@ _sca_security_key_openpgp_git_complete() {
           suggestions=($(compgen -W "-h --help -o --output" -- "$current_word"))
         ;;
       esac
+    ;;
+  esac
+}
+_sca_security_key_openpgp_init_complete() {
+  local previous_word=${COMP_WORDS[$((COMP_CWORD-1))]}
+  case "$previous_word" in
+    --device )
+      _sca_security_key_device_complete
+    ;;
+    --retries )
+      suggestions=()
+    ;;
+    --user-pin-file|--admin-pin-file|--reset-code-file|--current-admin-pin-file )
+      suggestions=($(compgen -f -- "$current_word"))
+    ;;
+    * )
+      suggestions=($(compgen -W "-h --help --device --retries --roll --reset-code --user-pin-file --admin-pin-file --reset-code-file --current-admin-pin-file" -- "$current_word"))
     ;;
   esac
 }
