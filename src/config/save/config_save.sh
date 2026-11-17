@@ -22,74 +22,78 @@ config_save() {
   shift
   log_detailed "config_save: start (sca_config_file=${sca_config_file})"
 
-  [ -z ${sca_conf_folder} ] && sca_conf_folder=~/.sca/config/
+  [ -z "${sca_conf_folder}" ] && sca_conf_folder=~/.sca/config/
 
-  sca_config_content='
+  # every value is written with printf %q, so the file sources back to
+  # exactly these values and nothing in a value runs
+  sca_config_content="$(cat <<EOF
+
 #################################################
 # settings
 # default value for verbosity level - none, v, vv
-export verbosity_default='$verbosity'
+export verbosity_default=$(printf %q "${verbosity}")
 #
-export name_default='$name'
+export name_default=$(printf %q "${name}")
 #
-export caps_name_default='$caps_name'
+export caps_name_default=$(printf %q "${caps_name}")
 #
-export domain_default='$domain'
+export domain_default=$(printf %q "${domain}")
 #
-export ca_bits_default='$ca_bits'
+export ca_bits_default=$(printf %q "${ca_bits}")
 #
-export subca_default='$subca'
+export subca_default=$(printf %q "${subca}")
 #
-export subca_name_default='$subca_name'
+export subca_name_default=$(printf %q "${subca_name}")
 #
-export subca_surname_default='$subca_surname'
+export subca_surname_default=$(printf %q "${subca_surname}")
 #
-export subca_given_name_default='$subca_given_name'
+export subca_given_name_default=$(printf %q "${subca_given_name}")
 #
-export subca_initials_default='$subca_initials'
+export subca_initials_default=$(printf %q "${subca_initials}")
 #
-export subca_bits_default='$subca_bits'
+export subca_bits_default=$(printf %q "${subca_bits}")
 #
-export service_default='$service'
+export service_default=$(printf %q "${service}")
 #
-export service_bits_default='$service_bits'
+export service_bits_default=$(printf %q "${service_bits}")
 #
-export host_default='$host'
+export host_default=$(printf %q "${host}")
 #
-export host_bits_default='$host_bits'
+export host_bits_default=$(printf %q "${host_bits}")
 #
-export user_default='$user'
+export user_default=$(printf %q "${user}")
 #
-export user_name_default='$user_name'
+export user_name_default=$(printf %q "${user_name}")
 #
-export user_surname_default='$user_surname'
+export user_surname_default=$(printf %q "${user_surname}")
 #
-export user_given_name_default='$user_given_name'
+export user_given_name_default=$(printf %q "${user_given_name}")
 #
-export user_initials_default='$user_initials'
+export user_initials_default=$(printf %q "${user_initials}")
 #
-export user_bits_default='$user_bits'
+export user_bits_default=$(printf %q "${user_bits}")
 #
-export suffix_default='$suffix'
+export suffix_default=$(printf %q "${suffix}")
 #
-export caps_suffix_default="'$caps_suffix'"
+export caps_suffix_default=$(printf %q "${caps_suffix}")
 
 #################################################
 # folder settings
 #
-export demo_folder_default='$demo_folder'
+export demo_folder_default=$(printf %q "${demo_folder}")
 #
-export key_folder_default='$key_folder'
+export key_folder_default=$(printf %q "${key_folder}")
 #
-export transfer_folder_default='$transfer_folder'
+export transfer_folder_default=$(printf %q "${transfer_folder}")
 # the folder containing the sca script
-export sca_folder_default='$sca_folder'
+export sca_folder_default=$(printf %q "${sca_folder}")
 # the folder in which to keep openssl configuration files and template
-export sca_conf_folder_default='$sca_conf_folder'
-  '
+export sca_conf_folder_default=$(printf %q "${sca_conf_folder}")
+EOF
+)"
   # create sca_config if not present, otherwise ask to remove existing and
   # create if confirmed
-  if [ -f ${sca_config_file} ]; then
+  if [ -f "${sca_config_file}" ]; then
     read -p "file $sca_config_file exists. remove?" -n 1 -r
     echo    # (optional) move to a new line
     if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -99,7 +103,7 @@ export sca_conf_folder_default='$sca_conf_folder'
     fi
   fi
 
-  echo "${sca_config_content}" > ${sca_config_file}
+  echo "${sca_config_content}" > "${sca_config_file}"
 
   log_detailed "config_save: finished (sca_config_file=${sca_config_file})"
 }
