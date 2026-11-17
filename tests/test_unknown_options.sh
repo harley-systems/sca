@@ -34,6 +34,10 @@ assert_rejected create key -Z service
 assert_rejected security_key info --bogus
 assert_rejected security_key info --devcie 1234
 assert_rejected security_key init --bogus subca
+assert_rejected security_key openpgp_key create --bogus
+assert_rejected security_key openpgp_key to_card --bogus
+# --admin-pin-file needs a value
+assert_rejected security_key openpgp_key to_card --admin-pin-file
 assert_rejected export p12 --bogus service
 # --password needs a value
 assert_rejected export p12 service --password

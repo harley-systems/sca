@@ -9,7 +9,7 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_key openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
       get_crt )
@@ -27,6 +27,9 @@ _sca_security_key_complete() {
       openpgp_git )
         _sca_security_key_openpgp_git_complete $subcommand_index
       ;;
+      openpgp_key )
+        _sca_security_key_openpgp_key_complete $subcommand_index
+      ;;
       openpgp_ssh )
         _sca_security_key_openpgp_ssh_complete $subcommand_index
       ;;
@@ -43,7 +46,7 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_key openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
       ;;
     esac
   fi
@@ -187,6 +190,51 @@ _sca_security_key_openpgp_git_complete() {
         ;;
         * )
           suggestions=($(compgen -W "-h --help -o --output" -- "$current_word"))
+        ;;
+      esac
+    ;;
+  esac
+}
+_sca_security_key_openpgp_key_complete() {
+  local openpgp_key_index=$1
+  local mode_index=$((openpgp_key_index+1))
+  if [ $COMP_CWORD == $mode_index ]; then
+    suggestions=($(compgen -W "-h --help create to_card" -- "$current_word"))
+    return
+  fi
+  local mode=${COMP_WORDS[$mode_index]}
+  local previous_word=${COMP_WORDS[$((COMP_CWORD-1))]}
+  case "$previous_word" in
+    --passphrase-file|--admin-pin-file )
+      suggestions=($(compgen -f -- "$current_word"))
+      return
+    ;;
+    --backup-dir )
+      suggestions=($(compgen -d -- "$current_word"))
+      return
+    ;;
+  esac
+  case "$mode" in
+    create )
+      case "$previous_word" in
+        --algo )
+          suggestions=($(compgen -W "ed25519 rsa4096" -- "$current_word"))
+        ;;
+        --name|--email|--expire )
+          suggestions=()
+        ;;
+        * )
+          suggestions=($(compgen -W "-h --help --name --email --algo --expire --backup-dir --passphrase-file" -- "$current_word"))
+        ;;
+      esac
+    ;;
+    to_card )
+      case "$previous_word" in
+        --device|--fingerprint )
+          suggestions=()
+        ;;
+        * )
+          suggestions=($(compgen -W "-h --help --device --fingerprint --backup-dir --force --no-backup-check --passphrase-file --admin-pin-file" -- "$current_word"))
         ;;
       esac
     ;;

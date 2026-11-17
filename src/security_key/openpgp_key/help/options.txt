@@ -1,0 +1,29 @@
+create_options:
+
+  -h, --help              - print this help
+  --name NAME             - the name in the user ID (required)
+  --email EMAIL           - the email in the user ID (required)
+  --algo ALGO             - ed25519 (default; ed25519, cv25519 and ed25519
+                            subkeys) or rsa4096, for firmware before 5.2.3
+  --expire WHEN           - when the subkeys expire: never, a number of days,
+                            or Nd, Nw, Nm, Ny, or YYYY-MM-DD (default 2y). the
+                            master key never expires
+  --backup-dir DIR        - write the backup files to DIR, rather than
+                            ~/.sca/keys/openpgp/<fingerprint>
+  --passphrase-file FILE  - read the key's passphrase from FILE (one line),
+                            rather than asking with pinentry
+
+to_card_options:
+
+  -h, --help              - print this help
+  --device SERIAL         - the YubiKey to write to. gpg's card must have
+                            this serial, so other keys may stay attached only
+                            if gpg does not pick them
+  --fingerprint FPR       - the key whose subkeys to move. by default, the
+                            only key with one [S], [E] and [A] subkey on disk
+  --backup-dir DIR        - where to look for master-and-subkeys.asc, rather
+                            than ~/.sca/keys/openpgp/<fingerprint>
+  --force                 - replace keys already in the card's slots
+  --no-backup-check       - move the subkeys without a backup file
+  --passphrase-file FILE  - read the key's passphrase from FILE (one line)
+  --admin-pin-file FILE   - read the card's admin PIN from FILE (one line)

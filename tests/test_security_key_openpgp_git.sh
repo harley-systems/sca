@@ -221,7 +221,7 @@ output="$(sca security_key openpgp_git setup 2>&1)" && fail "setup exits 0 with 
 reset_state
 sed -i "s/^fpr:.*/fpr::$enc:$aut:/" "$HOME/device/card_status"
 output="$(sca security_key openpgp_git setup 2>&1)" && fail "setup exits 0 with no signature key"
-[[ "$output" == *"the card has no signature key"*"docs/gpg-yubikey.md"* ]] || fail "no signature key message: $output"
+[[ "$output" == *"the card has no signature key"*"sca security_key openpgp_key create"*"docs/gpg-yubikey.md"* ]] || fail "no signature key message: $output"
 [ ! -e "$gitconfig" ] || fail "setup with no signature key writes the git config"
 output="$(sca security_key openpgp_git public_key 2>&1)" && fail "public_key exits 0 with no signature key"
 [[ "$output" == *"the card has no signature key"* ]] || fail "public_key, no signature key message: $output"

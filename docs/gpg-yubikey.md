@@ -164,6 +164,26 @@ copy it to a USB drive. Check that `gpg --card-status` works there; if
 `scdaemon` is missing, copy its package to the stick with your other offline
 packages.
 
+**With sca.** Two commands do 3.1 to 3.4 below:
+
+```bash
+export GNUPGHOME="$(mktemp -d)"
+sca security_key openpgp_key create --name "Alice Example" --email alice@example.com
+sca security_key openpgp_key to_card --device <serial>
+```
+
+`create` makes the master key and the three subkeys (`--algo rsa4096` on
+firmware before 5.2.3, `--expire` for the subkeys, default `2y`) and writes the
+four backup files of 3.3 with mode 600 to `~/.sca/keys/openpgp/<FPR>/` (or
+`--backup-dir DIR`), never overwriting one. Copy them, as 3.3 says, before
+the next step. `to_card` moves each subkey to its slot and saves. It refuses
+if another YubiKey is attached, a slot is already filled (`--force` replaces
+it), or there is no backup of the key (`--no-backup-check`), and if anything
+fails it quits without saving, so the subkeys stay on disk. gpg's pinentry asks
+for the passphrase and admin PIN; see
+[`sca security_key openpgp_key`](commands/security_key.md#sca-security_key-openpgp_key) for the
+options. The steps below do the same by hand.
+
 #### 3.1 Create the master key
 
 The master key only certifies (signs other keys and your own subkeys). It never
