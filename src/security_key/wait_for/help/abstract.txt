@@ -4,5 +4,10 @@ prompting a user to insert particular security key device.
 A security key wait for is used internally by sca and may be useful in custom
 tools for management of security keys.
 
+At a terminal it waits as long as it takes. Run unattended (stdin is not a
+terminal) it gives up after 10 seconds instead of waiting forever, and fails
+with an error naming the key it waited for and the keys it saw. Use --timeout
+or security_key_wait_timeout to change the limit.
+
 The last output line is the number of the smart card reader through in which
 the awaited security key resides.

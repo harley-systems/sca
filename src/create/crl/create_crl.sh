@@ -73,7 +73,10 @@ create_crl() {
       require_pkcs11_library opensc_pkcs11_module
       local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
       local entity_pkcs11_id=$(eval echo \${${entity}_pkcs11_id})
-      local security_key_opensc_reader_slot_number=$(security_key_wait_for $entity)
+      # local on its own line: on the same line it would mask wait_for's exit
+      # status, and a timeout would run on with an empty reader number.
+      local security_key_opensc_reader_slot_number
+      security_key_opensc_reader_slot_number=$(security_key_wait_for "$entity") || exit $?
       readarray slot_map < <( p11tool --list-tokens | grep -oP "(?<=URL: ).*" )
       log_detailed "create_crl: slot_map retrieved. there are ${#slot_map[@]} items."
       log_detailed "create_crl: opensc reader slot number '${security_key_opensc_reader_slot_number}' mapped to pkcs11 id is '${slot_map[${security_key_opensc_reader_slot_number}]::-1}'."

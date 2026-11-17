@@ -274,8 +274,13 @@ ykman info | grep Serial
 ### Wait for Specific Key
 
 ```bash
-# Useful in scripts
-sca security_key wait_for 12345678
+# Wait for the sub-CA's key, or a specific one by serial
+sca security_key wait_for subca
+sca security_key wait_for --device 12345678 subca
+
+# In scripts: stdin is not a terminal, so it gives up after 10 s by default.
+# Set the limit with --timeout (or security_key_wait_timeout); 0 waits forever.
+sca security_key wait_for --timeout 30 subca
 ```
 
 ## Troubleshooting
