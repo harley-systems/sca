@@ -142,4 +142,40 @@ status=0
 output="$(printf '\n' | sca display p12 "${out_empty}" 2>&1)" || status=$?
 assert_displays "${output}" "${status}" "display p12 with an empty password"
 
+# with -d the password must stay out of ~/.sca too: the log records the verb
+# dispatch and each dispatcher's start line, and those once held raw argv
+# assert_not_in_sca_folder WHAT - the password is in no file under ~/.sca
+assert_not_in_sca_folder() {
+  if grep -rqF -- "${pw}" "${HOME}/.sca"; then
+    fail "$1: password written under ~/.sca:"
+    grep -rF -- "${pw}" "${HOME}/.sca" >&2
+  fi
+}
+out_d="${HOME}/out-d.p12"
+sca -d export p12 -p "${pw}" -o "${out_d}" user > /dev/null 2>&1 || fail "-d export p12 -p"
+assert_not_in_sca_folder "-d export p12 -p"
+sca -d export p12 --password="${pw}" -o "${out_d}" user > /dev/null 2>&1 || fail "-d export p12 --password="
+assert_not_in_sca_folder "-d export p12 --password="
+sca -d export p12 --password "${pw}" -o "${out_d}" user > /dev/null 2>&1 || fail "-d export p12 --password"
+assert_not_in_sca_folder "-d export p12 --password"
+assert_opens "${out_d}" "${pw}" "-d export p12 --password"
+status=0
+output="$(sca -d display p12 -p "${pw}" "${out_d}" 2>&1)" || status=$?
+assert_displays "${output}" "${status}" "-d display p12 -p"
+assert_not_in_sca_folder "-d display p12 -p"
+status=0
+output="$(sca -d display p12 --password "${pw}" "${out_d}" 2>&1)" || status=$?
+assert_displays "${output}" "${status}" "-d display p12 --password"
+assert_not_in_sca_folder "-d display p12 --password"
+# the log still names the verb and the subcommand
+grep -qx 'sca: calling function for the verb export p12' "${HOME}/.sca/log" \
+  || fail "-d log: no dispatch line for export p12"
+grep -qx 'sca: calling function for the verb display p12' "${HOME}/.sca/log" \
+  || fail "-d log: no dispatch line for display p12"
+grep -qx 'display: finish (document_type=p12, rc=0)' "${HOME}/.sca/log" \
+  || fail "-d log: no finish line for display p12"
+grep -qx 'export_: finish (document_type=p12, rc=0)' "${HOME}/.sca/log" \
+  || fail "-d log: no finish line for export p12"
+: > "${shim_log}"
+
 test_done

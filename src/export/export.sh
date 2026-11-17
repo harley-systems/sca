@@ -28,8 +28,8 @@ export_() {
 
 
   local document_type=$1
-  local entity=$2
-  log_detailed "export_: start (document_type=${document_type}, entity=${entity})"
+  # the rest of argv is unparsed here: for p12 it can be --password=<password>
+  log_detailed "export_: start (document_type=${document_type})"
   local rc=0
   case "$document_type" in
     crt_pub_ssh|csr|p12)
@@ -45,7 +45,7 @@ ____EOM
     error "$message" 1
     ;;
   esac
-  log_detailed "export_: finish (document_type=${document_type}, entity=${entity}, rc=${rc})"
+  log_detailed "export_: finish (document_type=${document_type}, rc=${rc})"
   return $rc
 }
 export_help() {
