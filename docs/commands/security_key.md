@@ -30,6 +30,7 @@ The security key command is one of the following:
   info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
   openpgp_git - set up Git commit and tag signing with the OpenPGP signature key
+  openpgp_key - create and back up OpenPGP keys, and move them to the YubiKey
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
@@ -46,11 +47,12 @@ security key related commands.
 
 ### Choosing a key: `--device SERIAL`
 
-Every `security_key` subcommand except `openpgp_ssh` and `openpgp_git` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
+Every `security_key` subcommand except `openpgp_ssh`, `openpgp_git` and `openpgp_key create` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
 
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
 - `id`: lists only the named key, and fails if it is not attached.
+- `openpgp_key to_card`: gpg writes to whichever OpenPGP card it finds, so `--device` is not passed on; `to_card` refuses unless that card has the given serial. Without `--device`, it refuses when more than one key is attached.
 
 ```bash
 sca security_key id                         # 12345678 0
@@ -68,6 +70,7 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 - [info](#sca-security_key-info) - show the status of every PIV slot on the security key
 - [init](#sca-security_key-init) - first time initialization of security_key
 - [openpgp_git](#sca-security_key-openpgp_git) - set up Git commit and tag signing with the OpenPGP signature key
+- [openpgp_key](#sca-security_key-openpgp_key) - create and back up OpenPGP keys, and move them to the YubiKey
 - [openpgp_ssh](#sca-security_key-openpgp_ssh) - set up SSH with the OpenPGP authentication key and gpg-agent
 - [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
@@ -342,6 +345,107 @@ git commit --allow-empty -m test && git log --show-signature -1
 ```
 
 See [GPG with a YubiKey](../gpg-yubikey.md#54-git-commit-and-tag-signing) for the manual steps, and [section 3](../gpg-yubikey.md#3-keys) to put a signature key on the card.
+
+---
+
+## sca security_key openpgp_key
+
+```text
+The security key openpgp_key command help
+
+The security key openpgp_key command creates an OpenPGP key with an offline
+master key, backs it up, and moves its subkeys to the YubiKey's OpenPGP applet,
+as in docs/gpg-yubikey.md section 3 option B. It needs no sca configuration.
+
+create makes a certify-only master key that never expires, and a signing,
+an encryption and an authentication subkey, in the GnuPG home (GNUPGHOME). It
+writes master-and-subkeys.asc, subkeys.asc, public.asc and revoke.asc (the
+revocation certificate) with mode 600 to the backup folder, by default
+~/.sca/keys/openpgp/<fingerprint>, and never overwrites a file there. Run it
+on an offline machine, such as the sca air-gapped USB stick; it needs no card.
+
+to_card moves the three subkeys to the signature, encryption and
+authentication slots of the card, then saves, which deletes their secrets
+from the disk. It refuses when more than one YubiKey is attached (unless
+--device names the one gpg will write to), when a slot already holds a key
+(unless --force), when there is no backup of the key (unless
+--no-backup-check), and when ed25519 keys meet firmware before 5.2.3. If any
+step fails it quits without saving, so the subkeys stay on the disk. It does
+not change the touch policy: see ykman openpgp keys set-touch.
+
+gpg's pinentry asks for the passphrase and the admin PIN. For unattended runs,
+--passphrase-file and --admin-pin-file give them in files instead; sca sends
+them to gpg through a pipe, never on a command line or to the log. If gpg is
+missing, install the OpenPGP packages with sca install --openpgp.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] openpgp_key create --name NAME --email EMAIL [<create_options>]
+sca [<sca_options>] security_key [<security_key_options>] openpgp_key to_card [<to_card_options>]
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+create_options:
+
+  -h, --help              - print this help
+  --name NAME             - the name in the user ID (required)
+  --email EMAIL           - the email in the user ID (required)
+  --algo ALGO             - ed25519 (default; ed25519, cv25519 and ed25519
+                            subkeys) or rsa4096, for firmware before 5.2.3
+  --expire WHEN           - when the subkeys expire: never, a number of days,
+                            or Nd, Nw, Nm, Ny, or YYYY-MM-DD (default 2y). the
+                            master key never expires
+  --backup-dir DIR        - write the backup files to DIR, rather than
+                            ~/.sca/keys/openpgp/<fingerprint>
+  --passphrase-file FILE  - read the key's passphrase from FILE (one line),
+                            rather than asking with pinentry
+
+to_card_options:
+
+  -h, --help              - print this help
+  --device SERIAL         - the YubiKey to write to. gpg's card must have
+                            this serial, so other keys may stay attached only
+                            if gpg does not pick them
+  --fingerprint FPR       - the key whose subkeys to move. by default, the
+                            only key with one [S], [E] and [A] subkey on disk
+  --backup-dir DIR        - where to look for master-and-subkeys.asc, rather
+                            than ~/.sca/keys/openpgp/<fingerprint>
+  --force                 - replace keys already in the card's slots
+  --no-backup-check       - move the subkeys without a backup file
+  --passphrase-file FILE  - read the key's passphrase from FILE (one line)
+  --admin-pin-file FILE   - read the card's admin PIN from FILE (one line)
+```
+
+**What it does:**
+- `create`: checks `--name`, `--email`, `--algo` and `--expire`, and refuses before making anything if a backup file already exists in `--backup-dir`
+- `create` then runs `gpg --quick-generate-key "NAME <EMAIL>" <algo> cert never`, reads the fingerprint from the `KEY_CREATED` status line, and adds the subkeys with `gpg --quick-add-key <FPR> <algo> sign|encr|auth <expire>` (ed25519: `ed25519`, `cv25519`, `ed25519`; rsa4096: `rsa4096` for all three)
+- `create` writes `master-and-subkeys.asc` (`--export-secret-keys`), `subkeys.asc` (`--export-secret-subkeys`), `public.asc` (`--export`) and `revoke.asc` (a copy of `openpgp-revocs.d/<FPR>.rev` in the GnuPG home), each through a temporary file with mode 600 and `mv -n`, to `~/.sca/keys/openpgp/<FPR>/` or `--backup-dir`. Folders it creates have mode 700. If a file can't be written, it names the ones that were and weren't, and leaves the key in place
+- `to_card`: picks the key (`--fingerprint`, or the only one with a `[C]` master and exactly one `[S]`, `[E]` and `[A]` subkey on disk, not expired or revoked), and reads `gpg --card-status --with-colons`
+- `to_card` refuses, before writing anything, when: `--device` is not the serial of the card gpg sees; there is no `--device` and `ykman list --serials` shows more than one key (or ykman is missing); an ed25519 or cv25519 subkey meets firmware before 5.2.3 (`ykman info`); a target slot is filled and there is no `--force`; `master-and-subkeys.asc` in the backup folder is missing or holds another key and there is no `--no-backup-check`
+- `to_card` then runs one `gpg --edit-key <FPR> --command-fd 0 --status-fd 1` session: `key N`, `keytocard` and the slot (1 signature, 2 encryption, 3 authentication) for each subkey, then `save`. Any unexpected prompt, failure or repeated secret request makes it `quit` without saving, and it reports which slots were already written. Afterwards each subkey must be a card stub (`ssb>`)
+- Without `--passphrase-file` and `--admin-pin-file` sca never sees a secret: gpg's pinentry asks. With them, gpg runs with `--pinentry-mode loopback`; `create` passes the passphrase file to gpg, and `to_card` sends each secret through the `--command-fd` pipe only when gpg asks for it, never in argv, the environment of a command or `~/.sca/log`
+- Neither mode needs `sca config`, and the touch policy is left alone
+
+**Example:**
+```bash
+sca install --openpgp                            # gnupg, scdaemon, ykman
+# on the offline machine
+export GNUPGHOME="$(mktemp -d)"
+sca security_key openpgp_key create --name "Alice Example" --email alice@example.com
+# copy ~/.sca/keys/openpgp/<FPR>/ and $GNUPGHOME to an encrypted offline drive
+sca security_key openpgp_key to_card --device 12345678
+ykman openpgp keys set-touch sig on              # optional, see section 4
+sca security_key openpgp_key create --name "CI Test" --email ci@example.com \
+  --passphrase-file pass.txt --backup-dir ./backup
+sca security_key openpgp_key to_card --device 12345678 --backup-dir ./backup \
+  --passphrase-file pass.txt --admin-pin-file admin-pin.txt   # unattended
+```
+
+See [GPG with a YubiKey](../gpg-yubikey.md#option-b-offline-master-key-recommended) for what the commands do by hand, and [touch policies](../gpg-yubikey.md#4-touch-policies).
 
 ---
 

@@ -203,7 +203,7 @@ assert_eq "" "$(ls -A "$HOME/out")" "a failed export leaves a temporary file"
 reset_state
 sed -i "s/^fpr:.*/fpr:$sig:$enc::/" "$HOME/device/card_status"
 output="$(sca security_key openpgp_ssh public_key 2>&1)" && fail "public_key exits 0 with no auth key"
-[[ "$output" == *"the card has no authentication key"* ]] || fail "no auth key message: $output"
+[[ "$output" == *"the card has no authentication key"*"sca security_key openpgp_key to_card"* ]] || fail "no auth key message: $output"
 [[ "$output" == *"docs/gpg-yubikey.md"* ]] || fail "no auth key message has no next step: $output"
 grep -q -- "--export-ssh-key" "$HOME/calls" && fail "public_key exports with no auth key"
 

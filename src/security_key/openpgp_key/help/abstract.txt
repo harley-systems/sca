@@ -1,0 +1,24 @@
+The security key openpgp_key command creates an OpenPGP key with an offline
+master key, backs it up, and moves its subkeys to the YubiKey's OpenPGP applet,
+as in docs/gpg-yubikey.md section 3 option B. It needs no sca configuration.
+
+create makes a certify-only master key that never expires, and a signing,
+an encryption and an authentication subkey, in the GnuPG home (GNUPGHOME). It
+writes master-and-subkeys.asc, subkeys.asc, public.asc and revoke.asc (the
+revocation certificate) with mode 600 to the backup folder, by default
+~/.sca/keys/openpgp/<fingerprint>, and never overwrites a file there. Run it
+on an offline machine, such as the sca air-gapped USB stick; it needs no card.
+
+to_card moves the three subkeys to the signature, encryption and
+authentication slots of the card, then saves, which deletes their secrets
+from the disk. It refuses when more than one YubiKey is attached (unless
+--device names the one gpg will write to), when a slot already holds a key
+(unless --force), when there is no backup of the key (unless
+--no-backup-check), and when ed25519 keys meet firmware before 5.2.3. If any
+step fails it quits without saving, so the subkeys stay on the disk. It does
+not change the touch policy: see ykman openpgp keys set-touch.
+
+gpg's pinentry asks for the passphrase and the admin PIN. For unattended runs,
+--passphrase-file and --admin-pin-file give them in files instead; sca sends
+them to gpg through a pipe, never on a command line or to the log. If gpg is
+missing, install the OpenPGP packages with sca install --openpgp.

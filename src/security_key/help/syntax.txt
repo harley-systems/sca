@@ -11,6 +11,7 @@ The security key command is one of the following:
   info      - show the status of every PIV slot on the security key
   init      - first time initialization of security_key
   openpgp_git - set up Git commit and tag signing with the OpenPGP signature key
+  openpgp_key - create and back up OpenPGP keys, and move them to the YubiKey
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key

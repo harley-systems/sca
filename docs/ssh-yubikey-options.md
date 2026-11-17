@@ -73,8 +73,17 @@ gpg --card-edit
 # gpg/card> generate
 ```
 
-Or create an authentication subkey on your computer, back up the master key,
-and move the subkey to the card:
+Or, recommended, create the keys on an offline machine, back them up and move
+them to the card with sca (signing, encryption and authentication subkeys; see
+[GPG with a YubiKey, section 3](gpg-yubikey.md#option-b-offline-master-key-recommended)):
+
+```bash
+sca security_key openpgp_key create --name "Alice Example" --email alice@example.com
+sca security_key openpgp_key to_card --device <serial>
+```
+
+Or, by hand, create an authentication subkey on your computer, back up the
+master key, and move the subkey to the card:
 
 ```bash
 # Add an authentication-only subkey (choose "ECC (set your own capabilities)",

@@ -264,7 +264,8 @@ security_key_openpgp_git_read_card() {
   log_detailed "security_key_openpgp_git_read_card: signature key='$security_key_openpgp_git_fingerprint'"
   [[ "$security_key_openpgp_git_fingerprint" =~ ^[0-9A-Fa-f]+$ ]] || \
     error "security_key_openpgp_git $mode: the card has no signature key. put "\
-"one on it, see docs/gpg-yubikey.md section 3 (Keys)." 1
+"one on it with 'sca security_key openpgp_key create' and then "\
+"'sca security_key openpgp_key to_card', or see docs/gpg-yubikey.md section 3 (Keys)." 1
 }
 ################################################################################
 # exits with what to do when the signature key's public key is not in the

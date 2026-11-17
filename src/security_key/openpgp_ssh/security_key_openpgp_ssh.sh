@@ -184,8 +184,9 @@ security_key_openpgp_ssh_public_key() {
   log_detailed "security_key_openpgp_ssh_public_key: authentication key='$fingerprint'"
   [[ "$fingerprint" =~ ^[0-9A-Fa-f]+$ ]] || \
     error "security_key_openpgp_ssh public_key: the card has no authentication "\
-"key. put one on it, see docs/gpg-yubikey.md section 3 (Keys), or step 1 of "\
-"OpenPGP (gpg-agent) SSH in docs/ssh-yubikey-options.md." 1
+"key. put one on it with 'sca security_key openpgp_key create' and then "\
+"'sca security_key openpgp_key to_card', or see docs/gpg-yubikey.md section 3 "\
+"(Keys), or step 1 of OpenPGP (gpg-agent) SSH in docs/ssh-yubikey-options.md." 1
   # the ! exports this subkey, not whichever authentication key gpg picks
   if [ -z "$output" ]; then
     gpg --batch --export-ssh-key "${fingerprint}!" || \

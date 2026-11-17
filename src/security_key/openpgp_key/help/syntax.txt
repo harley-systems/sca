@@ -1,0 +1,8 @@
+sca [<sca_options>] security_key [<security_key_options>] openpgp_key create --name NAME --email EMAIL [<create_options>]
+sca [<sca_options>] security_key [<security_key_options>] openpgp_key to_card [<to_card_options>]
+
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@
