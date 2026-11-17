@@ -28,21 +28,17 @@ display_csr() {
 
   local entity=$1
   local entity_id=$2
-  local old_entity
-  local new_entity
+  local -a old_entity=()
   log_detailed "display_csr: start (entity=${entity}, entity_id=${entity_id})"
 
 
   local current_entity_id=$(get_current_entity_id $entity)
   log_detailed "display_csr: current_entity_id $current_entity_id"
-  local old_entity=''
-  if [[ ! -z "$entity_id" ]] && [[ "$entity_id" != $current_entity_id ]]; then
-    old_entity=$(config_get $entity)
-    old_entity="${old_entity//[$'\t\r\n']}"
-    #old_entity=${old_entity@Q}
-    log_detailed "display_csr: old_entity saved ${old_entity}"
-    log_detailed "display_csr: temporarily setting configuration for ${entity} to ${new_entity}"
-    config_set $entity ${entity_id}
+  if [[ ! -z "$entity_id" ]] && [[ "$entity_id" != "$current_entity_id" ]]; then
+    mapfile -d '' -t old_entity < <(config_get_values "$entity")
+    log_detailed "display_csr: old_entity saved ${old_entity[*]@Q}"
+    log_detailed "display_csr: temporarily setting configuration for ${entity} to ${entity_id}"
+    config_set "$entity" "$entity_id"
   fi
 
   local entity_csr_file=$(eval echo \${${entity}_csr_file})
@@ -55,9 +51,9 @@ display_csr() {
   log_verbose "$openssl_command"
   eval $openssl_command
 
-  if ! [ -z "$old_entity" ]; then
-    log_detailed "display_csr: setting entity back for ${entity} to ${old_entity}"
-    config_set ${entity} ${old_entity}
+  if [ ${#old_entity[@]} -gt 0 ]; then
+    log_detailed "display_csr: setting entity back for ${entity} to ${old_entity[*]@Q}"
+    config_set "${entity}" "${old_entity[@]}"
   fi
 
   log_detailed "display_csr: finish (entity=${entity}, entity_id=${entity_id}, old_entity_id=$old_entity_id))"

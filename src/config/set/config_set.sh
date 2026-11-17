@@ -9,7 +9,9 @@ config_set_persist() {
   local var_name="$1"
   local value="$2"
   if [ -n "$config_file" ] && [ -f "$config_file" ]; then
-    sed -i "s/^export ${var_name}_default=.*/export ${var_name}_default=${value}/" "$config_file"
+    # quoted for sourcing and escaped for sed, so the value is saved as given
+    local line="export ${var_name}_default=$(printf %q "${value}")"
+    sed -i "s/^export ${var_name}_default=.*/$(common_sed_escape_for_substitute "${line}")/" "$config_file"
     log_detailed "config_set_persist: updated ${var_name}_default=${value} in ${config_file}"
   fi
 }
@@ -49,7 +51,7 @@ config_set() {
   case "$setting_name" in
     ca|subca|user|host|service)
       log_detailed "config_set: parameters $@"
-      eval config_set_$setting_name $@
+      config_set_"$setting_name" "$@"
       ;;
     *)
     read -r -d '' message <<- ____EOM
@@ -78,7 +80,7 @@ SCA_HELP
 config_set_ca() {
   # Check if first arg looks like a setting name (contains underscore or known setting)
   local known_settings="name caps_name domain bits use_security_key security_key_type security_key_id pkcs11_id yubikey_slot yubikey_pin_policy yubikey_touch_policy"
-  if echo "$known_settings" | grep -qw "$1"; then
+  if [[ " $known_settings " == *" $1 "* ]]; then
     # key-value mode: config set ca <key> <value>
     local key="$1"
     local value="$2"
@@ -111,7 +113,7 @@ config_set_ca() {
 #
 config_set_subca() {
   local known_settings="subca name surname given_name initials use_security_key security_key_type security_key_id pkcs11_id yubikey_slot yubikey_pin_policy yubikey_touch_policy"
-  if echo "$known_settings" | grep -qw "$1"; then
+  if [[ " $known_settings " == *" $1 "* ]]; then
     # key-value mode
     local key="$1"
     local value="$2"
@@ -125,11 +127,11 @@ config_set_subca() {
     log_detailed "config_set_subca: set ${key}=${value}"
   else
     # legacy positional mode
-    export subca=${1:-$subca}
-    export subca_name=${2:-$subca_name}
-    export subca_surname=${3:-$subca_surname}
-    export subca_given_name=${4:-$subca_given_name}
-    export subca_initials=${5:-$subca_initials}
+    export subca="${1:-$subca}"
+    export subca_name="${2:-$subca_name}"
+    export subca_surname="${3:-$subca_surname}"
+    export subca_given_name="${4:-$subca_given_name}"
+    export subca_initials="${5:-$subca_initials}"
     log_detailed "config_set_subca: subca:$1 subca_name:$2 subca_surname:$3 subca_given_name:$4 subca_initials:$5"
     config_set_persist "subca" "$subca"
     config_set_persist "subca_name" "$subca_name"
@@ -148,7 +150,7 @@ config_set_subca() {
 #
 config_set_user() {
   local known_settings="user name surname given_name initials use_security_key security_key_type security_key_id pkcs11_id yubikey_slot yubikey_pin_policy yubikey_touch_policy"
-  if echo "$known_settings" | grep -qw "$1"; then
+  if [[ " $known_settings " == *" $1 "* ]]; then
     # key-value mode
     local key="$1"
     local value="$2"
@@ -162,11 +164,11 @@ config_set_user() {
     log_detailed "config_set_user: set ${key}=${value}"
   else
     # legacy positional mode
-    export user=${1:-$user}
-    export user_name=${2:-$user_name}
-    export user_surname=${3:-$user_surname}
-    export user_given_name=${4:-$user_given_name}
-    export user_initials=${5:-$user_initials}
+    export user="${1:-$user}"
+    export user_name="${2:-$user_name}"
+    export user_surname="${3:-$user_surname}"
+    export user_given_name="${4:-$user_given_name}"
+    export user_initials="${5:-$user_initials}"
     log_detailed "config_set_user: user:$1 user_name:$2 user_surname:$3 user_given_name:$4 user_initials:$5"
     config_set_persist "user" "$user"
     config_set_persist "user_name" "$user_name"
@@ -185,7 +187,7 @@ config_set_user() {
 #
 config_set_host() {
   local known_settings="host use_security_key security_key_type security_key_id pkcs11_id yubikey_slot yubikey_pin_policy yubikey_touch_policy"
-  if echo "$known_settings" | grep -qw "$1"; then
+  if [[ " $known_settings " == *" $1 "* ]]; then
     # key-value mode
     local key="$1"
     local value="$2"
@@ -199,7 +201,7 @@ config_set_host() {
     log_detailed "config_set_host: set ${key}=${value}"
   else
     # legacy positional mode
-    export host=${1:-$host}
+    export host="${1:-$host}"
     log_detailed "config_set_host: host:$1"
     config_set_persist "host" "$host"
   fi
@@ -214,7 +216,7 @@ config_set_host() {
 #
 config_set_service() {
   local known_settings="service use_security_key security_key_type security_key_id pkcs11_id yubikey_slot yubikey_pin_policy yubikey_touch_policy"
-  if echo "$known_settings" | grep -qw "$1"; then
+  if [[ " $known_settings " == *" $1 "* ]]; then
     # key-value mode
     local key="$1"
     local value="$2"
@@ -228,7 +230,7 @@ config_set_service() {
     log_detailed "config_set_service: set ${key}=${value}"
   else
     # legacy positional mode
-    export service=${1:-$service}
+    export service="${1:-$service}"
     log_detailed "config_set_service: service:$1"
     config_set_persist "service" "$service"
   fi

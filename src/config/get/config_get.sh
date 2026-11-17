@@ -32,7 +32,7 @@ config_get() {
   case "$setting_name" in
     ca|subca|user|host|service)
       shift
-      eval config_get_$setting_name "$@"
+      config_get_"$setting_name" "$@"
       ;;
     *)
     read -r -d '' message <<- ____EOM
@@ -43,6 +43,22 @@ ____EOM
     ;;
   esac
   log_detailed "config_get: finish (setting_name=${setting_name}, info=$@, config_file=$config_file))"
+}
+################################################################################
+# print the current positional values of `config set <entity>`, NUL-separated,
+# for callers that save and restore them (mapfile -d '' -t arr < <(...))
+#
+# parameters
+#   entity - 'ca' 'subca' 'user' 'host' or 'service'
+#
+config_get_values() {
+  case "$1" in
+    ca)      printf '%s\0' "$name" "$caps_name" ;;
+    subca)   printf '%s\0' "$subca" "$subca_name" "$subca_surname" "$subca_given_name" "$subca_initials" ;;
+    user)    printf '%s\0' "$user" "$user_name" "$user_surname" "$user_given_name" "$user_initials" ;;
+    host)    printf '%s\0' "$host" ;;
+    service) printf '%s\0' "$service" ;;
+  esac
 }
 config_get_help() {
   cat <<'SCA_HELP'
@@ -70,8 +86,8 @@ config_get_ca() {
 
   log_detailed "config_get_ca: start (ca_id=${ca_id})"
 
-  if [[ -z "$ca_id" ]] || [[ $ca_id == $name ]]; then
-    echo \"$name\" \"$caps_name\"
+  if [[ -z "$ca_id" ]] || [[ "$ca_id" == "$name" ]]; then
+    echo "\"$name\" \"$caps_name\""
   else
     local ca_document=$(display_crt ca ${ca_id})
     [ -z "${ca_document}" ] && ca_document=$(display_csr ca ${ca_id})
@@ -81,7 +97,7 @@ config_get_ca() {
     local ca_caps_name=$(echo "${ca_document}" | grep Subject: | grep -o 'O = .*, OU = ')
     [ ! -z "${ca_caps_name}" ] && ca_caps_name=${ca_caps_name::-7}
     [ ! -z "${ca_caps_name}" ] && ca_caps_name=${ca_caps_name:4}
-    echo \"${ca_name}\" \"${ca_caps_name}\"
+    echo "\"${ca_name}\" \"${ca_caps_name}\""
   fi
 
   log_detailed "config_get_ca: finished (ca_id=${ca_id})"
@@ -111,8 +127,8 @@ config_get_subca() {
 
   log_detailed "config_get_subca: start (subca_id=${subca_id})"
 
-  if [ -z "$subca_id" ] || [ $subca_id == $subca ]; then
-    echo \"$subca\" \"$subca_name\" \"$subca_surname\" \"$subca_given_name\" \"$subca_initials\"
+  if [ -z "$subca_id" ] || [ "$subca_id" == "$subca" ]; then
+    echo "\"$subca\" \"$subca_name\" \"$subca_surname\" \"$subca_given_name\" \"$subca_initials\""
   else
     local subca_document=$(display_crt subca ${subca_id})
     [ -z "${subca_document}" ] && subca_document=$(display_csr subca ${subca_id})
@@ -121,11 +137,11 @@ config_get_subca() {
     [ ! -z "${the_subca_name}" ] && the_subca_name=${the_subca_name::-1}
     local the_subca_surname=$(echo "${subca_document}"  | grep Subject: | grep -o ' SN = .*, GN = ' | cut -f 4 -d ' ')
     [ ! -z "${the_subca_surname}" ] && the_subca_surname=${the_subca_surname::-1}
-    local the_subca_given_name=$(echo "${subca_document}"  | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
+    local the_subca_given_name=$(echo "${subca_document}"  | grep Subject: | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
     [ ! -z "${the_subca_given_name}" ] && the_subca_given_name=${the_subca_given_name::-1}
     local the_subca_initials=$(echo "${subca_document}"  | grep Subject: | awk 'NF>1{print $NF}' | cut -f 1 -d '@')
     local the_subca=$subca_id
-    echo \"$the_subca\" \"$the_subca_name\" \"$the_subca_surname\" \"$the_subca_given_name\" \"$the_subca_initials\"
+    echo "\"$the_subca\" \"$the_subca_name\" \"$the_subca_surname\" \"$the_subca_given_name\" \"$the_subca_initials\""
   fi
 
 
@@ -156,8 +172,8 @@ config_get_user() {
 
   log_detailed "config_get_user: start (user_id=${user_id})"
 
-  if [ -z "$user_id" ] || [ $user_id == $user ]; then
-    echo \"$user\" \"$user_name\" \"$user_surname\" \"$user_given_name\" \"$user_initials\"
+  if [ -z "$user_id" ] || [ "$user_id" == "$user" ]; then
+    echo "\"$user\" \"$user_name\" \"$user_surname\" \"$user_given_name\" \"$user_initials\""
   else
     local user_document=$(display_crt user ${user_id})
     [ -z "${user_document}" ] && user_document=$(display_csr user ${user_id})
@@ -166,12 +182,12 @@ config_get_user() {
     [ ! -z "${the_user_name}" ] && the_user_name=${the_user_name::-1}
     local the_user_surname=$(echo "${user_document}" | grep Subject: | grep -o ' SN = .*, GN = ' | cut -f 4 -d ' ')
     [ ! -z "${the_user_surname}" ] && the_user_surname=${the_user_surname::-1}
-    local the_user_given_name=$(echo "${user_document}" | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
+    local the_user_given_name=$(echo "${user_document}" | grep Subject: | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
     [ ! -z "${the_user_given_name}" ] && the_user_given_name=${the_user_given_name::-1}
     local the_user_initials=$(echo "${user_document}" | grep Subject: | grep -o ' initials = .*, C = ' | cut -f 4 -d ' ')
     [ ! -z "${the_user_initials}" ] && the_user_initials=${the_user_initials::-1}
     local the_user=$user_id
-    echo \"$the_user\" \"$the_user_name\" \"$the_user_surname\" \"$the_user_given_name\" \"$the_user_initials\"
+    echo "\"$the_user\" \"$the_user_name\" \"$the_user_surname\" \"$the_user_given_name\" \"$the_user_initials\""
   fi
 
   log_detailed "config_get_user: finidhed (user_id=${user_id})"
@@ -192,14 +208,14 @@ config_get_host() {
 
   log_detailed "config_get_host: start (host_id=${host_id})"
 
-  if [ -z "$host_id" ] || [ $host_id == $host ]; then
-    echo \"$host\"
+  if [ -z "$host_id" ] || [ "$host_id" == "$host" ]; then
+    echo "\"$host\""
   else
     local host_document=$(display_crt host ${host_id})
     [ -z "${host_document}" ] && host_document=$(display_csr host ${host_id})
     [ -z "${host_document}" ] && return
     local host_name=$(echo "${host_document}" | grep  'Subject:' | awk 'NF>1{print $NF}')
-    echo \"$host_name\"
+    echo "\"$host_name\""
   fi
 
   log_detailed "config_get_host: finished (host_id=${host_id})"
@@ -220,15 +236,15 @@ config_get_service() {
 
   log_detailed "config_get_service: start (service_id=${service_id})"
 
-  if [ -z "$service_id" ] || [ $service_id == $service ]; then
-    echo \"$service\"
+  if [ -z "$service_id" ] || [ "$service_id" == "$service" ]; then
+    echo "\"$service\""
   else
     local service_document=$(display_crt service ${service_id})
     [ -z "${service_document}" ] && service_document=$(display_csr service ${service_id})
     [ -z "${service_document}" ] && return
 
     local service_name=$(echo "${service_document}" | grep  'Subject:' | awk 'NF>1{print $NF}')
-    echo \"$service_name\"
+    echo "\"$service_name\""
   fi
 
   log_detailed "config_get_service: finished (service_id=${service_id})"

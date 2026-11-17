@@ -74,21 +74,18 @@ approve() {
       ;;
   esac
   local current_entity_id=$(get_current_entity_id $entity)
-  old_entity=''
-  if [[ ! -z $entity_id ]] && [[ "$entity_id" != $current_entity_id ]]; then
+  local -a old_entity=()
+  if [[ ! -z $entity_id ]] && [[ "$entity_id" != "$current_entity_id" ]]; then
     log_detailed "approve: temporarily switching entity"
-    old_entity=$(config_get "${entity}")
-    old_entity="${old_entity//[$'\t\r\n']}"
-    #old_entity=${old_entity@Q}
-    log_detailed "approve: old_entity saved ${old_entity}"
-    new_entity="$@"
-    new_entity=${new_entity@Q}
-    log_detailed "approve: temporarily setting configuration for ${entity} to ${new_entity}"
-    config_set $entity "${new_entity}"
+    mapfile -d '' -t old_entity < <(config_get_values "${entity}")
+    log_detailed "approve: old_entity saved ${old_entity[*]@Q}"
+    log_detailed "approve: temporarily setting configuration for ${entity} to ${*@Q}"
+    config_set "$entity" "$@"
   fi
 
   # ca's are self approved. exit without doing anything.
   if [[ $entity == ca ]]; then
+    [ ${#old_entity[@]} -gt 0 ] && config_set "${entity}" "${old_entity[@]}"
     log_detailed "approve: finish (entity=${entity})"
     return 0
   fi
@@ -114,9 +111,9 @@ ____EOM
   export_ crt_pub_ssh $entity
 
   # now we want to restore the original current entity info
-  if ! [ -z "$old_entity" ]; then
-    log_detailed "approve: setting entity back for ${entity} to ${old_entity}"
-    config_set ${entity} "${old_entity}"
+  if [ ${#old_entity[@]} -gt 0 ]; then
+    log_detailed "approve: setting entity back for ${entity} to ${old_entity[*]@Q}"
+    config_set "${entity}" "${old_entity[@]}"
   fi
 
 

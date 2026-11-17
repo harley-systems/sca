@@ -74,13 +74,13 @@ init_demo() {
   request ca test TestInc
 
   # save test-ca configuration
-  local old_ca_config=$(config_get ca)
-  old_ca_config="${old_ca_config//[$'\t\r\n']}"
+  local -a old_ca_config=()
+  mapfile -d '' -t old_ca_config < <(config_get_values ca)
 
-  log_detailed "init_demo: old_ca_config ${old_ca_config}"
+  log_detailed "init_demo: old_ca_config ${old_ca_config[*]@Q}"
   config set ca test TestInc
   config save "${test_folder_data}ca-$name-sca.config"
-  config set ca "${old_ca_config}"
+  config set ca "${old_ca_config[@]}"
 
   # ---------------------
   # create subca requests
@@ -95,13 +95,13 @@ init_demo() {
   request subca daniel Daniel Korac Vladimir D.K.
 
   # save daniel-subca configuration
-  local old_subca_config=$(config_get subca)
-  old_subca_config="${old_subca_config//[$'\t\r\n']}"
-  log_detailed "init_demo: old_subca_config ${old_subca_config}"
+  local -a old_subca_config=()
+  mapfile -d '' -t old_subca_config < <(config_get_values subca)
+  log_detailed "init_demo: old_subca_config ${old_subca_config[*]@Q}"
   config set subca daniel Daniel Korac Vladimir D.K.
   log_detailed "init_demo: saving config file for daniel ${test_folder_data}subca-$subca-sca.config"
   config save "${test_folder_data}subca-$subca-sca.config"
-  config set subca "${old_subca_config}"
+  config set subca "${old_subca_config[@]}"
   log_detailed "init_demo: current subca ${subca}"
 
   # ------------------------

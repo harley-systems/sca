@@ -48,8 +48,8 @@ step() {
 p12_password="ca-flow-test-password"
 
 step config create all
-step config set ca name test
-step config set ca caps_name "Test Inc"
+# positional, with a space in the organisation: the form that broke on #205
+step config set ca test "Test Inc"
 step config set subca subca ops
 step config set service service web
 step config set ca use_security_key false
@@ -99,6 +99,13 @@ subject="$(openssl x509 -in "${service_crt}" -noout -subject -nameopt multiline)
 cn="$(sed -n 's/^ *commonName *= //p' <<< "${subject}")"
 assert_eq "web.test.systems" "${cn}" "service certificate CN"
 
+# the organisation keeps its space on every certificate
+for crt in "${ca_crt}" "${subca_crt}" "${service_crt}"; do
+  org="$(openssl x509 -in "${crt}" -noout -subject -nameopt multiline \
+    | sed -n 's/^ *organizationName *= //p')"
+  assert_eq "Test Inc" "${org}" "organizationName of $(basename "${crt}")"
+done
+
 # extensions: a tls server leaf under two CAs, the root self-signed
 service_text="$(openssl x509 -in "${service_crt}" -noout -text)"
 grep -q "TLS Web Server Authentication" <<< "${service_text}" \
@@ -140,6 +147,26 @@ if command -v ssh-keygen > /dev/null; then
 else
   echo "  skip: ssh-keygen not installed, .pub.ssh not checked"
 fi
+
+# request, approve and display for another service switch to it for a moment
+# and must put the configuration back exactly, spaced organisation included
+before_config="$(cat "${HOME}/.sca/config/sca.config")"
+step request service api
+step approve service api
+step display crt service api
+step display pub service api
+assert_file_exists "${keys}/ops/services/api/test-ops-api-crt.pem"
+assert_eq '"web"' "$(run_sca config get service)" "config get service after switching"
+assert_eq '"test" "Test Inc"' "$(run_sca config get ca)" "config get ca after switching"
+assert_eq "${before_config}" "$(cat "${HOME}/.sca/config/sca.config")" \
+  "config file after switching"
+
+# config get for another user reads the names from its certificate subject
+# only: the issuer (the sub-CA, which has a GN by default) must not leak in
+step request user bob Bob Builder Robert B.B.
+step approve user bob
+assert_eq '"bob" "Bob" "Builder" "Robert" "B.B."' \
+  "$(run_sca config get user bob)" "config get user bob"
 
 # nothing tried to reach a security key
 assert_eq "" "$(cat "${key_tools_log}")" "security key tools were called"
