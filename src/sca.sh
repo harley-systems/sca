@@ -140,7 +140,9 @@ exiting.
   case "$verb" in
     create|display|export|import|init|request|security_key|appliance|approve|revoke|scrub_log|config|list|completion|install|test)
       shift
-      log_detailed "sca: calling function for the verb $verb "$@""
+      # only the verb and the subcommand: the rest of argv can hold a secret
+      # (export p12 -p <password>), and each subcommand logs what it parsed.
+      log_detailed "sca: calling function for the verb ${verb} ${1}"
       if [ $verb == 'export' ]; then eval ${verb}_ "${@@Q}"; else eval $verb "${@@Q}"; fi
       rc=$?
       ;;
@@ -220,6 +222,9 @@ log_verbose() {
 # at each log_* call site, because this is the single point every one of them
 # funnels through -- which also covers call sites nobody has written yet.
 # the case test keeps the sed fork off the overwhelming majority of lines.
+# the last five rules match only the lines older versions wrote with the raw
+# argv of 'export p12' and 'display p12' (-p, -lp<pw>, --pass[word][=]), so
+# scrub_log can clean the p12 password out of an existing log.
 redact_secrets() {
   sed -E \
     -e 's/(pin-value=)[^"[:space:];]+/\1<REDACTED>/g' \
@@ -227,7 +232,12 @@ redact_secrets() {
     -e 's/(OPENSSL_PKCS11_PIN=)[^"[:space:]]+/\1<REDACTED>/g' \
     -e 's/(--key=)"?[0-9a-fA-F]{16,}"?/\1<REDACTED>/g' \
     -e 's/(-k[[:space:]]+)[0-9a-fA-F]{16,}/\1<REDACTED>/g' \
-    -e "s/(key is set,? ')[0-9a-fA-F]{16,}'/\\1<REDACTED>'/g"
+    -e "s/(key is set,? ')[0-9a-fA-F]{16,}'/\\1<REDACTED>'/g" \
+    -e 's/(calling function for the verb (export|display) p12 ([^[:space:]]+ )*(--p[a-z]*|-[hl]*p)[[:space:]]+)[^[:space:]]+/\1<REDACTED>/' \
+    -e 's/(calling function for the verb (export|display) p12 ([^[:space:]]+ )*(--p[a-z]*=|-[hl]*p))[^[:space:]]+/\1<REDACTED>/' \
+    -e 's/(display: start \(document_type=p12, entity=(--p[a-z]*|-[hl]*p), entity_id=).+\)$/\1<REDACTED>)/' \
+    -e 's/((display|export_): (start|finish) \(document_type=p12, entity=(--p[a-z]*=|-[hl]*p)).+(, (entity_id|rc)=[^,]*\))$/\1<REDACTED>\5/' \
+    -e 's/(export_: start \(document_type=p12, entity=(--p[a-z]*=|-[hl]*p)).+\)$/\1<REDACTED>)/'
 }
 log() {
   message="${@}"

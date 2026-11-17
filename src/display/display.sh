@@ -34,7 +34,8 @@ display() {
   local entity=$2
   local entity_id=$3
 
-  log_detailed "display: start (document_type=${document_type}, entity=${entity}, entity_id=${entity_id})"
+  # entity and entity_id are unparsed here: for p12 they can be -p <password>
+  log_detailed "display: start (document_type=${document_type})"
 
   local rc=0
   case "$document_type" in
@@ -62,6 +63,7 @@ display() {
             ;;
         esac
       done
+      log_detailed "display: entity=${entity}, entity_id=${entity_id}"
       local current_entity_id=$(get_current_entity_id $entity)
       local old_entity=''
       if ! [ -z "$entity_id" ] && [[ "$entity_id" != $current_entity_id ]]; then
@@ -111,7 +113,7 @@ ____EOM
   esac
 
 
-  log_detailed "display: finish (document_type=${document_type}, entity=${entity}, rc=${rc})"
+  log_detailed "display: finish (document_type=${document_type}, rc=${rc})"
   return $rc
 
 }
