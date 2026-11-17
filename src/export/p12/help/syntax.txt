@@ -5,6 +5,9 @@ Arguments:
 
 Options:
   -p, --password      Password to protect the p12 file (prompted if not provided)
+                      Other local users can read a password given here in
+                      the process list, and it is saved in shell history;
+                      leave it out and type it at the prompt instead
   -n, --friendly-name Friendly name for the certificate in the p12 bundle
   -l, --legacy        Use legacy encryption algorithms for compatibility
   -o, --output        Output file path (default: transfer folder)

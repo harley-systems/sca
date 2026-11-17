@@ -156,6 +156,9 @@ Arguments:
 
 Options:
   -p, --password      Password to protect the p12 file (prompted if not provided)
+                      Other local users can read a password given here in
+                      the process list, and it is saved in shell history;
+                      leave it out and type it at the prompt instead
   -n, --friendly-name Friendly name for the certificate in the p12 bundle
   -l, --legacy        Use legacy encryption algorithms for compatibility
   -o, --output        Output file path (default: transfer folder)
@@ -168,7 +171,8 @@ Options:
 # Export PKCS#12 bundle for mobile VPN client
 sca export p12 user
 
-# Export p12 with custom password and friendly name
+# Export p12 with a password on the command line and a friendly name
+# (fine for tests; for a real password leave out -p and type it at the prompt)
 sca export p12 -p mypassword -n My-VPN-Certificate user
 
 # Export p12 with legacy encryption for older software
