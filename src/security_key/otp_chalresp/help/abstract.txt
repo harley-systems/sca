@@ -1,0 +1,27 @@
+The security key otp_chalresp command programs HMAC-SHA1 challenge-response
+into OTP slot 2 of a YubiKey, the credential KeePassXC, pam_yubico and some
+disk unlock scripts use, programs the same secret into a backup key, and tests
+that both keys answer alike. It needs no sca configuration, only ykman (sca
+install --yubikey-support). Slot 1 is left alone: it holds Yubico OTP by
+default.
+
+setup generates a random 20-byte secret (openssl rand), writes it as hex to the
+secret file (by default ~/.sca/private/yubikey-<serial>-chalresp.txt, mode 600,
+in a folder created mode 700), and then programs it into slot 2. An existing
+secret file is never overwritten. If programming fails, the file is removed.
+Keep the file offline until the backup key is programmed, then delete it or
+move it to the air-gapped stick.
+
+backup programs the secret from --secret-file into another key's slot 2, so it
+gives the same responses. Pass the same --touch choice as on the original.
+
+Both refuse a slot 2 that is already programmed unless -f is given. Replacing
+it loses the old secret for good: whatever relies on it stops working.
+
+test sends a fixed challenge to slot 2 (ykman otp calculate) and prints the
+response. Run it on both keys and compare. If slot 2 requires a touch, ykman
+waits for it.
+
+With more than one YubiKey attached, choose one with --device SERIAL. The
+secret is passed to ykman on stdin: it never appears on a command line, in the
+sca log or in the output.

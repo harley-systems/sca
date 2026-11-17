@@ -9,7 +9,7 @@ _sca_security_key_complete() {
     subcommand_index=$((subcommand_index+1))
   done
   if [ -z "${COMP_WORDS[$subcommand_index]}" ]; then
-    suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
+    suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh otp_chalresp unblock_pin upload verify wait_for" -- "$current_word"))
   else
     case "${COMP_WORDS[$subcommand_index]}" in
       get_crt )
@@ -30,6 +30,9 @@ _sca_security_key_complete() {
       openpgp_ssh )
         _sca_security_key_openpgp_ssh_complete $subcommand_index
       ;;
+      otp_chalresp )
+        _sca_security_key_otp_chalresp_complete $subcommand_index
+      ;;
       unblock_pin )
         _sca_security_key_unblock_pin_complete $subcommand_index
       ;;
@@ -43,7 +46,7 @@ _sca_security_key_complete() {
         _sca_security_key_wait_for_complete $subcommand_index
       ;;
       *)
-        suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh unblock_pin upload verify wait_for" -- "$current_word"))
+        suggestions=($(compgen -W "get_crt id info init openpgp_git openpgp_ssh otp_chalresp unblock_pin upload verify wait_for" -- "$current_word"))
       ;;
     esac
   fi
@@ -221,6 +224,34 @@ _sca_security_key_openpgp_ssh_complete() {
           suggestions=($(compgen -W "-h --help -o --output" -- "$current_word"))
         ;;
       esac
+    ;;
+  esac
+}
+_sca_security_key_otp_chalresp_complete() {
+  local otp_chalresp_index=$1
+  local mode_index=$((otp_chalresp_index+1))
+  if [ $COMP_CWORD == $mode_index ]; then
+    suggestions=($(compgen -W "-h --help setup backup test" -- "$current_word"))
+    return
+  fi
+  local mode=${COMP_WORDS[$mode_index]}
+  local previous_word=${COMP_WORDS[$((COMP_CWORD-1))]}
+  case "$previous_word" in
+    --device )
+      _sca_security_key_device_complete
+      return
+    ;;
+    --secret-file )
+      suggestions=($(compgen -f -- "$current_word"))
+      return
+    ;;
+  esac
+  case "$mode" in
+    setup|backup )
+      suggestions=($(compgen -W "-h --help --device --touch --secret-file -f --force" -- "$current_word"))
+    ;;
+    test )
+      suggestions=($(compgen -W "-h --help --device" -- "$current_word"))
     ;;
   esac
 }

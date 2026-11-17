@@ -1,0 +1,9 @@
+sca [<sca_options>] security_key [<security_key_options>] otp_chalresp setup [<setup_options>]
+sca [<sca_options>] security_key [<security_key_options>] otp_chalresp backup [<backup_options>]
+sca [<sca_options>] security_key [<security_key_options>] otp_chalresp test [<test_options>]
+
+@@@SCA OPTIONS@@@
+
+@@@SECURITY_KEY OPTIONS@@@
+
+@@@OPTIONS@@@

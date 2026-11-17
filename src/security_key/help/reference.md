@@ -5,6 +5,7 @@ Every `security_key` subcommand except `openpgp_ssh` and `openpgp_git` accepts `
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
 - `id`: lists only the named key, and fails if it is not attached.
+- `otp_chalresp`: talks to the OTP application over USB HID, so it picks the key from `ykman list --serials` rather than the PC/SC readers, and passes `--device <serial>` to every `ykman` call. With more than one key attached it needs `--device`, as `info` does.
 
 ```bash
 sca security_key id                         # 12345678 0

@@ -31,6 +31,7 @@ The security key command is one of the following:
   init      - first time initialization of security_key
   openpgp_git - set up Git commit and tag signing with the OpenPGP signature key
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
+  otp_chalresp - set up, back up and test challenge-response in OTP slot 2
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
   verify    - test that an entity's private key on the security key can sign
@@ -51,6 +52,7 @@ Every `security_key` subcommand except `openpgp_ssh` and `openpgp_git` accepts `
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
 - `id`: lists only the named key, and fails if it is not attached.
+- `otp_chalresp`: talks to the OTP application over USB HID, so it picks the key from `ykman list --serials` rather than the PC/SC readers, and passes `--device <serial>` to every `ykman` call. With more than one key attached it needs `--device`, as `info` does.
 
 ```bash
 sca security_key id                         # 12345678 0
@@ -69,6 +71,7 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 - [init](#sca-security_key-init) - first time initialization of security_key
 - [openpgp_git](#sca-security_key-openpgp_git) - set up Git commit and tag signing with the OpenPGP signature key
 - [openpgp_ssh](#sca-security_key-openpgp_ssh) - set up SSH with the OpenPGP authentication key and gpg-agent
+- [otp_chalresp](#sca-security_key-otp_chalresp) - set up, back up and test challenge-response in OTP slot 2
 - [unblock_pin](#sca-security_key-unblock_pin) - unblock a blocked pin with the stored puk, and update the pin file
 - [upload](#sca-security_key-upload) - upload security document to security key
 - [verify](#sca-security_key-verify) - test that an entity's private key on the security key can sign
@@ -413,6 +416,103 @@ sca security_key openpgp_ssh public_key -o ~/.ssh/id_gpg.pub
 ```
 
 See [SSH with a YubiKey](../ssh-yubikey-options.md#openpgp-gpg-agent-ssh) for when to choose OpenPGP, and [GPG with a YubiKey](../gpg-yubikey.md#3-keys) to put an authentication key on the card.
+
+---
+
+## sca security_key otp_chalresp
+
+```text
+The security key otp_chalresp command help
+
+The security key otp_chalresp command programs HMAC-SHA1 challenge-response
+into OTP slot 2 of a YubiKey, the credential KeePassXC, pam_yubico and some
+disk unlock scripts use, programs the same secret into a backup key, and tests
+that both keys answer alike. It needs no sca configuration, only ykman (sca
+install --yubikey-support). Slot 1 is left alone: it holds Yubico OTP by
+default.
+
+setup generates a random 20-byte secret (openssl rand), writes it as hex to the
+secret file (by default ~/.sca/private/yubikey-<serial>-chalresp.txt, mode 600,
+in a folder created mode 700), and then programs it into slot 2. An existing
+secret file is never overwritten. If programming fails, the file is removed.
+Keep the file offline until the backup key is programmed, then delete it or
+move it to the air-gapped stick.
+
+backup programs the secret from --secret-file into another key's slot 2, so it
+gives the same responses. Pass the same --touch choice as on the original.
+
+Both refuse a slot 2 that is already programmed unless -f is given. Replacing
+it loses the old secret for good: whatever relies on it stops working.
+
+test sends a fixed challenge to slot 2 (ykman otp calculate) and prints the
+response. Run it on both keys and compare. If slot 2 requires a touch, ykman
+waits for it.
+
+With more than one YubiKey attached, choose one with --device SERIAL. The
+secret is passed to ykman on stdin: it never appears on a command line, in the
+sca log or in the output.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] otp_chalresp setup [<setup_options>]
+sca [<sca_options>] security_key [<security_key_options>] otp_chalresp backup [<backup_options>]
+sca [<sca_options>] security_key [<security_key_options>] otp_chalresp test [<test_options>]
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+setup_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - the YubiKey to program, required when more than one
+                        is attached
+  --touch             - require a touch for every response. without it, no
+                        touch is required
+  --secret-file FILE  - write the secret to FILE rather than
+                        ~/.sca/private/yubikey-<serial>-chalresp.txt. an
+                        existing FILE is never overwritten, not even with -f
+  -f, --force         - replace a programmed slot 2. its old secret is lost,
+                        and whatever relies on it (a KeePassXC database, a
+                        pam_yubico login) stops working
+
+backup_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - the backup YubiKey, required when more than one is
+                        attached
+  --secret-file FILE  - the file setup wrote (required). it is only read
+  --touch             - require a touch for every response. pass the same
+                        choice as on the original key
+  -f, --force         - replace a programmed slot 2, as for setup
+
+test_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - the YubiKey to test, required when more than one is
+                        attached
+```
+
+**What it does:**
+- `setup`: generates a 20-byte secret with `openssl rand -hex 20`, writes it as 40 hex characters to the secret file (default `~/.sca/private/yubikey-<serial>-chalresp.txt`, mode 600, folder mode 700), then programs it into OTP slot 2 with `ykman otp chalresp`. An existing secret file is never overwritten, and the file is removed again if programming fails
+- `backup`: programs the secret from `--secret-file` into another key's slot 2. It never writes or deletes the file, and warns if other users can read it
+- `setup` and `backup` refuse a programmed slot 2 unless `-f` is given; `--touch` requires a touch for every response
+- `test`: runs `ykman otp calculate 2` with a fixed challenge and prints the response, so two keys can be compared
+- The secret reaches ykman on stdin only: never on a command line, in `~/.sca/log` (even with `-d`) or in the output. No mode needs `sca config`
+
+**Example:**
+```bash
+sca install --yubikey-support
+sca security_key otp_chalresp setup --device 12345678
+sca security_key otp_chalresp backup --device 87654321 \
+  --secret-file ~/.sca/private/yubikey-12345678-chalresp.txt
+sca security_key otp_chalresp test --device 12345678
+sca security_key otp_chalresp test --device 87654321   # same response
+```
+
+See [Challenge-response](../yubikey.md#challenge-response) for what it is used for.
 
 ---
 
