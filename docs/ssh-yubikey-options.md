@@ -2,14 +2,14 @@
 
 [← Back to README](../README.md)
 
-A YubiKey can hold an SSH key in three different ways. SCA covers two of them
-(PIV and OpenPGP); this page explains all three so you can pick the right one.
+A YubiKey can hold an SSH key in three different ways. SCA covers all three
+(PIV, OpenPGP and FIDO2); this page explains them so you can pick the right one.
 
 | Method | YubiKey applet | Agent | Covered by SCA |
 |--------|----------------|-------|----------------|
 | **PIV via PKCS#11** | PIV | `ssh-agent` with `ykcs11`/OpenSC | Yes, see [SSH Integration](ssh-integration.md) |
 | **OpenPGP authentication subkey** | OpenPGP | `gpg-agent` | Yes, `sca security_key openpgp_ssh`, see [below](#openpgp-gpg-agent-ssh) |
-| **FIDO2 security key (`-sk`)** | FIDO2 / U2F | `ssh-agent` (OpenSSH built in) | No, manual steps below |
+| **FIDO2 security key (`-sk`)** | FIDO2 / U2F | `ssh-agent` (OpenSSH built in) | Yes, `sca security_key fido2_ssh`, see [below](#fido2-ssh--sk-keys) |
 
 > **Testing status.** The commands on this page were checked against the
 > OpenSSH, GnuPG and `ykman` documentation. They have **not yet been run on
@@ -24,12 +24,12 @@ A YubiKey can hold an SSH key in three different ways. SCA covers two of them
 | **YubiKey models** | YubiKey 4, 5 (incl. FIPS), NEO. **Not** the Security Key series | YubiKey 4, 5 (incl. FIPS), NEO. **Not** the Security Key series | `ecdsa-sk`: any FIDO U2F/FIDO2 key, including the Security Key series. `ed25519-sk`: firmware 5.2.3+. Resident keys need FIDO2 (YubiKey 5 or Security Key series) |
 | **Key algorithms on the device** | RSA 2048, ECC P-256/P-384 (more on firmware 5.7+) | RSA 2048/4096; ed25519/cv25519 on firmware 5.2.3+ | ECDSA P-256, Ed25519 |
 | **Private key stays on device** | Yes | Yes (if generated on card; `keytocard` moves it and removes the local copy on `save`) | Yes |
-| **Portable to a new machine** | Yes: the public key is read from the card | Yes, but the new machine needs your OpenPGP public key imported and `gpg --card-status` run once; then `sca security_key openpgp_ssh public_key` prints the SSH key | Resident: yes, `ssh-keygen -K`. Non-resident: no, you must copy the key-handle file (`id_*_sk`) |
+| **Portable to a new machine** | Yes: the public key is read from the card | Yes, but the new machine needs your OpenPGP public key imported and `gpg --card-status` run once; then `sca security_key openpgp_ssh public_key` prints the SSH key | Resident: yes, `sca security_key fido2_ssh restore` (or `ssh-keygen -K`). Non-resident: no, you must copy the key-handle file (`id_*_sk`) |
 | **PIN** | PIV PIN, asked by `ssh-add -s` or `ssh` and cached by the agent | OpenPGP user PIN, asked by `pinentry` and cached by `scdaemon` | FIDO2 PIN only with `-O verify-required` (and when creating or downloading resident keys) |
 | **Touch** | Set by the slot's touch policy when the key is generated (`never`/`always`/`cached`) | Optional: `ykman openpgp keys set-touch aut on` | Required on every use by default (`-O no-touch-required` turns it off and the server has to allow it) |
 | **OpenSSH certificates (SSH CA)** | Yes, with `CertificateFile` in `~/.ssh/config` | Yes, with `CertificateFile` in `~/.ssh/config`. gpg-agent holds only the plain key; the certificate can't be loaded into it with `ssh-add` | Yes: `-sk` public keys can be signed with `ssh-keygen -s` |
 | **Server requirements** | None beyond OpenSSH; RSA keys need `rsa-sha2-*` (any OpenSSH from the last decade) | None beyond OpenSSH | OpenSSH **≥ 8.2** on the server (`verify-required` needs ≥ 8.4). Many appliances and older distributions reject `sk-*` key types |
-| **Client OS / agent** | Linux, macOS (Homebrew OpenSC or `ykcs11`), Windows (OpenSC); stock `ssh-agent` | Linux, macOS (GnuPG + `pinentry-mac`), Windows (Gpg4win); `gpg-agent` replaces `ssh-agent` | Linux with OpenSSH ≥ 8.2 and libfido2; macOS needs Homebrew OpenSSH (Apple's build has no security-key support); Windows OpenSSH 8.9+ |
+| **Client OS / agent** | Linux, macOS (Homebrew OpenSC or `ykcs11`), Windows (OpenSC); stock `ssh-agent` | Linux, macOS (GnuPG + `pinentry-mac`), Windows (Gpg4win); `gpg-agent` replaces `ssh-agent` | Linux with OpenSSH ≥ 8.2 (≥ 8.3 for `verify-required`) and libfido2; macOS needs Homebrew OpenSSH (Apple's build has no security-key support); Windows OpenSSH 8.9+ |
 | **Backup / recovery** | Generated on device: none, enrol a second YubiKey. Imported key: restore the backup to a new card | Keep the master key offline (e.g. on an air-gapped machine) and `keytocard` again to a replacement; or enrol a second card | None: enrol a second YubiKey and add both public keys. Resident keys are lost if the FIDO applet is reset |
 | **Also useful for** | X.509 client certs, SCA signing | Git commit signing, email encryption | Git commit signing (`gpg.format ssh`), WebAuthn |
 
@@ -38,7 +38,7 @@ A YubiKey can hold an SSH key in three different ways. SCA covers two of them
 | Use case | Recommendation | Why |
 |----------|----------------|-----|
 | **One developer laptop** | **FIDO2, non-resident `ed25519-sk`** (or `ecdsa-sk` on older firmware) with a second YubiKey enrolled as backup. If you already sign Git commits with GPG, the **OpenPGP** subkey is fine too | Simplest setup: no extra daemons or PKCS#11 modules, and touch is required by default |
-| **Several machines** | **FIDO2 resident `ed25519-sk`** with `-O verify-required`, recovered with `ssh-keygen -K` on each machine. Fall back to **PIV** if a server runs OpenSSH older than 8.2 | The key comes with the YubiKey, and nothing has to be copied between machines |
+| **Several machines** | **FIDO2 resident `ed25519-sk`** with `-O verify-required`, recovered with `sca security_key fido2_ssh restore` (`ssh-keygen -K`) on each machine. `sca security_key fido2_ssh create` makes this kind of key by default. Fall back to **PIV** if a server runs OpenSSH older than 8.2 | The key comes with the YubiKey, and nothing has to be copied between machines |
 | **Organisation with an SSH CA** | **PIV** if users already have a YubiKey set up with SCA, otherwise **FIDO2**. OpenPGP also works, but is the least convenient choice here | All three work with OpenSSH certificates through `CertificateFile`. PIV reuses the YubiKey and PIN users already have for SCA, and FIDO2 needs no extra daemon; OpenPGP needs `gpg-agent` in place of `ssh-agent`, which is one more daemon to configure and has no tie-in with SCA's PIV workflow. **Not yet automated:** SCA does not sign OpenSSH certificates today (see [below](#openssh-certificates-not-yet-automated)) |
 | **Security Key series (FIDO-only) device** | **FIDO2** | It is the only applet these devices have |
 
@@ -222,9 +222,42 @@ ykman fido access change-pin
 ykman fido info       # shows whether a PIN is set
 ```
 
-The FIDO2 PIN is separate from the PIV and OpenPGP PINs.
+The FIDO2 PIN is separate from the PIV and OpenPGP PINs. SCA does not set or
+store it.
 
 ### 2. Generate the key
+
+```bash
+# Resident, verify-required, application ssh:sca: ~/.ssh/id_ed25519_sk_rk_sca
+sca security_key fido2_ssh create
+
+# Non-resident: the private key file is a handle that only works with this YubiKey
+sca security_key fido2_ssh create --non-resident --comment "you@laptop"
+```
+
+`sca security_key fido2_ssh create`:
+
+- uses `ed25519-sk` on firmware 5.2.3 or later and `ecdsa-sk` otherwise, and
+  says which;
+- checks first that the client's OpenSSH is 8.2 or later (8.3 or later for
+  `verify-required`; use `--no-verify` to do without), that exactly one YubiKey
+  is plugged in, and that a FIDO2 PIN is set when one is needed;
+- never overwrites a key file: choose another with `--output FILE`, or another
+  resident key with `--application NAME`;
+- prints the public key to add to the server's `~/.ssh/authorized_keys`.
+
+The resident key's file name, `id_ed25519_sk_rk_sca`, is the one `ssh-keygen -K`
+gives it on other machines, but not one `ssh` tries by default: use
+`ssh -i ~/.ssh/id_ed25519_sk_rk_sca`, an `IdentityFile` line in `~/.ssh/config`,
+or `ssh-add ~/.ssh/id_ed25519_sk_rk_sca`.
+
+- `-O verify-required` (the default with `sca`) asks for the FIDO2 PIN on every
+  use, as well as touch. The client needs OpenSSH 8.3+, and the server needs
+  OpenSSH 8.4+ to enforce it.
+- `--application NAME` (`-O application=ssh:<name>`) keeps several resident keys
+  apart on one device.
+
+**Manual alternative:**
 
 ```bash
 # Non-resident: the private key file is a handle that only works with this YubiKey
@@ -235,13 +268,18 @@ ssh-keygen -t ed25519-sk -O resident -O verify-required -C "you@yubikey"
 ```
 
 - Use `-t ecdsa-sk` on firmware older than 5.2.3 or on U2F-only keys.
-- `-O verify-required` asks for the FIDO2 PIN on every use, as well as touch.
-  The server needs OpenSSH 8.4+ to enforce it.
-- `-O application=ssh:<name>` keeps several resident keys apart on one device.
-
-Add `~/.ssh/id_ed25519_sk.pub` to the server's `~/.ssh/authorized_keys`.
+- Add `~/.ssh/id_ed25519_sk.pub` to the server's `~/.ssh/authorized_keys`.
 
 ### 3. Use the key on a new machine (resident keys)
+
+```bash
+sca security_key fido2_ssh restore    # writes the resident keys to ~/.ssh
+```
+
+It never overwrites a file in `~/.ssh` (or `--output-dir DIR`): a file that
+already exists is kept, and the command says so and exits non-zero.
+
+**Manual alternative:**
 
 ```bash
 cd ~/.ssh

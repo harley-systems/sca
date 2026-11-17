@@ -1,0 +1,20 @@
+The security key fido2_ssh command creates an SSH key on the FIDO2 applet of a
+YubiKey (ed25519-sk or ecdsa-sk), or restores the resident ones on a new
+machine. It wraps ssh-keygen and checks first what ssh-keygen needs.
+
+create makes a resident key with verify-required and application ssh:sca by
+default: the key is stored on the YubiKey, and every use asks for touch and the
+FIDO2 PIN. ed25519-sk is used on firmware 5.2.3 or later, ecdsa-sk otherwise.
+The key goes to ~/.ssh/id_<type>_rk_<NAME> (resident) or ~/.ssh/id_<type>
+(non-resident), the names ssh-keygen -K and ssh use. An existing file is never
+overwritten.
+
+restore runs ssh-keygen -K and writes the resident keys of the YubiKey to
+--output-dir. A file that already exists there is kept, and restore then exits
+non-zero.
+
+Before ssh-keygen runs, the command checks that OpenSSH is 8.2 or later (8.3
+for verify-required), that exactly one YubiKey is plugged in, and, for resident
+keys, verify-required and restore, that a FIDO2 PIN is set. sca does not set,
+store or log the FIDO2 PIN; set it with 'ykman fido access change-pin'. Only
+YubiKeys are counted: unplug other FIDO keys, or ssh-keygen may use them.

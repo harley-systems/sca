@@ -25,6 +25,7 @@ security_key_options:
 
 The security key command is one of the following:
 
+  fido2_ssh - create or restore a FIDO2 SSH key (ed25519-sk / ecdsa-sk)
   get_crt   - retrieving certificate for the given entity from a security key
   id        - retrieving ids of the currently inserted security key
   info      - show the status of every PIV slot on the security key
@@ -45,7 +46,7 @@ security key related commands.
 
 ### Choosing a key: `--device SERIAL`
 
-Every `security_key` subcommand except `openpgp_ssh` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
+Every `security_key` subcommand except `fido2_ssh` and `openpgp_ssh` accepts `--device SERIAL`, the YubiKey's hardware serial as printed by `sca security_key id` (or `ykman list --serials`). The serial is passed on to the tools: `yubico-piv-tool` is pointed at that key's reader, and `pkcs11-tool` at its `YubiKey PIV #<serial>` token.
 
 - `info` and `verify`: with one key attached, `--device` is optional and nothing changes. With more than one attached and no `--device`, the command prints the attached serials and exits non-zero rather than pick one.
 - `get_crt`, `init`, `unblock_pin`, `upload` and `wait_for`: these wait for the entity's configured key (`<entity>_security_key_id`). `--device` waits for the named key instead, which is how a second (backup) key of the same entity is reached. If no key is configured and more than one is attached, they refuse in the same way.
@@ -62,6 +63,7 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 
 **Subcommands**
 
+- [fido2_ssh](#sca-security_key-fido2_ssh) - create or restore a FIDO2 SSH key (ed25519-sk / ecdsa-sk)
 - [get_crt](#sca-security_key-get_crt) - retrieving certificate for the given entity from a security key
 - [id](#sca-security_key-id) - retrieving ids of the currently inserted security key
 - [info](#sca-security_key-info) - show the status of every PIV slot on the security key
@@ -71,6 +73,87 @@ If one attached reader's name is contained in another's, `yubico-piv-tool` canno
 - [upload](#sca-security_key-upload) - upload security document to security key
 - [verify](#sca-security_key-verify) - test that an entity's private key on the security key can sign
 - [wait_for](#sca-security_key-wait_for) - awaits for specific security key connection
+
+---
+
+## sca security_key fido2_ssh
+
+```text
+The security key fido2_ssh command help
+
+The security key fido2_ssh command creates an SSH key on the FIDO2 applet of a
+YubiKey (ed25519-sk or ecdsa-sk), or restores the resident ones on a new
+machine. It wraps ssh-keygen and checks first what ssh-keygen needs.
+
+create makes a resident key with verify-required and application ssh:sca by
+default: the key is stored on the YubiKey, and every use asks for touch and the
+FIDO2 PIN. ed25519-sk is used on firmware 5.2.3 or later, ecdsa-sk otherwise.
+The key goes to ~/.ssh/id_<type>_rk_<NAME> (resident) or ~/.ssh/id_<type>
+(non-resident), the names ssh-keygen -K and ssh use. An existing file is never
+overwritten.
+
+restore runs ssh-keygen -K and writes the resident keys of the YubiKey to
+--output-dir. A file that already exists there is kept, and restore then exits
+non-zero.
+
+Before ssh-keygen runs, the command checks that OpenSSH is 8.2 or later (8.3
+for verify-required), that exactly one YubiKey is plugged in, and, for resident
+keys, verify-required and restore, that a FIDO2 PIN is set. sca does not set,
+store or log the FIDO2 PIN; set it with 'ykman fido access change-pin'. Only
+YubiKeys are counted: unplug other FIDO keys, or ssh-keygen may use them.
+```
+
+**Syntax**
+
+```text
+sca [<sca_options>] security_key [<security_key_options>] fido2_ssh create [<create_options>]
+sca [<sca_options>] security_key [<security_key_options>] fido2_ssh restore [<restore_options>]
+
+security_key_options:
+
+  -h, --help                    - display security key command help and exit
+
+create_options:
+
+  -h, --help          - print this help
+  --non-resident      - keep the key on this machine only: the key file is a
+                        handle that works with this YubiKey, and can not be
+                        restored elsewhere. needs no FIDO2 PIN with --no-verify
+  --no-verify         - ask for touch only, not the FIDO2 PIN, on each use
+  --application NAME  - the FIDO2 application, NAME or ssh:NAME (default
+                        ssh:sca). keeps several resident keys apart on one
+                        YubiKey
+  --comment TEXT      - the comment of the public key (default: ssh-keygen's,
+                        user@host)
+  --output FILE       - the private key file (the public key goes to
+                        FILE.pub). default ~/.ssh/id_<type>_rk_<NAME>, or
+                        ~/.ssh/id_<type> with --non-resident
+
+restore_options:
+
+  -h, --help          - print this help
+  --output-dir DIR    - the folder the restored keys are written to (default
+                        ~/.ssh)
+```
+
+**What it does:**
+- `create`: runs `ssh-keygen -t ed25519-sk` (firmware 5.2.3+) or `-t ecdsa-sk` with `-O application=ssh:sca -O resident -O verify-required`, then prints the public key and what to do with it
+- `--non-resident` and `--no-verify` drop `-O resident` and `-O verify-required`; `--application NAME` sets `-O application=ssh:NAME`
+- The key goes to `~/.ssh/id_<type>_rk_<NAME>` (resident) or `~/.ssh/id_<type>` (non-resident). If the file or its `.pub` exists, `create` stops before ssh-keygen runs
+- `restore`: runs `ssh-keygen -K` and moves the keys to `--output-dir` (default `~/.ssh`); existing files are kept, and it then exits non-zero
+- Checks first: OpenSSH 8.2+ (8.3+ for verify-required), exactly one YubiKey plugged in, and a FIDO2 PIN set when one is needed. sca never sets or stores the FIDO2 PIN: set it with `ykman fido access change-pin`
+- `--device` is not supported: ssh-keygen can not choose between keys, so leave only one plugged in
+
+**Example:**
+```bash
+ykman fido access change-pin           # once, if no FIDO2 PIN is set yet
+sca security_key fido2_ssh create      # ~/.ssh/id_ed25519_sk_rk_sca
+# on another machine:
+sca security_key fido2_ssh restore     # ~/.ssh/id_ed25519_sk_rk_sca
+ssh -i ~/.ssh/id_ed25519_sk_rk_sca user@server
+```
+
+See [SSH with a YubiKey](../ssh-yubikey-options.md#fido2-ssh--sk-keys) for when to choose FIDO2.
 
 ---
 

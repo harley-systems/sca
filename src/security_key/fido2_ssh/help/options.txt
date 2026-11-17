@@ -1,0 +1,21 @@
+create_options:
+
+  -h, --help          - print this help
+  --non-resident      - keep the key on this machine only: the key file is a
+                        handle that works with this YubiKey, and can not be
+                        restored elsewhere. needs no FIDO2 PIN with --no-verify
+  --no-verify         - ask for touch only, not the FIDO2 PIN, on each use
+  --application NAME  - the FIDO2 application, NAME or ssh:NAME (default
+                        ssh:sca). keeps several resident keys apart on one
+                        YubiKey
+  --comment TEXT      - the comment of the public key (default: ssh-keygen's,
+                        user@host)
+  --output FILE       - the private key file (the public key goes to
+                        FILE.pub). default ~/.ssh/id_<type>_rk_<NAME>, or
+                        ~/.ssh/id_<type> with --non-resident
+
+restore_options:
+
+  -h, --help          - print this help
+  --output-dir DIR    - the folder the restored keys are written to (default
+                        ~/.ssh)
