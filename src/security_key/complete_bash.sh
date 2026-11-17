@@ -294,7 +294,7 @@ _sca_security_key_wait_for_complete() {
   local entity_index=$((wait_for_index+1))
   while [[ ${COMP_WORDS[$entity_index]} == -* ]]; do
     if [ $COMP_CWORD == $entity_index ]; then
-      suggestions=($(compgen -W "-h --help --device" -- "$current_word"))
+      suggestions=($(compgen -W "-h --help --device --timeout" -- "$current_word"))
       return
     fi
     if [ "${COMP_WORDS[$entity_index]}" == --device ]; then
@@ -302,6 +302,10 @@ _sca_security_key_wait_for_complete() {
         _sca_security_key_device_complete
         return
       fi
+      entity_index=$((entity_index+1))
+    elif [ "${COMP_WORDS[$entity_index]}" == --timeout ]; then
+      # the value is a number of seconds: nothing to suggest, just skip it
+      [ $((entity_index+1)) == $COMP_CWORD ] && return
       entity_index=$((entity_index+1))
     fi
     entity_index=$((entity_index+1))

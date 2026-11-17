@@ -510,6 +510,11 @@ prompting a user to insert particular security key device.
 A security key wait for is used internally by sca and may be useful in custom
 tools for management of security keys.
 
+At a terminal it waits as long as it takes. Run unattended (stdin is not a
+terminal) it gives up after 10 seconds instead of waiting forever, and fails
+with an error naming the key it waited for and the keys it saw. Use --timeout
+or security_key_wait_timeout to change the limit.
+
 The last output line is the number of the smart card reader through in which
 the awaited security key resides.
 ```
@@ -525,10 +530,17 @@ security_key_options:
 
 wait_for_options:
 
-  -h, --help      - print this help
-  --device SERIAL - use the security key with this serial instead of the one
-                    configured for the entity. needed to reach a second
-                    (backup) key of the same entity.
+  -h, --help        - print this help
+  --device SERIAL   - use the security key with this serial instead of the one
+                      configured for the entity. needed to reach a second
+                      (backup) key of the same entity.
+  --timeout SECONDS - give up and fail after SECONDS when the key is not
+                      attached. 0 waits forever. when not given, the
+                      security_key_wait_timeout variable (from the environment
+                      or an export line in sca.config) is used; when that is
+                      not set either, there is no limit if stdin is a
+                      terminal, and the limit is 10 seconds if it is not (a
+                      script, ci, a pipe).
 ```
 
 The key is identified by the serial configured in `<entity>_security_key_id`, or the one given with `--device`. Useful in scripts.
@@ -540,4 +552,10 @@ sca security_key wait_for subca
 
 # Wait for the sub-CA's backup YubiKey, serial 12345678
 sca security_key wait_for --device 12345678 subca
+
+# Unattended (script, CI): fail after 30 s instead of the default 10 s
+sca security_key wait_for --timeout 30 subca < /dev/null
+
+# Or set the limit for every command that waits for a key (0 waits forever)
+export security_key_wait_timeout=30
 ```

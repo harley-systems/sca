@@ -11,8 +11,9 @@
 # fi
 security_key_wait_for() {
   local device=''
+  local timeout=''
   local OPTS
-  OPTS=$(getopt -o h --long help,device: -n "sca security_key wait_for" -- "$@") || error "failed parsing options. use sca security_key wait_for -h for help." 1
+  OPTS=$(getopt -o h --long help,device:,timeout: -n "sca security_key wait_for" -- "$@") || error "failed parsing options. use sca security_key wait_for -h for help." 1
   eval set -- "$OPTS"
   while true; do
     case "$1" in
@@ -22,6 +23,13 @@ security_key_wait_for() {
       ;;
       --device )
         device=$2
+        shift;shift
+      ;;
+      --timeout )
+        timeout=$2
+        [[ $timeout =~ ^[0-9]+$ ]] || error "security_key_wait_for: invalid "\
+"value '$timeout' for --timeout: it must be a whole number of seconds (0 waits "\
+"forever)." 1
         shift;shift
       ;;
       -- )
@@ -46,6 +54,26 @@ security_key_wait_for() {
   # a prefix, so one serial can not stand in for a longer one.
   [ -n "$device" ] && entity_security_key_id="$device"
   local entity_security_key_type=$(eval echo \$${entity}_security_key_type)
+  # how long to wait: --timeout, else security_key_wait_timeout, else no limit
+  # for a person at a terminal and 10 seconds for a script, ci or anything else
+  # that has no one to insert a key. 0 waits forever.
+  if [ -z "$timeout" ]; then
+    if [ -n "${security_key_wait_timeout:-}" ]; then
+      timeout=$security_key_wait_timeout
+      [[ $timeout =~ ^[0-9]+$ ]] || error "security_key_wait_for: invalid "\
+"value '$timeout' for security_key_wait_timeout: it must be a whole number of "\
+"seconds (0 waits forever)." 1
+    elif [ -t 0 ]; then
+      timeout=0
+    else
+      timeout=10
+    fi
+  fi
+  log_detailed "security_key_wait_for: timeout is '$timeout' seconds"
+  local start=$SECONDS
+  # serials seen in the latest poll, named in the error when the wait gives up
+  local last_seen_ids=''
+  local last_seen_unreadable=false
   # wait for the relevant yubikey_id (entity_yubikey_id)
   local previous_security_key_ids=()
   local first_time=true
@@ -58,6 +86,8 @@ security_key_wait_for() {
     [ -n "$entity_security_key_type" ] && \
       type_option=(--security-key-type "$entity_security_key_type")
     local current_security_key_ids=$(security_key_id "${type_option[@]}")
+    last_seen_ids=''
+    last_seen_unreadable=false
     if [ "$current_security_key_ids" != "- -" ]; then
       # we've retrieved some security key ids and their related reader numbers
       # now check if there's the one we're looking for
@@ -74,6 +104,10 @@ security_key_wait_for() {
 "and none is configured for '$entity'. choose one with --device SERIAL, or set "\
 "${entity}_security_key_id." 1
       fi
+      last_seen_ids=$(printf '%s\n' "$current_security_key_ids" | \
+        awk 'NF && $1 != "-" { printf "%s%s", sep, $1; sep=", " }')
+      printf '%s\n' "$current_security_key_ids" | awk '$1 == "-"' | grep -q . && \
+        last_seen_unreadable=true
       while read -r current_security_key_id; do
         # if it is not the one we are looking for and it was not present in previous
         # itteration of the outer infinite loop, then we need to present the user
@@ -130,6 +164,17 @@ security_key_wait_for() {
       fi
     fi
     first_time=false
+    if [ "$timeout" -gt 0 ] && [ $((SECONDS - start)) -ge "$timeout" ]; then
+      local awaited_serial="${entity_security_key_id:-none configured}"
+      local attached="${last_seen_ids:-none}"
+      [ $last_seen_unreadable = true ] && \
+        attached="$attached (and a card whose serial could not be read)"
+      error "security_key_wait_for: no security key for '$entity' (serial "\
+"$awaited_serial) was attached within $timeout s; attached: $attached. attach "\
+"it, choose another with --device SERIAL, wait longer with --timeout SECONDS or "\
+"security_key_wait_timeout (0 waits forever), or set "\
+"${entity}_use_security_key=false if $entity should not use a security key." 1
+    fi
     sleep 1
   done
   log_detailed "security_key_wait_for: finished (entity=$entity)"
