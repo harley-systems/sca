@@ -1,0 +1,29 @@
+setup_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - the YubiKey to program, required when more than one
+                        is attached
+  --touch             - require a touch for every response. without it, no
+                        touch is required
+  --secret-file FILE  - write the secret to FILE rather than
+                        ~/.sca/private/yubikey-<serial>-chalresp.txt. an
+                        existing FILE is never overwritten, not even with -f
+  -f, --force         - replace a programmed slot 2. its old secret is lost,
+                        and whatever relies on it (a KeePassXC database, a
+                        pam_yubico login) stops working
+
+backup_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - the backup YubiKey, required when more than one is
+                        attached
+  --secret-file FILE  - the file setup wrote (required). it is only read
+  --touch             - require a touch for every response. pass the same
+                        choice as on the original key
+  -f, --force         - replace a programmed slot 2, as for setup
+
+test_options:
+
+  -h, --help          - print this help
+  --device SERIAL     - the YubiKey to test, required when more than one is
+                        attached

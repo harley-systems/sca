@@ -12,6 +12,7 @@ The security key command is one of the following:
   init      - first time initialization of security_key
   openpgp_git - set up Git commit and tag signing with the OpenPGP signature key
   openpgp_ssh - set up SSH with the OpenPGP authentication key and gpg-agent
+  otp_chalresp - set up, back up and test challenge-response in OTP slot 2
   unblock_pin - unblock a blocked pin with the stored puk, and update the pin file
   upload    - upload security document to security key
   verify    - test that an entity's private key on the security key can sign

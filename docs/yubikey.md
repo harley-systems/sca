@@ -283,6 +283,28 @@ sca security_key wait_for --device 12345678 subca
 sca security_key wait_for --timeout 30 subca
 ```
 
+## Challenge-response
+
+A YubiKey's OTP application can answer an HMAC-SHA1 challenge with a secret it keeps. [KeePassXC](https://keepassxc.org/docs/) uses it to unlock a database, [pam_yubico](https://developers.yubico.com/yubico-pam/Authentication_Using_Challenge-Response.html) for local login, and some disk unlock scripts use it too. This has nothing to do with PIV or the sca configuration.
+
+By convention challenge-response goes in **slot 2**: slot 1 holds Yubico OTP from the factory (the code a short touch types). `sca security_key otp_chalresp` programs slot 2 only.
+
+```bash
+# program a new random secret into slot 2, and keep it in a file
+sca security_key otp_chalresp setup --device 12345678
+# program the same secret into the backup key
+sca security_key otp_chalresp backup --device 87654321 \
+  --secret-file ~/.sca/private/yubikey-12345678-chalresp.txt
+# both keys must give the same response
+sca security_key otp_chalresp test --device 12345678
+sca security_key otp_chalresp test --device 87654321
+```
+
+- **Touch:** no touch is required by default. `--touch` requires one for every response, so malware on the computer can't query the key unnoticed. Pass the same choice to `backup` as to `setup`.
+- **Backup:** program a second key before relying on the first. The secret can't be read back from a key, so `setup` writes it to `~/.sca/private/yubikey-<serial>-chalresp.txt` (mode 600). Run `backup` with it, then delete the file or move it to the air-gapped stick. Without a backup key, losing the key means losing whatever it unlocks.
+- **Replacing:** `setup` and `backup` refuse a slot 2 that is already programmed. `-f` replaces it, and the old secret is gone for good: a database or login that used it stops working.
+- The secret is handed to `ykman` on stdin: it never appears on a command line, in `~/.sca/log` or in the output. A slot protected by an OTP access code is not supported.
+
 ## Troubleshooting
 
 ### YubiKey Not Detected
