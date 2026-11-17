@@ -59,9 +59,11 @@ display_p12() {
   echo "========================================"
   echo ""
 
-  # Get bundle info
+  # Get bundle info. Each openssl pkcs12 call below gets the password through
+  # an environment variable set for that one command, not as pass:..., which
+  # ps and /proc/*/cmdline would show to every local user.
   local info_output
-  info_output=$(openssl pkcs12 -in "$p12_file" -info -noout -passin pass:"$password" 2>&1)
+  info_output=$(SCA_P12_PASSWORD="$password" openssl pkcs12 -in "$p12_file" -info -noout -passin env:SCA_P12_PASSWORD 2>&1)
   if [ $? -ne 0 ]; then
     error "failed to read p12 file. check password." 1
   fi
@@ -78,7 +80,7 @@ display_p12() {
 
   # Extract and display certificate details
   local cert_output
-  cert_output=$(openssl pkcs12 -in "$p12_file" -nokeys -passin pass:"$password" -passout pass:"" 2>/dev/null)
+  cert_output=$(SCA_P12_PASSWORD="$password" openssl pkcs12 -in "$p12_file" -nokeys -passin env:SCA_P12_PASSWORD -passout pass:"" 2>/dev/null)
 
   local cert_num=1
   while IFS= read -r line; do
@@ -95,13 +97,13 @@ display_p12() {
       echo "  ${cert_num}. ${cn}"
       cert_num=$((cert_num + 1))
     fi
-  done <<< "$(openssl pkcs12 -in "$p12_file" -nokeys -passin pass:"$password" -passout pass:"" 2>/dev/null | openssl x509 -noout -subject 2>/dev/null; \
-             openssl pkcs12 -in "$p12_file" -nokeys -passin pass:"$password" -passout pass:"" -cacerts 2>/dev/null | while openssl x509 -noout -subject 2>/dev/null; do :; done)"
+  done <<< "$(SCA_P12_PASSWORD="$password" openssl pkcs12 -in "$p12_file" -nokeys -passin env:SCA_P12_PASSWORD -passout pass:"" 2>/dev/null | openssl x509 -noout -subject 2>/dev/null; \
+             SCA_P12_PASSWORD="$password" openssl pkcs12 -in "$p12_file" -nokeys -passin env:SCA_P12_PASSWORD -passout pass:"" -cacerts 2>/dev/null | while openssl x509 -noout -subject 2>/dev/null; do :; done)"
 
   # Simpler approach: just list all certs with their subjects and expiry
   echo ""
   echo "Certificate Details:"
-  openssl pkcs12 -in "$p12_file" -nokeys -passin pass:"$password" -passout pass:"" 2>/dev/null | \
+  SCA_P12_PASSWORD="$password" openssl pkcs12 -in "$p12_file" -nokeys -passin env:SCA_P12_PASSWORD -passout pass:"" 2>/dev/null | \
     awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/' | \
     while openssl x509 -noout -subject -enddate 2>/dev/null; do :; done | \
     paste - - | \

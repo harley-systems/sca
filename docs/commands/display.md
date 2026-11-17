@@ -180,6 +180,9 @@ Arguments:
 
 Options:
   -p, --password      Password for the p12 file (prompted if not provided)
+                      Other local users can read a password given here in
+                      the process list, and it is saved in shell history;
+                      leave it out and type it at the prompt instead
   -h, --help          Show this help message
 ```
 
@@ -189,6 +192,7 @@ Options:
 # Display PKCS#12 bundle contents
 sca display p12 ~/.sca/transfer/aharon.p12
 
-# Display p12 with password
+# Display p12 with the password on the command line
+# (fine for tests; for a real password leave out -p and type it at the prompt)
 sca display p12 -p mypassword certificate.p12
 ```

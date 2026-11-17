@@ -129,13 +129,15 @@ export_p12() {
   log_detailed "export_p12: friendly_name='${friendly_name}'"
   log_detailed "export_p12: legacy=${legacy}"
 
-  # create p12 file
-  openssl pkcs12 -export \
+  # create p12 file. the password goes to openssl through an environment
+  # variable set for this one command, not as pass:..., which ps and
+  # /proc/*/cmdline would show to every local user.
+  SCA_P12_PASSWORD="$password" openssl pkcs12 -export \
     -in "$entity_crt_file" \
     -inkey "$entity_key_file" \
     -certfile "$ca_chain_file" \
     -out "$output_file" \
-    -passout pass:"$password" \
+    -passout env:SCA_P12_PASSWORD \
     -name "$friendly_name" \
     $openssl_opts
 
