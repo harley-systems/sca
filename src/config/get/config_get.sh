@@ -137,7 +137,7 @@ config_get_subca() {
     [ ! -z "${the_subca_name}" ] && the_subca_name=${the_subca_name::-1}
     local the_subca_surname=$(echo "${subca_document}"  | grep Subject: | grep -o ' SN = .*, GN = ' | cut -f 4 -d ' ')
     [ ! -z "${the_subca_surname}" ] && the_subca_surname=${the_subca_surname::-1}
-    local the_subca_given_name=$(echo "${subca_document}"  | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
+    local the_subca_given_name=$(echo "${subca_document}"  | grep Subject: | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
     [ ! -z "${the_subca_given_name}" ] && the_subca_given_name=${the_subca_given_name::-1}
     local the_subca_initials=$(echo "${subca_document}"  | grep Subject: | awk 'NF>1{print $NF}' | cut -f 1 -d '@')
     local the_subca=$subca_id
@@ -182,7 +182,7 @@ config_get_user() {
     [ ! -z "${the_user_name}" ] && the_user_name=${the_user_name::-1}
     local the_user_surname=$(echo "${user_document}" | grep Subject: | grep -o ' SN = .*, GN = ' | cut -f 4 -d ' ')
     [ ! -z "${the_user_surname}" ] && the_user_surname=${the_user_surname::-1}
-    local the_user_given_name=$(echo "${user_document}" | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
+    local the_user_given_name=$(echo "${user_document}" | grep Subject: | grep -o ' GN = .*, initials = ' | cut -f 4 -d ' ')
     [ ! -z "${the_user_given_name}" ] && the_user_given_name=${the_user_given_name::-1}
     local the_user_initials=$(echo "${user_document}" | grep Subject: | grep -o ' initials = .*, C = ' | cut -f 4 -d ' ')
     [ ! -z "${the_user_initials}" ] && the_user_initials=${the_user_initials::-1}

@@ -161,6 +161,13 @@ assert_eq '"test" "Test Inc"' "$(run_sca config get ca)" "config get ca after sw
 assert_eq "${before_config}" "$(cat "${HOME}/.sca/config/sca.config")" \
   "config file after switching"
 
+# config get for another user reads the names from its certificate subject
+# only: the issuer (the sub-CA, which has a GN by default) must not leak in
+step request user bob Bob Builder Robert B.B.
+step approve user bob
+assert_eq '"bob" "Bob" "Builder" "Robert" "B.B."' \
+  "$(run_sca config get user bob)" "config get user bob"
+
 # nothing tried to reach a security key
 assert_eq "" "$(cat "${key_tools_log}")" "security key tools were called"
 
