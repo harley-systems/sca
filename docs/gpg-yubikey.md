@@ -8,9 +8,10 @@ one complete path: set up the card, keep the master key offline, move the
 subkeys to the card, and use it every day for files and Git. It also covers a
 backup YubiKey and what to do when something goes wrong.
 
-SCA does not automate any of this. SCA uses the **PIV** applet; OpenPGP is a
-separate applet on the same YubiKey, with its own keys and PINs. Using one does
-not change the other.
+SCA automates only a few steps: installing the tools (1), Git signing (5.4)
+and SSH (5.5). The card and key setup is done by hand. SCA's CA uses the
+**PIV** applet; OpenPGP is a separate applet on the same YubiKey, with its own
+keys and PINs. Using one does not change the other.
 
 > **Testing status.** The commands on this page were checked against the
 > GnuPG and `ykman` documentation. They have **not yet been run on hardware**
@@ -325,36 +326,57 @@ to read the file later.
 
 ### 5.4 Git commit and tag signing
 
+With the card plugged in and its public key imported (5.1):
+
+```bash
+sca security_key openpgp_git setup --dry-run   # show what it would change
+sca security_key openpgp_git setup             # every repository; --local for this one only
+sca security_key openpgp_git public_key        # for the Git host's GPG keys page
+```
+
+`sca security_key openpgp_git setup` needs no `sca` configuration. It reads the
+`[S]` key's fingerprint from the card and sets `user.signingkey <FPR>!`,
+`commit.gpgsign true` and `tag.gpgSign true` (`--no-tags` skips the last one).
+Settings that already have the right value are left alone. If one has another
+value, or `gpg.format` is set to `ssh` or `x509`, it lists them with the
+command that accepts each and changes nothing.
+
+Add the output of `sca security_key openpgp_git public_key` to your account on
+the Git host (GitHub: *Settings → SSH and GPG keys*; GitLab: *Preferences →
+GPG Keys*) so commits show as verified. The key's user IDs must include your
+`git config user.email`; `setup` warns when they don't.
+
+If the PIN prompt does not appear, set `GPG_TTY` in your shell profile
+(`setup` prints this line, but does not edit shell files):
+
+```bash
+export GPG_TTY="$(tty)"
+```
+
+Check it:
+
+```bash
+git commit --allow-empty -m "test"   # asks for the user PIN (and touch, if set)
+git log --show-signature -1
+git tag -s v1.0 -m "v1.0"
+git verify-tag v1.0
+```
+
+**By hand.** This is what `setup` and `public_key` do:
+
 ```bash
 gpg --list-secret-keys --keyid-format long     # find the ID of the [S] subkey
 
 git config --global user.signingkey <SIGNING-SUBKEY-ID>!
 git config --global commit.gpgsign true
 git config --global tag.gpgSign true
+
+gpg --armor --export <FPR>                     # for the Git host
 ```
 
 The `!` tells GnuPG to use exactly that subkey. You can also give the master
 key's fingerprint; GnuPG then picks the newest usable signing subkey. If `git`
 can't find `gpg`, set `git config --global gpg.program gpg`.
-
-Check it:
-
-```bash
-git commit -m "test"           # asks for the user PIN (and touch, if set)
-git log --show-signature -1
-git tag -s v1.0 -m "v1.0"
-git verify-tag v1.0
-```
-
-Add the output of `gpg --armor --export <FPR>` to your account on the Git host
-(GitHub: *Settings → SSH and GPG keys*; GitLab: *Preferences → GPG Keys*) so
-commits show as verified.
-
-If the PIN prompt does not appear, set `GPG_TTY` in your shell profile:
-
-```bash
-export GPG_TTY="$(tty)"
-```
 
 ### 5.5 SSH
 

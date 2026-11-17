@@ -104,14 +104,15 @@ sca() {
   # fail if sca_config is not present, otherwise load it
   if [ ! -f ${config_file} ]; then
     # install (the bootstrap command) and completion (only prints a script)
-    # need no configuration, whatever their options. nor does security_key
-    # openpgp_ssh, which uses gpg and no CA settings; every other security_key
-    # command does.
+    # need no configuration, whatever their options. nor do security_key
+    # openpgp_ssh and openpgp_git, which use gpg (and git) and no CA settings;
+    # every other security_key command does.
     case "$verb" in
       config|scrub_log|appliance|install|completion ) ;;
       * )
         if [ -n "$verb" ] && [ -n "$2" ] && [ "$2" != create ] && \
-            ! { [ "$verb" = security_key ] && [ "$2" = openpgp_ssh ]; }; then
+            ! { [ "$verb" = security_key ] && \
+                { [ "$2" = openpgp_ssh ] || [ "$2" = openpgp_git ]; }; }; then
           error "the sca configuration file ${config_file} doesn't
 exist. if this is the first time run, make sure to run
 
